@@ -1,0 +1,95 @@
+/* Form layouts and field grids */
+
+.form-section {
+  background-color: var(--color-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.form-section__title,
+.form-section h3.form-section__title,
+.form-section .MuiTypography-h6.form-section__title {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  margin-top: 0 !important;
+  margin-bottom: var(--space-3) !important;
+  color: var(--color-text) !important;
+}
+
+.form-section__description {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-5);
+}
+
+/* Grids for inputs */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: var(--space-5);
+}
+
+.form-grid--three {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: var(--space-5);
+}
+
+.form-grid--one {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+
+/* Full span element in form grids */
+.form-grid__span-full {
+  grid-column: 1 / -1;
+}
+
+/* Form fields container and validation messages */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.form-field__label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+  color: var(--color-text);
+}
+
+.form-field__error {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+  margin-top: var(--space-1);
+}
+
+.form-field__helper {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+/* Form actions bar */
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-color);
+}
+
+@media (max-width: 768px) {
+
+  .form-grid,
+  .form-grid--three {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}

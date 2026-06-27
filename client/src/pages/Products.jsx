@@ -1,0 +1,619 @@
+import React, { useState, useEffect } from 'react';
+import { formatCurrencyEGP } from '../utils/formatters';
+import { useAuth } from '../app/AuthContext';
+import { apiClient } from '../services/apiClient';
+import LoadingState from '../components/LoadingState';
+import EmptyState from '../components/EmptyState';
+import { FormSection } from '../components/forms/FormSection';
+import { FieldGrid } from '../components/forms/FieldGrid';
+import { FormActions } from '../components/forms/FormActions';
+import EntityDrawer from '../components/EntityDrawer';
+import ConfirmDialog from '../components/ConfirmDialog';
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  IconButton,
+  Chip,
+  Drawer,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  Alert,
+  Snackbar,
+  InputAdornment,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Add as AddIcon,
+  Search as SearchIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon
+} from '@mui/icons-material';
+
+export const Products = () => {
+  const { hasPermission } = useAuth();
+  
+  // Products listing states
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [authorsList, setAuthorsList] = useState([]);
+  const [outletTypes, setOutletTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+
+  // Dialog controllers
+  const [openModal, setOpenModal] = useState(false);
+  const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  const [openDetailsModal, setOpenDetailsModal] = useState(false);
+  const [detailsProduct, setDetailsProduct] = useState(null);
+  const [detailsPrices, setDetailsPrices] = useState([]);
+
+  // Form states
+  const [formTitle, setFormTitle] = useState('');
+  const [formCode, setFormCode] = useState('');
+  const [formCategory, setFormCategory] = useState('');
+  const [formStatus, setFormStatus] = useState('active');
+  const [formStockPolicy, setFormStockPolicy] = useState('track');
+  const [formAuthorIds, setFormAuthorIds] = useState([]);
+  const [formPrices, setFormPrices] = useState({}); // { outletTypeId: priceValue }
+
+  // Notifications toast state
+  const [toastMsg, setToastMsg] = useState('');
+  const [toastSeverity, setToastSeverity] = useState('success');
+
+  // Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [productIdToDelete, setProductIdToDelete] = useState(null);
+
+  const fetchInitialData = async () => {
+    try {
+      const cats = await apiClient.get('/products/categories');
+      setCategories(cats);
+
+      const authorsData = await apiClient.get('/authors?limit=500&status=active');
+      setAuthorsList(authorsData);
+
+      const outletsData = await apiClient.get('/outlet-types?limit=100&includeDisabled=false');
+      setOutletTypes(outletsData);
+    } catch (err) {
+      console.error('Failed to load filters metadata:', err);
+    }
+  };
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      let query = `/products?search=${search}`;
+      if (categoryFilter) query += `&category=${categoryFilter}`;
+      if (statusFilter) query += `&status=${statusFilter}`;
+      
+      const data = await apiClient.get(query);
+      setProducts(data);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تحميل المنتجات.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [search, categoryFilter, statusFilter]);
+
+  const showToast = (msg, severity = 'success') => {
+    setToastMsg(msg);
+    setToastSeverity(severity);
+  };
+
+  // Open Details View (fetches outlet type prices dynamically)
+  const handleOpenDetails = async (product) => {
+    setDetailsProduct(product);
+    setDetailsPrices([]);
+    setOpenDetailsModal(true);
+    try {
+      const prices = await apiClient.get(`/product-prices/product/${product.id}`);
+      setDetailsPrices(prices);
+    } catch (err) {
+      console.error(err);
+      showToast('فشل تحميل قائمة أسعار المنتج.', 'error');
+    }
+  };
+
+  const handleOpenCreateModal = () => {
+    setModalMode('create');
+    setSelectedProduct(null);
+    setFormTitle('');
+    setFormCode('');
+    setFormCategory('');
+    setFormStatus('active');
+    setFormStockPolicy('track');
+    setFormAuthorIds([]);
+    
+    // Initialise empty prices for all active outlet types
+    const initialPrices = {};
+    outletTypes.forEach(ot => {
+      initialPrices[ot.id] = '';
+    });
+    setFormPrices(initialPrices);
+    
+    setOpenModal(true);
+  };
+
+  const handleOpenEditModal = async (product) => {
+    setModalMode('edit');
+    setSelectedProduct(product);
+    setFormTitle(product.title);
+    setFormCode(product.code);
+    setFormCategory(product.category || '');
+    setFormStatus(product.status);
+    setFormStockPolicy(product.stock_policy || 'track');
+    setFormAuthorIds(product.authors?.map(a => a.id) || []);
+    
+    // Fetch prices to populate form
+    const initialPrices = {};
+    outletTypes.forEach(ot => {
+      initialPrices[ot.id] = '';
+    });
+    setFormPrices(initialPrices);
+    
+    setOpenModal(true);
+    try {
+      const prices = await apiClient.get(`/product-prices/product/${product.id}`);
+      const priceMap = {};
+      prices.forEach(p => {
+        priceMap[p.outlet_type_id] = p.price;
+      });
+      setFormPrices({
+        ...initialPrices,
+        ...priceMap
+      });
+    } catch (err) {
+      console.error('Failed to fetch pricing list for edit:', err);
+    }
+  };
+
+  const handlePriceChange = (outletTypeId, val) => {
+    setFormPrices({
+      ...formPrices,
+      [outletTypeId]: val
+    });
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    if (!formTitle || !formCode) {
+      showToast('عنوان الكتاب ورمز SKU مطلوبان.', 'error');
+      return;
+    }
+
+    const payload = {
+      title: formTitle,
+      code: formCode,
+      category: formCategory,
+      status: formStatus,
+      stockPolicy: formStockPolicy,
+      authorIds: formAuthorIds
+    };
+
+    try {
+      let productId;
+      if (modalMode === 'create') {
+        const res = await apiClient.post('/products', payload);
+        productId = res.product.id;
+        showToast('تم إنشاء المنتج بنجاح.');
+      } else {
+        await apiClient.put(`/products/${selectedProduct.id}`, payload);
+        productId = selectedProduct.id;
+        showToast('تم تحديث بيانات المنتج بنجاح.');
+      }
+
+      // Map prices payload: format array [{ outletTypeId, price }]
+      const pricesPayload = [];
+      Object.keys(formPrices).forEach(otId => {
+        const priceVal = parseFloat(formPrices[otId]);
+        if (!isNaN(priceVal) && priceVal >= 0) {
+          pricesPayload.push({
+            outletTypeId: parseInt(otId, 10),
+            price: priceVal
+          });
+        }
+      });
+
+      // Send bulk prices update
+      if (pricesPayload.length > 0) {
+        await apiClient.put(`/product-prices/product/${productId}`, { prices: pricesPayload });
+      }
+
+      setOpenModal(false);
+      fetchProducts();
+      // Reload categories list just in case a new one was typed
+      const cats = await apiClient.get('/products/categories');
+      setCategories(cats);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل حفظ التعديلات.', 'error');
+    }
+  };
+
+  const handleDeleteProduct = (prodId) => {
+    setProductIdToDelete(prodId);
+    setConfirmOpen(true);
+  };
+
+  const executeDeleteProduct = async () => {
+    if (!productIdToDelete) return;
+    try {
+      await apiClient.delete(`/products/${productIdToDelete}`);
+      showToast('تم حذف المنتج بنجاح.');
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل حذف المنتج من قاعدة البيانات.', 'error');
+    } finally {
+      setConfirmOpen(false);
+      setProductIdToDelete(null);
+    }
+  };
+
+  if (loading && products.length === 0) {
+    return <LoadingState type="skeleton" />;
+  }
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          دليل الكتب والمنشورات
+        </Typography>
+        {hasPermission('products.create') && (
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AddIcon />}
+            onClick={handleOpenCreateModal}
+            sx={{ fontWeight: 'bold' }}
+          >
+            إضافة كتاب / منتج جديد
+          </Button>
+        )}
+      </Box>
+
+      {/* Search & Filters */}
+      <Paper sx={{ p: 2, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="البحث بالاسم أو الرمز SKU..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="cat-filter-label">التصنيف</InputLabel>
+              <Select
+                labelId="cat-filter-label"
+                value={categoryFilter}
+                label="التصنيف"
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <MenuItem value="">الجميع</MenuItem>
+                {categories.map((c) => (
+                  <MenuItem key={c} value={c}>
+                    {c}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="status-filter-label">حالة المنتج</InputLabel>
+              <Select
+                labelId="status-filter-label"
+                value={statusFilter}
+                label="حالة المنتج"
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <MenuItem value="">الجميع</MenuItem>
+                <MenuItem value="active">نشط</MenuItem>
+                <MenuItem value="disabled">معطل</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Table grid */}
+      {products.length === 0 ? (
+        <EmptyState title="لا يوجد منتجات" description="لم نتمكن من العثور على أي كتب تطابق معايير البحث الحالية." />
+      ) : (
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+              <TableRow>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الرمز (SKU)</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>العنوان والكتاب</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>التصنيف</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>المؤلفين</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>سياسة الجرد</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {products.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell align="right" sx={{ fontFamily: 'monospace' }}>{p.code}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 500 }}>{p.title}</TableCell>
+                  <TableCell align="right">
+                    {p.category ? <Chip label={p.category} size="small" variant="outlined" /> : '-'}
+                  </TableCell>
+                  <TableCell align="right">
+                    {p.authors && p.authors.length > 0 ? (
+                      p.authors.map(a => a.name).join('، ')
+                    ) : (
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير محدد</Typography>
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    {p.stock_policy === 'track' ? 'تتبع الكميات' : 'تجاهل الجرد'}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Chip
+                      label={p.status === 'active' ? 'نشط' : 'معطل'}
+                      color={p.status === 'active' ? 'success' : 'error'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                      <IconButton color="secondary" onClick={() => handleOpenDetails(p)} title="عرض التفاصيل والأسعار">
+                        <VisibilityIcon />
+                      </IconButton>
+                      {hasPermission('products.update') && (
+                        <IconButton color="primary" onClick={() => handleOpenEditModal(p)} title="تعديل">
+                          <EditIcon />
+                        </IconButton>
+                      )}
+                      {hasPermission('products.delete') && (
+                        <IconButton color="error" onClick={() => handleDeleteProduct(p.id)} title="حذف">
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* Details Drawer */}
+      <EntityDrawer
+        open={openDetailsModal}
+        onClose={() => setOpenDetailsModal(false)}
+        title="تفاصيل الكتاب والأسعار"
+      >
+        <Box className="entity-drawer__content">
+          {detailsProduct && (
+            <FormSection title={detailsProduct.title} description={`رمز SKU: ${detailsProduct.code}`}>
+              <FieldGrid columns={1}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  التصنيف: {detailsProduct.category || 'غير محدد'}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                  المؤلفين: {detailsProduct.authors?.map(a => a.name).join('، ') || 'غير محدد'}
+                </Typography>
+              </FieldGrid>
+              
+              <Divider sx={{ my: 3 }} />
+              
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1.5 }}>
+                أسعار البيع المعتمدة بحسب فئات المنافذ:
+              </Typography>
+              {detailsPrices.length === 0 ? (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>لا توجد أسعار مدخلة بعد لهذا المنتج.</Typography>
+              ) : (
+                <TableContainer>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="right">فئة المنفذ</TableCell>
+                        <TableCell align="right">السعر المعتمد</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {detailsPrices.map((pr) => (
+                        <TableRow key={pr.id}>
+                          <TableCell align="right">{pr.outlet_type_name}</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                            {formatCurrencyEGP(pr.price)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </FormSection>
+          )}
+        </Box>
+        <FormActions className="entity-drawer__actions">
+          <Button onClick={() => setOpenDetailsModal(false)} variant="outlined">إغلاق</Button>
+        </FormActions>
+      </EntityDrawer>
+
+      {/* Editor Drawer */}
+      <EntityDrawer
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        title={modalMode === 'create' ? 'إضافة كتاب / منتج جديد' : 'تعديل بيانات المنتج'}
+      >
+        <form onSubmit={handleFormSubmit} className="entity-drawer__form">
+          <Box className="entity-drawer__content">
+            <FormSection title="البيانات الأساسية">
+              <FieldGrid columns={1}>
+                <TextField
+                  required
+                  fullWidth
+                  size="small"
+                  label="عنوان الكتاب / المنتج"
+                  value={formTitle}
+                  onChange={(e) => setFormTitle(e.target.value)}
+                />
+                <TextField
+                  required
+                  fullWidth
+                  size="small"
+                  label="رمز SKU / الرمز التعريفي"
+                  value={formCode}
+                  onChange={(e) => setFormCode(e.target.value)}
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="التصنيف (مثال: رواية، أكاديمي، فلسفة)"
+                  value={formCategory}
+                  onChange={(e) => setFormCategory(e.target.value)}
+                />
+                <FormControl fullWidth size="small">
+                  <InputLabel id="form-stock-policy-label">سياسة المخزون والجرد</InputLabel>
+                  <Select
+                    labelId="form-stock-policy-label"
+                    value={formStockPolicy}
+                    label="سياسة المخزون والجرد"
+                    onChange={(e) => setFormStockPolicy(e.target.value)}
+                  >
+                    <MenuItem value="track">تتبع الجرد والكميات</MenuItem>
+                    <MenuItem value="ignore">تجاهل الجرد ومراقبة stock</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="form-authors-label">المؤلفين المشاركين</InputLabel>
+                  <Select
+                    labelId="form-authors-label"
+                    multiple
+                    value={formAuthorIds}
+                    label="المؤلفين المشاركين"
+                    onChange={(e) => setFormAuthorIds(e.target.value)}
+                    renderValue={(selected) => (
+                      <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {selected.map((val) => {
+                          const author = authorsList.find(a => a.id === val);
+                          return <Chip key={val} label={author ? author.name : val} size="small" />;
+                        })}
+                      </Box>
+                    )}
+                  >
+                    {authorsList.map((a) => (
+                      <MenuItem key={a.id} value={a.id}>
+                        {a.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel id="form-status-label">حالة المنتج</InputLabel>
+                  <Select
+                    labelId="form-status-label"
+                    value={formStatus}
+                    label="حالة المنتج"
+                    onChange={(e) => setFormStatus(e.target.value)}
+                  >
+                    <MenuItem value="active">نشط</MenuItem>
+                    <MenuItem value="disabled">معطل</MenuItem>
+                  </Select>
+                </FormControl>
+              </FieldGrid>
+            </FormSection>
+
+            <FormSection title="قائمة أسعار البيع المعتمدة بحسب فئات المنافذ">
+              <FieldGrid columns={2}>
+                {outletTypes.map((ot) => (
+                  <TextField
+                    key={ot.id}
+                    type="number"
+                    size="small"
+                    label={`السعر لـ (${ot.name})`}
+                    value={formPrices[ot.id] || ''}
+                    onChange={(e) => handlePriceChange(ot.id, e.target.value)}
+                    placeholder="0.00"
+                    fullWidth
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
+                    }}
+                  />
+                ))}
+              </FieldGrid>
+            </FormSection>
+          </Box>
+          <FormActions className="entity-drawer__actions">
+            <Button onClick={() => setOpenModal(false)}>إلغاء</Button>
+            <Button type="submit" variant="contained" color="secondary">حفظ التغييرات</Button>
+          </FormActions>
+        </form>
+      </EntityDrawer>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={executeDeleteProduct}
+        title="تأكيد حذف المنتج"
+        message="هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء."
+        severity="error"
+        confirmText="حذف"
+      />
+
+      {/* Snackbar Alert */}
+      <Snackbar
+        open={!!toastMsg}
+        autoHideDuration={4000}
+        onClose={() => setToastMsg('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setToastMsg('')} severity={toastSeverity} sx={{ width: '100%' }}>
+          {toastMsg}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};
+
+export default Products;

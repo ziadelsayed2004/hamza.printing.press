@@ -1,0 +1,29 @@
+.breadcrumbs-container {
+  margin-bottom: var(--space-4);
+}
+
+.breadcrumbs-list {
+  color: var(--color-text-muted) !important;
+}
+
+.breadcrumbs-list .MuiBreadcrumbs-separator {
+  margin-left: var(--space-1) !important;
+  margin-right: var(--space-1) !important;
+}
+
+.breadcrumbs-link {
+  display: flex !important;
+  align-items: center !important;
+  color: inherit !important;
+}
+
+.breadcrumbs-home-icon {
+  margin-right: var(--space-1) !important;
+  margin-left: var(--space-1) !important;
+  font-size: 20px !important;
+}
+
+.breadcrumbs-current {
+  font-weight: 500 !important;
+  color: var(--color-text) !important;
+}

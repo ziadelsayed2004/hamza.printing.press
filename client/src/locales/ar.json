@@ -1,0 +1,122 @@
+{
+  "app": {
+    "title": "مطبعة حمزة",
+    "subtitle": "نظام إدارة متكامل",
+    "company": "مطبعة حمزة",
+    "developer": "Ziad Elsayed CodzHub"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "products": "الكتب والمنتجات",
+    "authors": "المؤلفين",
+    "outletTypes": "فئات المنافذ",
+    "outlets": "المنافذ والفروع",
+    "invoices": "الفواتير",
+    "payments": "المدفوعات",
+    "finance": "الخزينة والمالية",
+    "inventory": "المخزون والوارد",
+    "shipments": "الشحنات",
+    "reports": "التقارير",
+    "imports": "استيراد البيانات",
+    "exports": "تصدير البيانات",
+    "users": "المستخدمين والأدوار",
+    "audit": "سجل العمليات",
+    "notifications": "التنبيهات",
+    "profile": "الملف الشخصي",
+    "logout": "تسجيل الخروج",
+    "main": "الرئيسية",
+    "catalog": "الكتالوج والتسعير",
+    "distribution": "المنافذ والتوزيع",
+    "sales": "الفواتير والمبيعات",
+    "financeSection": "المالية والحسابات",
+    "inventorySection": "المخزون",
+    "shippingSection": "الشحن",
+    "reportsSection": "التقارير والتصدير",
+    "managementSection": "الإدارة",
+    "expandMenu": "توسيع القائمة",
+    "collapseMenu": "تصغير القائمة",
+    "openMenu": "فتح القائمة",
+    "lightMode": "الوضع المضيء",
+    "darkMode": "الوضع المظلم"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "search": "بحث",
+    "actions": "الإجراءات",
+    "status": "الحالة",
+    "active": "نشط",
+    "disabled": "معطل",
+    "error": "خطأ",
+    "success": "نجاح",
+    "warning": "تحذير",
+    "info": "معلومات",
+    "noData": "لا توجد بيانات متاحة",
+    "confirm": "تأكيد",
+    "user": "مستخدم",
+    "new": "جديد"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "username": "اسم المستخدم",
+    "password": "كلمة المرور",
+    "loginFailed": "فشل تسجيل الدخول. يرجى التحقق من اسم المستخدم وكلمة المرور.",
+    "usernameRequired": "يرجى إدخال اسم المستخدم وكلمة المرور",
+    "accountOptions": "خيارات الحساب"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "welcome": "مرحبًا، {name}",
+    "subtitle": "لوحة تشغيل وماليات متكاملة لمطبعة حمزة",
+    "activeBooks": "إجمالي الكتب النشطة",
+    "activeOutlets": "إجمالي المنافذ النشطة",
+    "todayInvoices": "فواتير اليوم",
+    "todaySales": "إجمالي مبيعات اليوم",
+    "todayPayments": "مقبوضات اليوم",
+    "criticalAlerts": "تنبيهات حرجة"
+  },
+  "products": {
+    "title": "الكتب والمنتجات",
+    "addBook": "إضافة كتاب جديد",
+    "editBook": "تعديل كتاب"
+  },
+  "authors": {
+    "title": "المؤلفين",
+    "addAuthor": "إضافة مؤلف جديد"
+  },
+  "outlets": {
+    "title": "المنافذ والفروع",
+    "addOutlet": "إضافة منفذ جديد"
+  },
+  "invoices": {
+    "title": "الفواتير والمبيعات",
+    "addInvoice": "إنشاء فاتورة جديدة"
+  },
+  "payments": {
+    "title": "المدفوعات",
+    "addPayment": "تسجيل دفعة جديدة"
+  },
+  "finance": {
+    "title": "الخزينة والمالية",
+    "ledger": "دفتر الأستاذ المالي"
+  },
+  "inventory": {
+    "title": "المخزون والوارد",
+    "adjust": "تسوية مخزنية"
+  },
+  "notifications": {
+    "title": "التنبيهات",
+    "markAsRead": "مقروء",
+    "resolve": "حل",
+    "noNotifications": "لا توجد تنبيهات",
+    "viewAll": "عرض جميع التنبيهات"
+  },
+  "reports": {
+    "title": "التقارير",
+    "export": "تصدير تقرير"
+  }
+}

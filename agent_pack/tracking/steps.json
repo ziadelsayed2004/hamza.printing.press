@@ -1,0 +1,402 @@
+[
+  {
+    "id": "001",
+    "slug": "repo_reality_audit",
+    "description": "Audit the current repository, detect framework, database, routes, views, static assets, package scripts, deployment assumptions, and risks. Produce a factual audit report only; do not refactor yet."
+  },
+  {
+    "id": "002",
+    "slug": "target_architecture_plan",
+    "description": "Create/confirm target architecture for a single deployable Node.js monolith with Express API and React/Vite/MUI client built into public/. Define server/client/storage structure."
+  },
+  {
+    "id": "003",
+    "slug": "repo_structure_bootstrap",
+    "description": "Create the organized folders: server/src modules, client scaffold if missing, storage folders, scripts, docs. Do not delete legacy UI yet."
+  },
+  {
+    "id": "004",
+    "slug": "env_config_security_bootstrap",
+    "description": "Add .env.example, config loader, NODE_ENV/PORT/session/database paths, secure defaults, health endpoint, and storage safety rules."
+  },
+  {
+    "id": "005",
+    "slug": "fresh_database_schema",
+    "description": "Since the project is allowed to start from scratch, design and create fresh SQLite schema/migrations for all core modules without preserving old records."
+  },
+  {
+    "id": "006",
+    "slug": "database_runner_and_seed",
+    "description": "Implement migration runner, reset/dev seed command, initial admin seed, outlet type seed examples, and safe database initialization."
+  },
+  {
+    "id": "007",
+    "slug": "auth_users_roles_schema",
+    "description": "Implement users, roles, permissions, role_permissions, user_role assignments, password hashing, account status, and session/auth tables where needed."
+  },
+  {
+    "id": "008",
+    "slug": "advanced_rbac_middleware",
+    "description": "Build advanced permission middleware: role permissions, optional user overrides, page/menu permissions, action-level API guards, super_admin bypass, and consistent 403 responses."
+  },
+  {
+    "id": "009",
+    "slug": "audit_log_system",
+    "description": "Add audit log model/service/middleware for login, create, update, delete, disable, payment, inventory, invoice, export, and permission actions."
+  },
+  {
+    "id": "010",
+    "slug": "auth_api_and_sessions",
+    "description": "Create auth APIs: login, logout, me, change password, reset password by admin, session validation, account disable handling, and secure cookie/session config."
+  },
+  {
+    "id": "011",
+    "slug": "user_management_api",
+    "description": "Create user management APIs for creating, editing, disabling, enabling, archiving/deleting users, assigning roles, and listing permissions."
+  },
+  {
+    "id": "012",
+    "slug": "outlet_types_module",
+    "description": "Create admin-managed outlet types module. Admin can add/edit/disable outlet types dynamically; these types drive product prices."
+  },
+  {
+    "id": "013",
+    "slug": "outlets_module",
+    "description": "Create outlets module with outlet type, governorate, detailed address, phone, credit limit, status, notes, and filters."
+  },
+  {
+    "id": "014",
+    "slug": "authors_module",
+    "description": "Create authors module and optional author accounts: author profile, linked user account, status, and author-book relationships."
+  },
+  {
+    "id": "015",
+    "slug": "products_books_module",
+    "description": "Create normalized books/products module with title, code/SKU, author links, category, status, stock policy, and metadata."
+  },
+  {
+    "id": "016",
+    "slug": "product_prices_by_outlet_type",
+    "description": "Implement product_prices so one book has a separate active price per outlet type. Invoice creation must resolve price from selected outlet type and save snapshots."
+  },
+  {
+    "id": "017",
+    "slug": "inventory_ledger_schema",
+    "description": "Implement inventory ledger schema: receipts, receipt items, inventory transactions, stock summaries, stock adjustments, and opening balances."
+  },
+  {
+    "id": "018",
+    "slug": "inventory_receipts_logic",
+    "description": "Implement receiving books as inventory receipts that automatically increase stock and create ledger transactions."
+  },
+  {
+    "id": "019",
+    "slug": "invoice_schema",
+    "description": "Create invoice v2 schema: invoice header, items, snapshots, totals, statuses, history, notes, created_by, and immutable financial snapshots."
+  },
+  {
+    "id": "020",
+    "slug": "invoice_create_pricing_stock",
+    "description": "Implement invoice create/update logic: selected outlet -> outlet type -> price per book, validate stock, calculate totals, decrement stock via ledger."
+  },
+  {
+    "id": "021",
+    "slug": "payments_cash_deferred_installments",
+    "description": "Implement payments: cash, deferred, installments, mixed; invoice_payments; installment schedule; paid/remaining auto-calculation."
+  },
+  {
+    "id": "022",
+    "slug": "payment_status_engine",
+    "description": "Build calculation engine for paid_amount, remaining_amount, payment_status, overdue installments, reversal/correction rules, and audit entries."
+  },
+  {
+    "id": "023",
+    "slug": "shipments_partial_model",
+    "description": "Add shipments and shipment_items. Allow partial shipment operationally while keeping payment/fees on invoice level unless explicitly configured later."
+  },
+  {
+    "id": "024",
+    "slug": "filters_search_api",
+    "description": "Implement advanced filters for invoices/products/outlets/authors: by book, author, outlet, outlet type, governorate, date, payment status, shipping status, remaining amount."
+  },
+  {
+    "id": "025",
+    "slug": "reports_api",
+    "description": "Create reports APIs: sales, paid, remaining, deferred, balances by outlet/governorate/outlet type, stock reports, author reports, receipt reports."
+  },
+  {
+    "id": "026",
+    "slug": "excel_export_system",
+    "description": "Implement Excel export for products, prices, authors, outlets, invoices, payments, inventory, reports, outstanding balances."
+  },
+  {
+    "id": "027",
+    "slug": "excel_import_templates",
+    "description": "Implement Excel templates/import pipeline with preview, validation, accepted/rejected rows, and error sheet generation."
+  },
+  {
+    "id": "028",
+    "slug": "pdf_invoice_reports_cleanup",
+    "description": "Standardize PDF generation for invoices/reports, remove unused PDF dependencies if safe, and ensure RTL Arabic rendering works."
+  },
+  {
+    "id": "029",
+    "slug": "react_vite_mui_bootstrap",
+    "description": "Create React + Vite + Material UI frontend, RTL theme, routing, API client, auth context, error boundaries, and build output to public/."
+  },
+  {
+    "id": "030",
+    "slug": "mui_layout_navigation",
+    "description": "Build professional dashboard layout: responsive sidebar, topbar, breadcrumbs, role-aware menus, mobile drawer, loading states, and empty states."
+  },
+  {
+    "id": "031",
+    "slug": "login_users_roles_ui",
+    "description": "Build login, profile, users, roles, permissions matrix, account enable/disable, password reset, and audit view UI."
+  },
+  {
+    "id": "032",
+    "slug": "products_authors_prices_ui",
+    "description": "Build UI for authors, books/products, product details, price per outlet type, DataGrid, filters, and forms."
+  },
+  {
+    "id": "033",
+    "slug": "outlets_outlet_types_ui",
+    "description": "Build UI for outlet types and outlets with governorate/address/phone/status/credit limit filters."
+  },
+  {
+    "id": "034",
+    "slug": "invoices_ui",
+    "description": "Build invoices UI: list, advanced filters, create invoice flow, item selection, automatic outlet-type prices, totals, details page."
+  },
+  {
+    "id": "035",
+    "slug": "payments_installments_ui",
+    "description": "Build payments UI inside invoice and standalone: add payment, create installment plan, view remaining, overdue, and payment history."
+  },
+  {
+    "id": "036",
+    "slug": "inventory_shipments_ui",
+    "description": "Build inventory receipts, stock ledger, adjustments, stock alerts, shipments, partial shipment status, and shipment items UI."
+  },
+  {
+    "id": "037",
+    "slug": "reports_exports_ui",
+    "description": "Build dashboard/reports/excel/pdf export UI with cards, charts, filters, and permission-aware actions."
+  },
+  {
+    "id": "038",
+    "slug": "legacy_ui_deprecation",
+    "description": "After new MUI screens are verified, deprecate old HTML/SweetAlert-heavy pages, keep fallback only if necessary, and clean routes/assets."
+  },
+  {
+    "id": "039",
+    "slug": "test_suite_and_quality_gate",
+    "description": "Add automated tests for auth/RBAC/pricing/invoices/payments/inventory/reports plus lint/build checks and API smoke tests."
+  },
+  {
+    "id": "040",
+    "slug": "directadmin_deploy_docs_final_verify",
+    "description": "Finalize DirectAdmin single Node app deployment docs, build scripts, smoke test checklist, final verification report, and handoff notes."
+  },
+  {
+    "id": "041",
+    "slug": "fresh_database_reset_super_admin_only",
+    "description": "Hard reset SQLite for fresh production start. Seed permissions and a single super_admin account only; no demo data, no staff, no outlet types, no books, no outlets, no invoices."
+  },
+  {
+    "id": "042",
+    "slug": "flatten_server_structure_no_src",
+    "description": "Refactor backend from server/src/* to simpler server/* paths. Update app.js, scripts, package scripts, tests, imports, and docs. Keep one Node.js monolith deployment."
+  },
+  {
+    "id": "043",
+    "slug": "remove_old_identity_visual_system",
+    "description": "Remove old warehouse/bookstore identity, legacy colors, and inconsistent branding from the React UI. Move app name/brand to configurable settings and create a clean neutral professional visual baseline."
+  },
+  {
+    "id": "044",
+    "slug": "material_light_dark_theme_overhaul",
+    "description": "Build a premium Material UI theme system with light/dark mode, RTL tokens, typography, spacing, elevations, form/table/card standards, and persistent mode toggle."
+  },
+  {
+    "id": "045",
+    "slug": "dashboard_redesign_executive_experience",
+    "description": "Replace the current weak dashboard with a professional executive dashboard: KPIs, quick actions, charts/insights, recent activity, alerts, and responsive layout."
+  },
+  {
+    "id": "046",
+    "slug": "navigation_information_architecture_polish",
+    "description": "Rebuild sidebar/topbar navigation into clear grouped sections for operations/catalog/finance/inventory/reports/admin with role-aware visibility and mobile usability."
+  },
+  {
+    "id": "047",
+    "slug": "forms_tables_dialog_cleanup_ux",
+    "description": "Reduce dialog-heavy flows. Convert major create/edit/detail flows to pages or drawers. Standardize DataGrid filters, empty states, loading states, validations, confirmations, and snackbars."
+  },
+  {
+    "id": "048",
+    "slug": "fresh_start_quality_smoke_verification",
+    "description": "Run full fresh-start verification: db reset, super-admin login, CRUD smoke paths, light/dark toggle, build, tests, lint, API health, and DirectAdmin deploy readiness."
+  },
+  {
+    "id": "049",
+    "slug": "directadmin_deploy_docs_final_verify",
+    "description": "Finalize simple deployment docs after the new structure and UI reset: one Node app, React build into public, storage safety, env, npm commands, restart, and handoff notes."
+  },
+  {
+    "id": "050",
+    "slug": "login_session_sidebar_layout_hotfix",
+    "description": "Fix the post-login refresh bug, normalize auth/user permission hydration, and correct RTL sidebar/topbar/content layout positioning."
+  },
+  {
+    "id": "051",
+    "slug": "professional_material_shell_rebuild",
+    "description": "Replace the current weak shell with a premium Material Design style app shell: right sidebar, topbar, content grid, responsive drawer, grouped navigation, active states, and polished spacing."
+  },
+  {
+    "id": "052",
+    "slug": "egypt_currency_timezone_localization",
+    "description": "Standardize all money as Egyptian Pound and all displayed dates/times as Egypt time, with shared server/client formatting utilities and tests."
+  },
+  {
+    "id": "053",
+    "slug": "finance_balance_engine_egp",
+    "description": "Rebuild the legacy balance concept as an advanced finance ledger connected to invoices, payments, credit limits, and manual adjustments in EGP."
+  },
+  {
+    "id": "054",
+    "slug": "finance_balance_ui_dashboard_history",
+    "description": "Add professional finance balance cards, history tables, manual adjustment UI, and dashboard financial overview using the new balance engine."
+  },
+  {
+    "id": "055",
+    "slug": "notifications_engine_legacy_plus",
+    "description": "Restore and upgrade legacy stock/store-limit notifications into a unified advanced notification engine for stock, credit limits, invoices, payments, shipments, and system events."
+  },
+  {
+    "id": "056",
+    "slug": "notifications_ui_center_badges",
+    "description": "Add a polished notification center, topbar badge, dashboard alerts, unread/read/resolved workflow, filters, and action links."
+  },
+  {
+    "id": "057",
+    "slug": "legacy_feature_parity_merge_audit",
+    "description": "Compare the old repo behavior with the modern app, document all remaining functional gaps, and open/implement only critical parity fixes needed for a complete professional system."
+  },
+  {
+    "id": "058",
+    "slug": "dashboard_executive_ops_finance_perfection",
+    "description": "Rebuild the dashboard as a high-value operations + finance command center with KPIs, alerts, cash/receivables, stock risk, latest invoices, payments, and quick actions."
+  },
+  {
+    "id": "059",
+    "slug": "business_flow_integrity_e2e",
+    "description": "Verify and fix connected flows across outlet types, outlets, products, prices, inventory receipts, invoices, payments, balances, shipments, notifications, and reports."
+  },
+  {
+    "id": "060",
+    "slug": "final_visual_quality_deploy_gate",
+    "description": "Run final quality gate for UI polish, light/dark mode, responsive layout, EGP/Egypt time, finance, notifications, tests, build, and simple DirectAdmin deployment."
+  },
+  {
+    "id": "061",
+    "slug": "unified_design_system_contract",
+    "description": "Convert `agent_pack/docs/design.md` into the active design contract for the repo and prepare the frontend structure needed to apply it."
+  },
+  {
+    "id": "062",
+    "slug": "frontend_style_inventory_line_by_line",
+    "description": "Create a concrete line-by-line frontend style debt inventory before refactoring pages."
+  },
+  {
+    "id": "063",
+    "slug": "css_extraction_no_inline_styles",
+    "description": "Remove inline CSS and move styles into structured CSS files."
+  },
+  {
+    "id": "064",
+    "slug": "rtl_layout_sidebar_no_refresh_fix",
+    "description": "Fix the login/session/sidebar issue and rebuild the RTL layout distribution."
+  },
+  {
+    "id": "065",
+    "slug": "material_shell_light_dark_perfection",
+    "description": "Create a polished Google Material-inspired app shell with Light/Dark mode."
+  },
+  {
+    "id": "066",
+    "slug": "single_ar_translation_json",
+    "description": "Move UI labels to one Arabic JSON dictionary."
+  },
+  {
+    "id": "067",
+    "slug": "forms_fields_labels_spacing_overhaul",
+    "description": "Fix all form fields, labels, drawers, and cramped layouts."
+  },
+  {
+    "id": "068",
+    "slug": "entity_drawers_dialogs_professional_ui",
+    "description": "Standardize side drawers and confirmation dialogs."
+  },
+  {
+    "id": "069",
+    "slug": "dashboard_command_center_redesign",
+    "description": "Rebuild Dashboard as a professional operations + finance command center."
+  },
+  {
+    "id": "070",
+    "slug": "author_accounts_invoice_scope",
+    "description": "Complete author account logic."
+  },
+  {
+    "id": "071",
+    "slug": "outlet_accounts_invoice_scope",
+    "description": "Add outlet accounts."
+  },
+  {
+    "id": "072",
+    "slug": "balance_finance_ledger_full_reconciliation",
+    "description": "Make balance/finance system complete, auditable, and tied to invoices/payments."
+  },
+  {
+    "id": "073",
+    "slug": "payments_installments_shipping_logic_integrity",
+    "description": "Verify and complete cash/deferred/installments/shipping logic."
+  },
+  {
+    "id": "074",
+    "slug": "inventory_receipts_stock_ledger_integrity",
+    "description": "Make inventory, receipts, invoice stock deduction, and adjustments fully reliable."
+  },
+  {
+    "id": "075",
+    "slug": "notifications_legacy_plus_advanced_rules",
+    "description": "Bring back old notification value and expand it professionally."
+  },
+  {
+    "id": "076",
+    "slug": "pricing_outlets_products_end_to_end",
+    "description": "Verify product pricing by outlet type and invoice snapshots end-to-end."
+  },
+  {
+    "id": "077",
+    "slug": "legacy_feature_parity_deep_audit",
+    "description": "Ensure the new platform covers the old system and adds the requested upgrades."
+  },
+  {
+    "id": "078",
+    "slug": "style_quality_gate_script",
+    "description": "Add automated style/design checks to prevent regressions."
+  },
+  {
+    "id": "079",
+    "slug": "visual_regression_manual_qa_pack",
+    "description": "Create a practical visual QA checklist and fix high-priority visual defects found."
+  },
+  {
+    "id": "080",
+    "slug": "final_business_design_deploy_gate",
+    "description": "Run the final gate after the new design and logic steps."
+  }
+]

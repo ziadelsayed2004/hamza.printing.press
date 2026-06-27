@@ -1,0 +1,81 @@
+/* RTL Layout & Text Alignment Rules */
+html {
+  direction: rtl;
+}
+
+body {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Force standard elements to right-align in RTL context */
+.text-right {
+  text-align: right;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Technical values, SKUs, invoice codes, phone numbers, emails, etc. */
+.ltr-value {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: plaintext !important;
+  display: inline-block;
+}
+
+/* Material UI Component adjustments for RTL if any custom selectors are needed */
+.MuiTableCell-root {
+  text-align: right !important;
+}
+
+.MuiFormLabel-root {
+  right: 14px;
+  left: auto !important;
+  transform-origin: top right !important;
+}
+
+/* .MuiInputLabel-shrink {
+  transform: translate(14px, -9px) scale(0.75) !important;
+} */
+
+.MuiOutlinedInput-notchedOutline {
+  text-align: right !important;
+}
+
+.MuiAutocomplete-endAdornment {
+  right: auto !important;
+  left: 9px !important;
+}
+
+/* Select dropdowns: prevent collapsing when empty */
+.MuiSelect-select.MuiInputBase-input {
+  min-width: 140px !important;
+}
+
+/* Date/datetime fields: force LTR value display and prevent label overlap */
+input[type="date"].MuiInputBase-input,
+input[type="datetime-local"].MuiInputBase-input {
+  text-align: left !important;
+  direction: ltr !important;
+  /* Push the date value to the left so it doesn't overlap with the RTL label on the right */
+  padding-right: 8px !important;
+}
+
+/* Force the shrunk label on date fields to stay above the border (notch area) */
+.MuiFormControl-root:has(input[type="date"]) .MuiInputLabel-root,
+.MuiFormControl-root:has(input[type="datetime-local"]) .MuiInputLabel-root {
+  transform: translate(-14px, -9px) scale(0.75) !important;
+  pointer-events: none;
+}
+
+/* Ensure the notched outline legend (label cutout) is wide enough for the label text */
+.MuiFormControl-root:has(input[type="date"]) .MuiOutlinedInput-notchedOutline legend,
+.MuiFormControl-root:has(input[type="datetime-local"]) .MuiOutlinedInput-notchedOutline legend {
+  max-width: 100% !important;
+}

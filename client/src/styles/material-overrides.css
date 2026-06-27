@@ -1,0 +1,43 @@
+/* Material UI global class overrides to align with Hamza Printing Press system design */
+
+/* Force cairo font on all material ui components */
+.MuiTypography-root,
+.MuiButton-root,
+.MuiInputBase-root,
+.MuiFormLabel-root,
+.MuiTableCell-root,
+.MuiTab-root,
+.MuiMenuItem-root,
+.MuiListItemText-root {
+  font-family: var(--app-font-family) !important;
+}
+
+/* Align inputs to right in RTL */
+.MuiInputBase-input {
+  text-align: right !important;
+}
+
+/* LTR technical value fields (e.g. email, quantity/SKU, amount number inputs) */
+.MuiInputBase-input.ltr-value {
+  text-align: left !important;
+}
+
+/* Outlined Input overrides */
+.MuiOutlinedInput-root {
+  border-radius: var(--radius-xs) !important;
+}
+
+/* Active sidebar element rounding */
+.sidebar-active-item {
+  background-color: var(--color-primary-soft) !important;
+  color: var(--color-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Flat material cards matching our design contract */
+.flat-card {
+  background-color: var(--color-surface) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-xs) !important;
+  box-shadow: none !important;
+}
