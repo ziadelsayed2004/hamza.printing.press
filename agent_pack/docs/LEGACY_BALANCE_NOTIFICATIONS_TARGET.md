@@ -33,8 +33,8 @@ Do NOT copy the old implementation directly. Rebuild it as a proper finance ledg
 ### Required balance definitions
 
 - **Cash/Collected Balance**: confirmed paid money from invoice payments plus manual deposits minus withdrawals/reversals.
-- **Receivables/Pending Balance**: invoice remaining amount for active unpaid/partially paid/deferred/installment invoices.
-- **Overdue Balance**: due installments or invoices past due date.
+- **Receivables/Pending Balance**: invoice remaining amount for active unpaid/partially paid invoices invoices.
+- **Overdue Balance**: due collections or invoices past due date.
 - **Outlet Balance**: receivable amount grouped by outlet.
 - **Governorate Balance**: receivable amount grouped by governorate.
 - **Outlet Type Balance**: receivable amount grouped by outlet type.
@@ -84,7 +84,7 @@ Create one professional notification engine:
 - `stock_low`
 - `outlet_credit_limit_exceeded`
 - `invoice_overdue`
-- `installment_due`
+- `collection_unsupplied`
 - `payment_received`
 - `shipment_partial`
 - `shipment_delayed`

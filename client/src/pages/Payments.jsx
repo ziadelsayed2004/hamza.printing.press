@@ -159,18 +159,7 @@ export const Payments = () => {
     }
   };
 
-  const getInstallmentStatusChip = (status) => {
-    switch (status) {
-      case 'paid':
-        return <Chip label="مدفوع" color="success" size="small" />;
-      case 'partially_paid':
-        return <Chip label="مدفوع جزئياً" color="warning" size="small" />;
-      case 'overdue':
-        return <Chip label="متأخر" color="error" size="small" />;
-      default:
-        return <Chip label="غير مدفوع" variant="outlined" size="small" />;
-    }
-  };
+
 
   // ---- Add Payment ----
 
@@ -309,15 +298,14 @@ export const Payments = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          {hasPermission('payments.create') && (
+          {hasPermission('payments.supply_batch') && payments.filter(p => p.supply_status !== 'supplied').length > 0 && (
             <Button
-              variant="outlined"
-              color="warning"
-              startIcon={<SyncIcon />}
-              onClick={handleCheckOverdue}
-              disabled={overdueChecking}
+              variant="contained"
+              color="success"
+              startIcon={<CheckCircleIcon />}
+              onClick={handleBatchSupply}
             >
-              {overdueChecking ? 'جاري الفحص...' : 'فحص الأقساط المتأخرة'}
+              توريد الدفعات المعلقة ({payments.filter(p => p.supply_status !== 'supplied').length})
             </Button>
           )}
 
@@ -454,7 +442,8 @@ export const Payments = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>المرجع</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>سجّلت بواسطة</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 130 }}>خيارات</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>حالة التوريد</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 160 }}>خيارات</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -484,8 +473,15 @@ export const Payments = () => {
                       {row.reference_number || '-'}
                     </TableCell>
                     <TableCell>{row.user_full_name || 'غير معروف'}</TableCell>
-                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                     <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.notes || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {row.supply_status === 'supplied' ? (
+                        <Chip label="مورد للشركة" color="success" size="small" />
+                      ) : (
+                        <Chip label="معلق طرف المندوب" color="warning" size="small" variant="outlined" />
+                      )}
                     </TableCell>
                     <TableCell align="center">
                       <Tooltip title="عرض تفاصيل تحصيلات الفاتورة">
@@ -493,6 +489,22 @@ export const Payments = () => {
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+
+                      {hasPermission('payments.mark_supplied') && row.supply_status !== 'supplied' && (
+                        <Tooltip title="تأكيد توريد المقبوضات للشركة">
+                          <IconButton color="success" onClick={() => handleSupplyPayment(row.id)}>
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+
+                      {hasPermission('payments.reverse') && row.supply_status === 'supplied' && (
+                        <Tooltip title="إلغاء التوريد المالي">
+                          <IconButton color="warning" onClick={() => handleReverseSupply(row.id)}>
+                            <UndoIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
 
                       {hasPermission('payments.create') && (
                         <Tooltip title="تسجيل دفعة إضافية لنفس الفاتورة">
@@ -790,7 +802,7 @@ export const Payments = () => {
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            تفاصيل تحصيلات وأقساط الفاتورة
+            تفاصيل تحصيلات الفاتورة
           </Typography>
           <Button onClick={() => setOpenMetrics(false)} variant="outlined" size="small" color="inherit">إغلاق</Button>
         </Box>
@@ -856,61 +868,7 @@ export const Payments = () => {
                 </Typography>
               </Box>
 
-              {metricsData.overdueCount > 0 && (
-                <Alert severity="error" icon={<WarningIcon />} sx={{ mb: 3 }}>
-                  يوجد {metricsData.overdueCount} قسط/أقساط متأخرة عن موعد الاستحقاق.
-                </Alert>
-              )}
 
-              {/* Installments Table */}
-              {metricsData.installments && metricsData.installments.length > 0 ? (
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    جدول الأقساط ({metricsData.installments.length} قسط)
-                  </Typography>
-                  <TableContainer component={Paper}>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold' }}>رقم القسط</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الاستحقاق</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ المطلوب</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ المسدد</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {metricsData.installments.map((inst) => (
-                          <TableRow
-                            key={inst.id}
-                            sx={{
-                              backgroundColor: inst.status === 'overdue' ? 'rgba(231, 76, 60, 0.06)' : 'inherit'
-                            }}
-                          >
-                            <TableCell>{inst.installment_number}</TableCell>
-                            <TableCell>
-                              {formatEgyptDate(inst.due_date)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                              {formatCurrencyEGP(inst.amount)}
-                            </TableCell>
-                            <TableCell align="right" sx={{ color: 'success.main', fontWeight: 500 }}>
-                              {formatCurrencyEGP(inst.paid_amount)}
-                            </TableCell>
-                            <TableCell>{getInstallmentStatusChip(inst.status)}</TableCell>
-                            <TableCell sx={{ color: 'text.secondary' }}>{inst.notes || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-              ) : (
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  لا يوجد جدول أقساط مُعدّ لهذه الفاتورة. يمكن إعداد جدول الأقساط من صفحة تفاصيل الفاتورة.
-                </Alert>
-              )}
 
               {/* Quick-add payment button */}
               {hasPermission('payments.create') && metricsData.remainingAmount > 0 && (

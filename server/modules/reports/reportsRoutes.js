@@ -3,13 +3,14 @@ const router = express.Router();
 const reportsService = require('./reportsService');
 const usersService = require('../users/usersService');
 const authorsService = require('../authors/authorsService');
+const outletsService = require('../outlets/outletsService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 
 // Helper to get restricted author IDs if the user is a linked author
 async function getFilterAuthorIds(req) {
   const userId = req.session.user.id;
   const userRoles = await usersService.getUserRoles(userId);
-  const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+  const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'readonly_viewer'].includes(r.name));
 
   if (!isElevated) {
     const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
@@ -45,11 +46,21 @@ router.get('/financials/by-outlet', requireAuth, checkPermission('reports.view')
   const { startDate = '', endDate = '', governorate = '', outletTypeId = null } = req.query;
 
   try {
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'readonly_viewer'].includes(r.name));
+
+    let filterOutletIds = null;
+    if (!isElevated) {
+      filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
+    }
+
     const list = await reportsService.getBalancesByOutlet({
       startDate,
       endDate,
       governorate,
-      outletTypeId: outletTypeId ? parseInt(outletTypeId, 10) : null
+      outletTypeId: outletTypeId ? parseInt(outletTypeId, 10) : null,
+      outletIds: filterOutletIds
     });
     res.status(200).json(list);
   } catch (err) {

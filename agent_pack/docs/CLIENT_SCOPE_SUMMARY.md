@@ -11,7 +11,7 @@ The new scope is not just a visual redesign. It includes:
 - Adding author accounts.
 - Adding dynamic outlet types.
 - Adding product prices by outlet type.
-- Rebuilding invoices, payments, installments, remaining calculations.
+- Rebuilding invoices, payments, partial/full collections, remaining calculations.
 - Adding inventory receipts and ledger.
 - Adding advanced filters, reports, Excel, PDF.
 - Keeping deployment simple as one Node app.

@@ -1,0 +1,80 @@
+const request = require('supertest');
+const db = require('../../db');
+const app = require('../../../app');
+const usersService = require('../users/usersService');
+const rolesService = require('../roles/rolesService');
+const fs = require('fs');
+
+describe('Admin API Backup Integration Tests', () => {
+  let adminUser;
+  let unauthorizedUser;
+
+  beforeAll(async () => {
+    // 1. Retrieve seeded roles
+    const roles = await rolesService.getAllRoles();
+    const adminRole = roles.find(r => r.name === 'super_admin');
+    const viewerRole = roles.find(r => r.name === 'readonly_viewer');
+
+    if (!adminRole || !viewerRole) {
+      throw new Error('Required roles (super_admin, readonly_viewer) not found in the database.');
+    }
+
+    // 2. Create test users
+    const rand = Math.floor(Math.random() * 100000);
+    const adminUsername = `bk_adm_${rand}`;
+    const unauthUsername = `bk_unauth_${rand}`;
+
+    const adminUserObj = await usersService.createUser({
+      username: adminUsername,
+      password: 'password123',
+      fullName: 'Backup Administrator'
+    });
+    await usersService.assignRole(adminUserObj.id, adminRole.id);
+    adminUser = { id: adminUserObj.id, username: adminUsername };
+
+    const unauthorizedUserObj = await usersService.createUser({
+      username: unauthUsername,
+      password: 'password123',
+      fullName: 'Unauthorized Viewer'
+    });
+    await usersService.assignRole(unauthorizedUserObj.id, viewerRole.id);
+    unauthorizedUser = { id: unauthorizedUserObj.id, username: unauthUsername };
+  });
+
+  afterAll(async () => {
+    if (adminUser) {
+      await db.run('DELETE FROM user_roles WHERE user_id = ?', [adminUser.id]);
+      await db.run('DELETE FROM users WHERE id = ?', [adminUser.id]);
+    }
+    if (unauthorizedUser) {
+      await db.run('DELETE FROM user_roles WHERE user_id = ?', [unauthorizedUser.id]);
+      await db.run('DELETE FROM users WHERE id = ?', [unauthorizedUser.id]);
+    }
+    await new Promise((resolve) => {
+      db.db.close(resolve);
+    });
+  });
+
+  it('should block unauthorized backup request', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/login').send({ username: unauthorizedUser.username, password: 'password123' });
+    
+    const res = await agent.post('/api/admin/backup');
+    expect(res.status).toBe(403);
+  });
+
+  it('should allow authorized backup request', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/login').send({ username: adminUser.username, password: 'password123' });
+
+    const res = await agent.post('/api/admin/backup');
+    expect(res.status).toBe(200);
+    expect(res.body.message).toContain('backup');
+    expect(res.body.filename).toBeDefined();
+
+    // Cleanup generated backup file if exists
+    if (res.body.path && fs.existsSync(res.body.path)) {
+      fs.unlinkSync(res.body.path);
+    }
+  });
+});

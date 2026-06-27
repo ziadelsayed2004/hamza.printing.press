@@ -1,7 +1,7 @@
 # Step 021: Payments Cash Deferred Installments
 
 ## Goal
-Implement payments: cash, deferred, installments, mixed; invoice_payments; installment schedule; paid/remaining auto-calculation.
+Implement payments: unpaid, partial collection, full collection, supplied/not supplied; invoice_payments; installment schedule; paid/remaining auto-calculation.
 
 ## Context
 This project is being modernized from a simple Node/Express + static HTML/Vanilla JS system into a professional single-deployment platform with Express APIs and a React/Vite/Material UI dashboard.
@@ -37,3 +37,6 @@ Production must remain one Node.js app. The frontend build must be served by Exp
 
 ## Stop rule
 Stop immediately after this one step and reporting are complete.
+
+## Current correction
+This old completed step is superseded by the active business corrections in steps 081–095. Do not reintroduce installments or imports.

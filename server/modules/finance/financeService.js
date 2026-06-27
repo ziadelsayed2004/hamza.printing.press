@@ -75,43 +75,88 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
 }
 
 /**
- * Fetch overview finance metrics.
+ * Fetch overview finance metrics in Egypt timezone and EGP.
  */
-async function getFinanceSummary() {
-  // Sync overdue installments
-  await paymentsService.checkOverdueInstallments();
-
-  const totalInvoicesRow = await db.get(`
+async function getFinanceSummary(outletIds = null) {
+  let totalInvoicesSql = `
     SELECT COALESCE(SUM(total_price), 0) as total 
     FROM invoices 
     WHERE payment_status != 'cancelled'
-  `);
-
-  const ledgerRow = await db.get(`
+  `;
+  let ledgerSql = `
     SELECT 
       COALESCE(SUM(cash_amount), 0) as totalCollected,
       COALESCE(SUM(receivable_amount), 0) as totalReceivables
     FROM finance_ledger_entries
-  `);
+    WHERE 1=1
+  `;
 
-  const overdueRow = await db.get(`
-    SELECT COALESCE(SUM(amount - paid_amount), 0) as totalOverdue 
-    FROM payment_installments 
-    WHERE status = 'overdue' OR (due_date < datetime('now') AND status IN ('unpaid', 'partially_paid'))
-  `);
+  const params = [];
+  if (outletIds && outletIds.length > 0) {
+    const placeholders = outletIds.map(() => '?').join(',');
+    totalInvoicesSql += ` AND outlet_id IN (${placeholders})`;
+    ledgerSql += ` AND outlet_id IN (${placeholders})`;
+    params.push(...outletIds);
+  } else if (outletIds) {
+    totalInvoicesSql += ` AND 0=1`;
+    ledgerSql += ` AND 0=1`;
+  }
+
+  let suppliedSql = `
+    SELECT COALESCE(SUM(p.amount), 0) as total
+    FROM invoice_payments p
+    JOIN invoices i ON i.id = p.invoice_id
+    WHERE i.payment_status != 'cancelled' AND p.supply_status = 'supplied'
+  `;
+  let unsuppliedSql = `
+    SELECT COALESCE(SUM(p.amount), 0) as total
+    FROM invoice_payments p
+    JOIN invoices i ON i.id = p.invoice_id
+    WHERE i.payment_status != 'cancelled' AND p.supply_status = 'not_supplied'
+  `;
+  const filterParams = [...params];
+  if (outletIds && outletIds.length > 0) {
+    const placeholders = outletIds.map(() => '?').join(',');
+    suppliedSql += ` AND i.outlet_id IN (${placeholders})`;
+    unsuppliedSql += ` AND i.outlet_id IN (${placeholders})`;
+  } else if (outletIds) {
+    suppliedSql += ` AND 0=1`;
+    unsuppliedSql += ` AND 0=1`;
+  }
+
+  const invoiceRow = await db.get(totalInvoicesSql, params);
+  const ledgerRow = await db.get(ledgerSql, params);
+  const suppliedRow = await db.get(suppliedSql, filterParams);
+  const unsuppliedRow = await db.get(unsuppliedSql, filterParams);
+
+  const totalInvoices = invoiceRow.total;
+  const totalCollected = ledgerRow.totalCollected;
+  const totalReceivables = ledgerRow.totalReceivables;
+  const suppliedBalance = suppliedRow.total;
+  const unsuppliedBalance = unsuppliedRow.total;
 
   return {
-    totalInvoices: totalInvoicesRow.total,
-    totalCollected: ledgerRow.totalCollected,
-    totalReceivables: ledgerRow.totalReceivables,
-    totalOverdue: overdueRow.totalOverdue
+    totalInvoices,
+    totalCollected,
+    totalReceivables,
+    totalOverdue: 0,
+
+    invoice_total: totalInvoices,
+    collected_total: totalCollected,
+    pending_balance: totalReceivables,
+    pendingBalance: totalReceivables,
+    actualBalance: totalCollected,
+    suppliedBalance,
+    unsuppliedBalance,
+    supplied_balance: suppliedBalance,
+    unsupplied_balance: unsuppliedBalance
   };
 }
 
 /**
  * Retrieve finance ledger entries history.
  */
-async function getLedgerHistory({ limit = 50, offset = 0, outletId = null, startDate = '', endDate = '', entryType = '' } = {}) {
+async function getLedgerHistory({ limit = 50, offset = 0, outletId = null, startDate = '', endDate = '', entryType = '', outletIds = null } = {}) {
   let sql = `
     SELECT fle.*, o.name as outlet_name, u.full_name as user_full_name
     FROM finance_ledger_entries fle
@@ -137,6 +182,12 @@ async function getLedgerHistory({ limit = 50, offset = 0, outletId = null, start
     sql += ` AND fle.entry_type = ?`;
     params.push(entryType);
   }
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND fle.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
+    params.push(...outletIds);
+  } else if (outletIds) {
+    sql += ` AND 0=1`;
+  }
 
   sql += ` ORDER BY fle.created_at DESC, fle.id DESC LIMIT ? OFFSET ?`;
   params.push(limit, offset);
@@ -147,22 +198,48 @@ async function getLedgerHistory({ limit = 50, offset = 0, outletId = null, start
 /**
  * Group balances by outlet.
  */
-async function getBalancesByOutlet() {
-  const sql = `
+async function getBalancesByOutlet(outletIds = null) {
+  let sql = `
     SELECT 
       o.id, 
       o.name, 
       o.governorate, 
       ot.name as outlet_type_name,
-      COALESCE(SUM(fle.cash_amount), 0) as collected_balance,
-      COALESCE(SUM(fle.receivable_amount), 0) as receivable_balance
+      o.credit_limit
     FROM outlets o
     JOIN outlet_types ot ON ot.id = o.outlet_type_id
-    LEFT JOIN finance_ledger_entries fle ON fle.outlet_id = o.id
-    GROUP BY o.id
-    ORDER BY o.name ASC
+    WHERE 1=1
   `;
-  return await db.all(sql);
+  const params = [];
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND o.id IN (${outletIds.map(() => '?').join(',')})`;
+    params.push(...outletIds);
+  } else if (outletIds) {
+    sql += ` AND 0=1`;
+  }
+  
+  sql += ` ORDER BY o.name ASC`;
+  const outlets = await db.all(sql, params);
+
+  const results = [];
+  for (const outlet of outlets) {
+    const summary = await getFinanceSummary([outlet.id]);
+    results.push({
+      id: outlet.id,
+      name: outlet.name,
+      governorate: outlet.governorate,
+      outlet_type_name: outlet.outlet_type_name,
+      credit_limit: outlet.credit_limit,
+      invoice_total: summary.totalInvoices,
+      collected_total: summary.totalCollected,
+      pending_balance: summary.pendingBalance,
+      supplied_balance: summary.suppliedBalance,
+      unsupplied_balance: summary.unsuppliedBalance,
+      collected_balance: summary.totalCollected,
+      receivable_balance: summary.totalReceivables
+    });
+  }
+  return results;
 }
 
 /**
@@ -201,11 +278,61 @@ async function getBalancesByOutletType() {
   return await db.all(sql);
 }
 
+/**
+ * Generate per-outlet statement of account in chronological order.
+ */
+async function getOutletStatement(outletId) {
+  const outlet = await db.get('SELECT * FROM outlets WHERE id = ?', [outletId]);
+  if (!outlet) {
+    throw new Error(`Outlet with ID ${outletId} does not exist`);
+  }
+
+  const entries = await db.all(`
+    SELECT fle.*, u.full_name as user_full_name
+    FROM finance_ledger_entries fle
+    LEFT JOIN users u ON u.id = fle.created_by
+    WHERE fle.outlet_id = ?
+    ORDER BY fle.created_at ASC, fle.id ASC
+  `, [outletId]);
+
+  let runningReceivable = 0;
+  let runningCash = 0;
+
+  const statement = entries.map(entry => {
+    runningReceivable += entry.receivable_amount;
+    runningCash += entry.cash_amount;
+    return {
+      id: entry.id,
+      entry_type: entry.entry_type,
+      reference_type: entry.reference_type,
+      reference_id: entry.reference_id,
+      cash_amount: entry.cash_amount,
+      receivable_amount: entry.receivable_amount,
+      notes: entry.notes,
+      created_by: entry.created_by,
+      user_full_name: entry.user_full_name,
+      created_at: entry.created_at,
+      running_receivable: parseFloat(runningReceivable.toFixed(2)),
+      running_cash: parseFloat(runningCash.toFixed(2))
+    };
+  });
+
+  return {
+    outlet: {
+      id: outlet.id,
+      name: outlet.name,
+      governorate: outlet.governorate
+    },
+    statement
+  };
+}
+
 module.exports = {
   recordManualAdjustment,
   getFinanceSummary,
   getLedgerHistory,
   getBalancesByOutlet,
   getBalancesByGovernorate,
-  getBalancesByOutletType
+  getBalancesByOutletType,
+  getOutletStatement
 };

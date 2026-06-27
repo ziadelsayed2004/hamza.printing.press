@@ -10,7 +10,7 @@ Bring back old notification value and expand it professionally.
   - low stock
   - outlet credit limit exceeded
   - invoice overdue
-  - installment due
+  - collected-not-supplied and pending-balance warning
   - payment received
   - partial shipment
   - missing product price for outlet type

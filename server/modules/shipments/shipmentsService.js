@@ -1,4 +1,5 @@
 const db = require('../../db');
+const notificationsService = require('../notifications/notificationsService');
 
 /**
  * Recalculate invoice shipping status based on non-cancelled shipments.
@@ -74,6 +75,26 @@ async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
       INSERT INTO invoice_status_history (invoice_id, status_type, old_status, new_status, changed_by, notes)
       VALUES (?, 'shipping', ?, ?, ?, ?)
     `, [invoiceId, invoice.shipping_status, newStatus, userId, `Shipping status updated to ${newStatus}.`]);
+  }
+
+  // Trigger partial shipment notification checks
+  try {
+    if (newStatus === 'partially_shipped') {
+      await notificationsService.createOrUpdateNotification({
+        category: 'shipment_partial',
+        severity: 'warning',
+        title: 'شحنة جزئية للفاتورة',
+        message: `تم شحن الفاتورة رقم ${invoiceId} شحناً جزئياً.`,
+        source_type: 'invoice',
+        source_id: invoiceId,
+        dedupe_key: `shipment_partial:${invoiceId}`,
+        action_url: `/operations/shipments`
+      });
+    } else {
+      await notificationsService.resolveNotificationByDedupeKey(`shipment_partial:${invoiceId}`);
+    }
+  } catch (e) {
+    console.error('Error triggering partial shipment notification checks:', e);
   }
 }
 
@@ -246,7 +267,7 @@ async function updateShipmentStatus(shipmentId, { status, notes = '', userId = n
 /**
  * Retrieve shipments list.
  */
-async function getShipments({ limit = 50, offset = 0, invoiceId = null, status = null } = {}) {
+async function getShipments({ limit = 50, offset = 0, invoiceId = null, status = null, outletIds = null } = {}) {
   let sql = `
     SELECT s.*, i.invoice_number, u.full_name as user_full_name
     FROM shipments s
@@ -264,6 +285,13 @@ async function getShipments({ limit = 50, offset = 0, invoiceId = null, status =
   if (status) {
     sql += ` AND s.status = ?`;
     params.push(status);
+  }
+
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND i.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
+    params.push(...outletIds);
+  } else if (outletIds) {
+    sql += ` AND 0=1`;
   }
 
   sql += ` ORDER BY s.created_at DESC LIMIT ? OFFSET ?`;

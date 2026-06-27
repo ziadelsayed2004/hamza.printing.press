@@ -1,16 +1,10 @@
-/* Material UI global class overrides to align with Hamza Printing Press system design */
+/* 
+  Material UI global class overrides to align with Bookstore Manager system design.
+  NOTE: Global '!important' rules here override dynamically injected MUI styles in index.html.
+  Future Cleanup Ticket: Move component overrides into ThemeConfig.jsx 'components' block.
+*/
 
-/* Force cairo font on all material ui components */
-.MuiTypography-root,
-.MuiButton-root,
-.MuiInputBase-root,
-.MuiFormLabel-root,
-.MuiTableCell-root,
-.MuiTab-root,
-.MuiMenuItem-root,
-.MuiListItemText-root {
-  font-family: var(--app-font-family) !important;
-}
+
 
 /* Align inputs to right in RTL */
 .MuiInputBase-input {

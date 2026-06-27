@@ -1,4 +1,9 @@
-/* RTL Layout & Text Alignment Rules */
+/* 
+  RTL Layout & Text Alignment Rules.
+  NOTE: '!important' rules here force RTL layout directions on inputs, tables, 
+  and date widgets to override default browser/MUI styles.
+  Future Cleanup Ticket: Replace static overrides with styled-components or RTL plugins.
+*/
 html {
   direction: rtl;
 }
@@ -32,12 +37,6 @@ body {
 /* Material UI Component adjustments for RTL if any custom selectors are needed */
 .MuiTableCell-root {
   text-align: right !important;
-}
-
-.MuiFormLabel-root {
-  right: 14px;
-  left: auto !important;
-  transform-origin: top right !important;
 }
 
 /* .MuiInputLabel-shrink {

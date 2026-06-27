@@ -26,3 +26,15 @@ Agent Pack موحد لإكمال منصة إدارة الكتب، المنافذ
 - CSS files per component/page.
 - Single Arabic JSON dictionary.
 - One Node.js DirectAdmin deployment.
+
+## Active business correction
+
+The unified pack now follows these active rules:
+
+- No versions/folders like V2/V3; this is one unified agent pack with continuous numbered steps.
+- No installments.
+- No import pipeline.
+- Export-only reporting.
+- Supply-aware finance.
+- Partial invoice shipping by product quantities.
+- Material UI RTL design system without inline styles or `!important` abuse.

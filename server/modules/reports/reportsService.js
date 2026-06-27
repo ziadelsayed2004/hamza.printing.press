@@ -12,7 +12,7 @@ async function getFinancialSummary({ startDate = '', endDate = '', outletId = nu
       COALESCE(SUM(i.discount), 0) as totalDiscount,
       COALESCE(SUM(i.subtotal), 0) as totalSubtotal,
       COALESCE(SUM(CASE WHEN i.payment_type = 'deferred' THEN i.total_price ELSE 0 END), 0) as totalDeferredRemaining,
-      COALESCE(SUM(CASE WHEN i.payment_type = 'installments' THEN i.total_price ELSE 0 END), 0) as totalInstallmentsRemaining,
+      0 as totalInstallmentsRemaining,
       COALESCE(SUM(CASE WHEN i.payment_type = 'cash' THEN i.total_price ELSE 0 END), 0) as totalCashSales
     FROM invoices i
     JOIN outlets o ON o.id = i.outlet_id
@@ -114,6 +114,100 @@ async function getFinancialSummary({ startDate = '', endDate = '', outletId = nu
 
   const ledgerRow = await db.get(ledgerSql, ledgerParams);
 
+  // 3. Calculate supplied & unsupplied payment metrics from invoice_payments table
+  let paymentSql = `
+    SELECT 
+      COALESCE(SUM(CASE WHEN ip.supply_status = 'supplied' THEN ip.amount ELSE 0 END), 0) as totalSupplied,
+      COALESCE(SUM(CASE WHEN ip.supply_status = 'not_supplied' THEN ip.amount ELSE 0 END), 0) as totalUnsupplied
+    FROM invoice_payments ip
+    JOIN invoices i ON i.id = ip.invoice_id
+    JOIN outlets o ON o.id = i.outlet_id
+    WHERE i.payment_status != 'cancelled'
+  `;
+  const paymentParams = [];
+
+  if (authorIds && authorIds.length > 0) {
+    paymentSql += ` AND i.id IN (
+      SELECT ii.invoice_id
+      FROM invoice_items ii
+      JOIN product_authors pa ON pa.product_id = ii.product_id
+      WHERE pa.author_id IN (${authorIds.map(() => '?').join(',')})
+    )`;
+    paymentParams.push(...authorIds);
+  } else if (authorIds) {
+    paymentSql += ` AND 0=1`;
+  }
+
+  if (startDate) {
+    paymentSql += ` AND ip.payment_date >= ?`;
+    paymentParams.push(startDate);
+  }
+  if (endDate) {
+    paymentSql += ` AND ip.payment_date <= ?`;
+    paymentParams.push(endDate);
+  }
+  if (outletId) {
+    paymentSql += ` AND i.outlet_id = ?`;
+    paymentParams.push(outletId);
+  }
+  if (outletTypeId) {
+    paymentSql += ` AND o.outlet_type_id = ?`;
+    paymentParams.push(outletTypeId);
+  }
+  if (governorate) {
+    paymentSql += ` AND o.governorate = ?`;
+    paymentParams.push(governorate);
+  }
+
+  const paymentRow = await db.get(paymentSql, paymentParams);
+
+  // 4. Calculate invoice shipping status counts
+  let shipSql = `
+    SELECT 
+      COALESCE(SUM(CASE WHEN i.shipping_status = 'shipped' OR i.shipping_status = 'delivered' THEN 1 ELSE 0 END), 0) as countShipped,
+      COALESCE(SUM(CASE WHEN i.shipping_status = 'partially_shipped' THEN 1 ELSE 0 END), 0) as countPartiallyShipped,
+      COALESCE(SUM(CASE WHEN i.shipping_status = 'pending' THEN 1 ELSE 0 END), 0) as countNotShipped
+    FROM invoices i
+    JOIN outlets o ON o.id = i.outlet_id
+    WHERE i.payment_status != 'cancelled'
+  `;
+  const shipParams = [];
+
+  if (authorIds && authorIds.length > 0) {
+    shipSql += ` AND i.id IN (
+      SELECT ii.invoice_id
+      FROM invoice_items ii
+      JOIN product_authors pa ON pa.product_id = ii.product_id
+      WHERE pa.author_id IN (${authorIds.map(() => '?').join(',')})
+    )`;
+    shipParams.push(...authorIds);
+  } else if (authorIds) {
+    shipSql += ` AND 0=1`;
+  }
+
+  if (startDate) {
+    shipSql += ` AND i.created_at >= ?`;
+    shipParams.push(startDate);
+  }
+  if (endDate) {
+    shipSql += ` AND i.created_at <= ?`;
+    shipParams.push(endDate);
+  }
+  if (outletId) {
+    shipSql += ` AND i.outlet_id = ?`;
+    shipParams.push(outletId);
+  }
+  if (outletTypeId) {
+    shipSql += ` AND o.outlet_type_id = ?`;
+    shipParams.push(outletTypeId);
+  }
+  if (governorate) {
+    shipSql += ` AND o.governorate = ?`;
+    shipParams.push(governorate);
+  }
+
+  const shipRow = await db.get(shipSql, shipParams);
+
   const totalSales = parseFloat(salesRow.totalSales || 0);
   const totalPaid = parseFloat(ledgerRow.totalCollected || 0);
   const totalRemaining = parseFloat(ledgerRow.totalReceivables || 0);
@@ -126,15 +220,19 @@ async function getFinancialSummary({ startDate = '', endDate = '', outletId = nu
     totalDiscount: parseFloat(salesRow.totalDiscount || 0),
     totalSubtotal: parseFloat(salesRow.totalSubtotal || 0),
     totalDeferredRemaining: parseFloat(salesRow.totalDeferredRemaining || 0),
-    totalInstallmentsRemaining: parseFloat(salesRow.totalInstallmentsRemaining || 0),
-    totalCashSales: parseFloat(salesRow.totalCashSales || 0)
+    totalCashSales: parseFloat(salesRow.totalCashSales || 0),
+    totalSupplied: parseFloat(paymentRow.totalSupplied || 0),
+    totalUnsupplied: parseFloat(paymentRow.totalUnsupplied || 0),
+    countShipped: parseInt(shipRow.countShipped || 0, 10),
+    countPartiallyShipped: parseInt(shipRow.countPartiallyShipped || 0, 10),
+    countNotShipped: parseInt(shipRow.countNotShipped || 0, 10)
   };
 }
 
 /**
  * Get balances grouped by outlet.
  */
-async function getBalancesByOutlet({ startDate = '', endDate = '', governorate = '', outletTypeId = null } = {}) {
+async function getBalancesByOutlet({ startDate = '', endDate = '', governorate = '', outletTypeId = null, outletIds = null } = {}) {
   let sql = `
     SELECT 
       o.id as outletId,
@@ -163,6 +261,10 @@ async function getBalancesByOutlet({ startDate = '', endDate = '', governorate =
     sql += ` AND i.created_at <= ?`;
     params.push(endDate);
   }
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND i.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
+    params.push(...outletIds);
+  }
   sql += `
       GROUP BY i.outlet_id
     ) i_sum ON i_sum.outlet_id = o.id
@@ -184,6 +286,10 @@ async function getBalancesByOutlet({ startDate = '', endDate = '', governorate =
     sql += ` AND fle.created_at <= ?`;
     fleParams.push(endDate);
   }
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND fle.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
+    fleParams.push(...outletIds);
+  }
   sql += `
       GROUP BY fle.outlet_id
     ) fle_sum ON fle_sum.outlet_id = o.id
@@ -198,6 +304,12 @@ async function getBalancesByOutlet({ startDate = '', endDate = '', governorate =
   if (outletTypeId) {
     sql += ` AND o.outlet_type_id = ?`;
     whereParams.push(outletTypeId);
+  }
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND o.id IN (${outletIds.map(() => '?').join(',')})`;
+    whereParams.push(...outletIds);
+  } else if (outletIds) {
+    sql += ` AND 0=1`;
   }
   sql += ` ORDER BY o.name ASC`;
 

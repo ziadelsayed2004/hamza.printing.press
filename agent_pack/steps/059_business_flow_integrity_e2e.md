@@ -18,7 +18,7 @@ Run and fix the full business flow:
 6. Add inventory receipt.
 7. Create invoice for outlet; verify price snapshot and stock movement.
 8. Add payment; verify paid/remaining/finance balance.
-9. Create deferred/installment scenario; verify receivables and overdue logic.
+9. Create partial collection and unsupplied collection scenario; verify pending, collected, supplied, and unsupplied balances.
 10. Trigger negative/low stock notification.
 11. Trigger credit-limit notification.
 12. Verify reports/dashboard/export values align.

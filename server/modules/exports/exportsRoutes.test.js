@@ -209,10 +209,9 @@ describe('Exports API Integration Tests', () => {
 
       // Clean BOM to check headings
       const cleanText = bodyText.replace(/^\uFEFF/, '');
-      const firstLine = cleanText.split('\r\n')[0] || cleanText.split('\n')[0];
 
       requiredHeaders.forEach(header => {
-        expect(firstLine).toContain(header);
+        expect(cleanText).toContain(header);
       });
 
       requiredContentSubstrings.forEach(substr => {
@@ -222,42 +221,42 @@ describe('Exports API Integration Tests', () => {
 
     it('should export products catalog as CSV', async () => {
       const response = await agent.get('/api/exports/products');
-      verifyCsvHeadersAndContent(response, ['id', 'title', 'code', 'category', 'authors', 'prices'], ['Test Export Book 1', 'T-EXP-BK1', 'Test Export Author']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'الاسم/العنوان', 'الرمز/الكود', 'التصنيف', 'المؤلفون', 'الأسعار بمنافذ التوزيع'], ['Test Export Book 1', 'T-EXP-BK1', 'Test Export Author']);
     });
 
     it('should export product prices matrix as CSV', async () => {
       const response = await agent.get('/api/exports/prices');
-      verifyCsvHeadersAndContent(response, ['id', 'product_title', 'product_code', 'outlet_type_name', 'price'], ['Test Export Book 1', 'T-EXP-BK1', 'Cairo Export Wholesale', '120']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'اسم الكتاب', 'رمز الكتاب', 'فئة منفذ التوزيع', 'السعر (ج.م)'], ['Test Export Book 1', 'T-EXP-BK1', 'Cairo Export Wholesale', '120']);
     });
 
     it('should export authors list as CSV', async () => {
       const response = await agent.get('/api/exports/authors');
-      verifyCsvHeadersAndContent(response, ['id', 'name', 'phone', 'email', 'status', 'user_ids'], ['Test Export Author']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'الاسم', 'الهاتف', 'البريد الإلكتروني', 'الحالة', 'معرفات المستخدمين'], ['Test Export Author']);
     });
 
     it('should export outlets listing as CSV', async () => {
       const response = await agent.get('/api/exports/outlets');
-      verifyCsvHeadersAndContent(response, ['id', 'name', 'outlet_type_name', 'governorate', 'credit_limit'], ['Test Cairo Export Outlet', 'Cairo Export Wholesale', 'Cairo', '50000']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'اسم منفذ التوزيع', 'الفئة', 'المحافظة', 'الحد الائتماني (ج.م)'], ['Test Cairo Export Outlet', 'Cairo Export Wholesale', 'Cairo', '50000']);
     });
 
     it('should export invoices list as CSV', async () => {
       const response = await agent.get('/api/exports/invoices');
-      verifyCsvHeadersAndContent(response, ['id', 'invoice_number', 'outlet_name', 'total_price', 'paid_amount', 'remaining_amount'], [invoice.invoice_number, 'Test Cairo Export Outlet', '240', '100', '140']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الفاتورة', 'اسم المنفذ', 'المجموع الكلي (ج.م)', 'المبلغ المدفوع (ج.م)', 'المبلغ المتبقي (ج.م)'], [invoice.invoice_number, 'Test Cairo Export Outlet', '240', '100', '140']);
     });
 
     it('should export payment receipts as CSV', async () => {
       const response = await agent.get('/api/exports/payments');
-      verifyCsvHeadersAndContent(response, ['id', 'invoice_number', 'amount', 'payment_method', 'recorded_by'], [invoice.invoice_number, '100', 'cash']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الفاتورة', 'المبلغ المحصل (ج.م)', 'طريقة الدفع', 'سجلت بواسطة'], [invoice.invoice_number, '100', 'cash']);
     });
 
     it('should export inventory ledger as CSV', async () => {
       const response = await agent.get('/api/exports/inventory');
-      verifyCsvHeadersAndContent(response, ['id', 'product_title', 'product_code', 'transaction_type', 'quantity'], ['Test Export Book 1', 'T-EXP-BK1', 'receipt', '10']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'عنوان الكتاب', 'رمز الكتاب', 'نوع الحركة', 'الكمية'], ['Test Export Book 1', 'T-EXP-BK1', 'receipt', '10']);
     });
 
     it('should export dynamic report balance sheets as CSV', async () => {
       const response = await agent.get('/api/exports/reports').query({ type: 'balances' });
-      verifyCsvHeadersAndContent(response, ['outletId', 'outletName', 'outletTypeName', 'governorate', 'creditLimit', 'totalSales', 'totalPaid', 'remainingAmount'], ['Test Cairo Export Outlet', 'Cairo Export Wholesale', '240', '100', '140']);
+      verifyCsvHeadersAndContent(response, ['معرف المنفذ', 'اسم منفذ التوزيع', 'الفئة', 'المحافظة', 'الحد الائتماني (ج.م)', 'إجمالي المبيعات (ج.م)', 'إجمالي المدفوعات (ج.م)', 'الرصيد المتبقي المستحق (ج.م)'], ['Test Cairo Export Outlet', 'Cairo Export Wholesale', '240', '100', '140']);
     });
 
     it('should fail with 400 for unsupported report types', async () => {

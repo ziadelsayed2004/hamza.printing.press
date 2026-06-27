@@ -5,6 +5,7 @@ const paymentsService = require('../payments/paymentsService');
 const pdfService = require('./pdfService');
 const usersService = require('../users/usersService');
 const authorsService = require('../authors/authorsService');
+const outletsService = require('../outlets/outletsService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
@@ -29,13 +30,20 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     let filterAuthorIds = null;
+    let filterOutletIds = null;
+
     if (!isElevated) {
       const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
       if (linkedAuthors.length > 0) {
         filterAuthorIds = linkedAuthors;
+      }
+      
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0) {
+        filterOutletIds = linkedOutlets;
       }
     }
 
@@ -55,7 +63,8 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
       hasRemaining,
       minRemaining,
       maxRemaining,
-      authorIds: filterAuthorIds
+      authorIds: filterAuthorIds,
+      outletIds: filterOutletIds
     });
     res.status(200).json(list);
   } catch (err) {
@@ -75,9 +84,19 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
 
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     if (!isElevated) {
+      // Check outlet permission first
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0 && !linkedOutlets.includes(invoice.outlet_id)) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Access denied. You do not have permission to view this invoice.'
+        });
+      }
+
+      // Check author permission
       const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
       if (linkedAuthors.length > 0) {
         const db = require('../../db');
@@ -191,43 +210,6 @@ router.get('/:id/payments', requireAuth, checkPermission('invoices.view'), async
   }
 });
 
-// 6. POST /api/invoices/:id/installment-schedule - Generate or regenerate installment schedule
-router.post('/:id/installment-schedule', requireAuth, checkPermission('invoices.update'), auditLog('create_installment_schedule', 'invoices'), async (req, res) => {
-  const invoiceId = parseInt(req.params.id, 10);
-  const { installmentsCount, intervalDays = 30, startDate = new Date(), notes = '' } = req.body;
-
-  if (installmentsCount === undefined) {
-    return res.status(400).json({ error: 'Bad Request', message: 'Installments count is required.' });
-  }
-
-  try {
-    const invoice = await invoicesService.getInvoiceById(invoiceId);
-    if (!invoice) {
-      return res.status(404).json({ error: 'Not Found', message: `Invoice with ID ${invoiceId} does not exist.` });
-    }
-
-    const schedule = await paymentsService.generateInstallmentSchedule({
-      invoiceId,
-      totalAmount: invoice.total_price,
-      installmentsCount,
-      intervalDays,
-      startDate,
-      notes
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Installment schedule generated successfully.',
-      schedule
-    });
-  } catch (err) {
-    const msg = (err.message || '').toLowerCase();
-    if (msg.includes('positive') || msg.includes('count')) {
-      return res.status(400).json({ error: 'Bad Request', message: err.message });
-    }
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
-  }
-});
 // 7. POST /api/invoices/export/pdf - Export selected invoices to a unified PDF report
 router.post('/export/pdf', requireAuth, checkPermission('invoices.export'), async (req, res) => {
   const { invoiceIds } = req.body;

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const exportsService = require('./exportsService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
+const { auditLog } = require('../../middleware/audit');
 
 // Helper to handle sending CSV downloads
 function sendCsvDownload(res, filename, csvContent) {
@@ -11,7 +12,7 @@ function sendCsvDownload(res, filename, csvContent) {
 }
 
 // 1. GET /api/exports/products - Export products catalog
-router.get('/products', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/products', requireAuth, checkPermission('exports.run'), auditLog('export_products', 'exports'), async (req, res) => {
   try {
     const csv = await exportsService.exportProducts();
     sendCsvDownload(res, 'products_export.csv', csv);
@@ -21,7 +22,7 @@ router.get('/products', requireAuth, checkPermission('exports.run'), async (req,
 });
 
 // 2. GET /api/exports/prices - Export price sheets
-router.get('/prices', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/prices', requireAuth, checkPermission('exports.run'), auditLog('export_prices', 'exports'), async (req, res) => {
   try {
     const csv = await exportsService.exportPrices();
     sendCsvDownload(res, 'prices_export.csv', csv);
@@ -31,7 +32,7 @@ router.get('/prices', requireAuth, checkPermission('exports.run'), async (req, r
 });
 
 // 3. GET /api/exports/authors - Export authors list
-router.get('/authors', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/authors', requireAuth, checkPermission('exports.run'), auditLog('export_authors', 'exports'), async (req, res) => {
   try {
     const csv = await exportsService.exportAuthors();
     sendCsvDownload(res, 'authors_export.csv', csv);
@@ -41,7 +42,7 @@ router.get('/authors', requireAuth, checkPermission('exports.run'), async (req, 
 });
 
 // 4. GET /api/exports/outlets - Export outlets listing
-router.get('/outlets', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/outlets', requireAuth, checkPermission('exports.run'), auditLog('export_outlets', 'exports'), async (req, res) => {
   try {
     const csv = await exportsService.exportOutlets();
     sendCsvDownload(res, 'outlets_export.csv', csv);
@@ -51,9 +52,9 @@ router.get('/outlets', requireAuth, checkPermission('exports.run'), async (req, 
 });
 
 // 5. GET /api/exports/invoices - Export invoice records
-router.get('/invoices', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/invoices', requireAuth, checkPermission('exports.run'), auditLog('export_invoices', 'exports'), async (req, res) => {
   try {
-    const csv = await exportsService.exportInvoices();
+    const csv = await exportsService.exportInvoices(req.query);
     sendCsvDownload(res, 'invoices_export.csv', csv);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -61,9 +62,9 @@ router.get('/invoices', requireAuth, checkPermission('exports.run'), async (req,
 });
 
 // 6. GET /api/exports/payments - Export recorded payments history
-router.get('/payments', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/payments', requireAuth, checkPermission('exports.run'), auditLog('export_payments', 'exports'), async (req, res) => {
   try {
-    const csv = await exportsService.exportPayments();
+    const csv = await exportsService.exportPayments(req.query);
     sendCsvDownload(res, 'payments_export.csv', csv);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -71,9 +72,9 @@ router.get('/payments', requireAuth, checkPermission('exports.run'), async (req,
 });
 
 // 7. GET /api/exports/inventory - Export transaction ledger
-router.get('/inventory', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/inventory', requireAuth, checkPermission('exports.run'), auditLog('export_inventory', 'exports'), async (req, res) => {
   try {
-    const csv = await exportsService.exportInventory();
+    const csv = await exportsService.exportInventory(req.query);
     sendCsvDownload(res, 'inventory_export.csv', csv);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -81,14 +82,14 @@ router.get('/inventory', requireAuth, checkPermission('exports.run'), async (req
 });
 
 // 8. GET /api/exports/reports - Export dynamic report sheets (balances, stock, authors, receipts)
-router.get('/reports', requireAuth, checkPermission('exports.run'), async (req, res) => {
+router.get('/reports', requireAuth, checkPermission('exports.run'), auditLog('export_reports', 'exports'), async (req, res) => {
   const { type } = req.query;
   if (!type || !['balances', 'stock', 'authors', 'receipts'].includes(type)) {
     return res.status(400).json({ error: 'Bad Request', message: 'Valid report type is required (balances, stock, authors, receipts).' });
   }
 
   try {
-    const csv = await exportsService.exportReport(type);
+    const csv = await exportsService.exportReport(type, req.query, req.session.user);
     sendCsvDownload(res, `${type}_report_export.csv`, csv);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

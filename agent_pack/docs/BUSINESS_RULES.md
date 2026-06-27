@@ -90,3 +90,16 @@ Must support filtering invoices by:
 ## Deployment
 
 Keep deployment simple on DirectAdmin: one Node app, one start command.
+
+## Active correction: no installments, no imports, supply-aware finance
+
+These rules are mandatory and override any previous note:
+
+- Remove installments/payment plans entirely.
+- Payment shapes are only: unpaid, partial collection, full collection.
+- Collection/supply are separate: money can be collected from outlet but not yet supplied to treasury/admin.
+- Finance must show pending balance, collected balance, supplied balance, and unsupplied collected balance.
+- Partial invoice shipping is allowed by selecting exact invoice products and quantities.
+- No Excel/CSV import features are allowed.
+- Export features remain and must be professional.
+- Legacy functionality must be enhanced, not reduced.

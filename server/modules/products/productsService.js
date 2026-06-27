@@ -1,4 +1,5 @@
 const db = require('../../db');
+const notificationsService = require('../notifications/notificationsService');
 
 /**
  * Create a new product.
@@ -19,6 +20,12 @@ async function createProduct({ title, code, category = '', status = 'active', st
     for (const authorId of authorIds) {
       await db.run('INSERT INTO product_authors (product_id, author_id) VALUES (?, ?)', [productId, authorId]);
     }
+  }
+
+  try {
+    await notificationsService.checkProductPriceNotifications(productId);
+  } catch (e) {
+    console.error('Error running checkProductPriceNotifications in createProduct:', e);
   }
 
   return { id: productId, title, code, category, status, stockPolicy, authorIds };
@@ -51,6 +58,12 @@ async function updateProduct(id, { title, code, category = '', status = 'active'
     for (const authorId of authorIds) {
       await db.run('INSERT INTO product_authors (product_id, author_id) VALUES (?, ?)', [id, authorId]);
     }
+  }
+
+  try {
+    await notificationsService.checkProductPriceNotifications(id);
+  } catch (e) {
+    console.error('Error running checkProductPriceNotifications in updateProduct:', e);
   }
 
   return result.changes > 0;

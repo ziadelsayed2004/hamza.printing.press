@@ -10,6 +10,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 const cacheRtl = createCache({
   key: 'muirtl',
   stylisPlugins: [prefixer, rtlPlugin],
+  prepend: true,
 });
 
 export const ColorModeContext = createContext({
@@ -122,6 +123,43 @@ export const ThemeConfig = ({ children }) => {
           borderRadius: 4, // "مش راوند" - Sharp subtle rounding for Google Design
         },
         components: {
+          MuiCssBaseline: {
+            styleOverrides: {
+              body: {
+                fontFamily: 'Cairo, Inter, Roboto, sans-serif',
+              },
+            },
+          },
+          MuiFormLabel: {
+            styleOverrides: {
+              root: {
+                fontFamily: 'Cairo, Inter, Roboto, sans-serif',
+              },
+            },
+          },
+          MuiInputLabel: {
+            styleOverrides: {
+              root: {
+                right: 14,
+                left: 'auto',
+                transformOrigin: 'top right',
+              },
+              shrink: {
+                transformOrigin: 'top right',
+                right: 14,
+                left: 'auto',
+              },
+            },
+          },
+          MuiMenuItem: {
+            styleOverrides: {
+              root: {
+                fontFamily: 'Cairo, Inter, Roboto, sans-serif',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+              },
+            },
+          },
           MuiButton: {
             styleOverrides: {
               root: {

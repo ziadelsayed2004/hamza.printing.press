@@ -1,4 +1,5 @@
 const db = require('../../db');
+const notificationsService = require('../notifications/notificationsService');
 
 /**
  * Get all prices for a product, showing all active outlet types and their corresponding prices.
@@ -62,6 +63,12 @@ async function updatePricesForProduct(productId, prices) {
         [productId, outletTypeId, parsedPrice]
       );
     }
+  }
+
+  try {
+    await notificationsService.checkProductPriceNotifications(productId);
+  } catch (e) {
+    console.error('Error running checkProductPriceNotifications in updatePricesForProduct:', e);
   }
 
   return true;

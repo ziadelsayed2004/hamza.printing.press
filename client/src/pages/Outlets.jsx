@@ -85,6 +85,7 @@ export const Outlets = () => {
   const [outletTypes, setOutletTypes] = useState([]);
   const [governorates, setGovernorates] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [usersList, setUsersList] = useState([]);
 
   // Filters State
   const [search, setSearch] = useState('');
@@ -110,6 +111,7 @@ export const Outlets = () => {
   const [formCreditLimit, setFormCreditLimit] = useState(0);
   const [formStatus, setFormStatus] = useState('active');
   const [formNotes, setFormNotes] = useState('');
+  const [formUserId, setFormUserId] = useState('');
 
   // Toast Notifications State
   const [toastMsg, setToastMsg] = useState('');
@@ -122,6 +124,11 @@ export const Outlets = () => {
 
       const typesData = await apiClient.get('/outlet-types?limit=100&includeDisabled=false');
       setOutletTypes(typesData);
+
+      if (hasPermission('outlets.create') || hasPermission('outlets.update')) {
+        const usersData = await apiClient.get('/users?limit=200');
+        setUsersList(usersData.filter(u => u.status === 'active'));
+      }
     } catch (err) {
       console.error('Failed to load outlets metadata:', err);
     }
@@ -163,12 +170,13 @@ export const Outlets = () => {
     setSelectedOutlet(null);
     setFormName('');
     setFormOutletTypeId(outletTypes[0]?.id || '');
-    setFormGovernorate('عمان');
+    setFormGovernorate('القاهرة');
     setFormAddressDetails('');
     setFormPhone('');
     setFormCreditLimit(0);
     setFormStatus('active');
     setFormNotes('');
+    setFormUserId('');
     setOpenModal(true);
   };
 
@@ -183,6 +191,7 @@ export const Outlets = () => {
     setFormCreditLimit(outlet.credit_limit || 0);
     setFormStatus(outlet.status);
     setFormNotes(outlet.notes || '');
+    setFormUserId(outlet.userId || '');
     setOpenModal(true);
   };
 
@@ -201,7 +210,8 @@ export const Outlets = () => {
       phone: formPhone,
       creditLimit: parseFloat(formCreditLimit),
       status: formStatus,
-      notes: formNotes
+      notes: formNotes,
+      userId: formUserId ? parseInt(formUserId, 10) : null
     };
 
     try {
@@ -363,6 +373,7 @@ export const Outlets = () => {
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>الفئة والسعر المعتمد</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحافظة والمدينة</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحساب المرتبط</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>السقف الائتماني</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
@@ -375,6 +386,13 @@ export const Outlets = () => {
                   <TableCell align="right">{outlet.outlet_type_name}</TableCell>
                   <TableCell align="right">{outlet.governorate}</TableCell>
                   <TableCell align="right">{outlet.phone || '-'}</TableCell>
+                  <TableCell align="right">
+                    {outlet.linked_username ? (
+                      <Chip label={outlet.linked_username} size="small" color="primary" variant="outlined" />
+                    ) : (
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير مرتبط</Typography>
+                    )}
+                  </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
                     {formatCurrencyEGP(outlet.credit_limit || 0)}
                   </TableCell>
@@ -481,6 +499,22 @@ export const Outlets = () => {
                     endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
                   }}
                 />
+                <FormControl fullWidth size="small">
+                  <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
+                  <Select
+                    labelId="link-user-label"
+                    value={formUserId}
+                    label="ربط الحساب البرمجي (اختياري)"
+                    onChange={(e) => setFormUserId(e.target.value)}
+                  >
+                    <MenuItem value="">غير مرتبط</MenuItem>
+                    {usersList.map((u) => (
+                      <MenuItem key={u.id} value={u.id}>
+                        {u.full_name} ({u.username})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
                 <FormControl fullWidth size="small">
                   <InputLabel id="form-status-label">الحالة</InputLabel>
                   <Select

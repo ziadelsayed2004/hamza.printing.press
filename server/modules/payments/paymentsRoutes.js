@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const paymentsService = require('./paymentsService');
+const outletsService = require('../outlets/outletsService');
+const usersService = require('../users/usersService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
@@ -9,9 +11,27 @@ router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) 
   const limit = parseInt(req.query.limit || '50', 10);
   const offset = parseInt(req.query.offset || '0', 10);
   const invoiceId = req.query.invoiceId ? parseInt(req.query.invoiceId, 10) : null;
+  const supplyStatus = req.query.supplyStatus || '';
 
   try {
-    const list = await paymentsService.getPayments({ limit, offset, invoiceId });
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+
+    let filterOutletIds = null;
+    const queryOutletId = req.query.outletId ? parseInt(req.query.outletId, 10) : null;
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (queryOutletId) {
+        filterOutletIds = linkedOutlets.includes(queryOutletId) ? [queryOutletId] : [0];
+      } else {
+        filterOutletIds = linkedOutlets.length > 0 ? linkedOutlets : null;
+      }
+    } else if (queryOutletId) {
+      filterOutletIds = [queryOutletId];
+    }
+
+    const list = await paymentsService.getPayments({ limit, offset, invoiceId, outletIds: filterOutletIds, supplyStatus });
     res.status(200).json(list);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -20,7 +40,7 @@ router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) 
 
 // 2. POST /api/payments - Record a payment
 router.post('/', requireAuth, checkPermission('payments.create'), auditLog('create_payment', 'payments'), async (req, res) => {
-  const { invoiceId, amount, paymentMethod, paymentDate, referenceNumber = '', notes = '' } = req.body;
+  const { invoiceId, amount, paymentMethod, paymentDate, referenceNumber = '', notes = '', supplyStatus = 'not_supplied' } = req.body;
 
   if (!invoiceId || amount === undefined || !paymentMethod) {
     return res.status(400).json({ error: 'Bad Request', message: 'Invoice ID, amount, and payment method are required.' });
@@ -35,6 +55,7 @@ router.post('/', requireAuth, checkPermission('payments.create'), auditLog('crea
       paymentDate,
       referenceNumber,
       notes,
+      supplyStatus,
       userId
     });
 
@@ -48,7 +69,7 @@ router.post('/', requireAuth, checkPermission('payments.create'), auditLog('crea
     if (msg.includes('does not exist')) {
       return res.status(404).json({ error: 'Not Found', message: err.message });
     }
-    if (msg.includes('required') || msg.includes('positive') || msg.includes('exceeds') || msg.includes('fully paid')) {
+    if (msg.includes('required') || msg.includes('positive') || msg.includes('exceeds') || msg.includes('fully paid') || msg.includes('supply status')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -77,21 +98,74 @@ router.post('/:id/reverse', requireAuth, checkPermission('payments.reverse'), au
   }
 });
 
-// 4. POST /api/payments/check-overdue - Run overdue check on installments
-router.post('/check-overdue', requireAuth, checkPermission('payments.create'), auditLog('check_overdue_payments', 'payments'), async (req, res) => {
+// 4. POST /api/payments/:id/supply - Mark a single payment as supplied
+router.post('/:id/supply', requireAuth, checkPermission('payments.mark_supplied'), auditLog('supply_payment', 'payments'), async (req, res) => {
+  const paymentId = parseInt(req.params.id, 10);
   try {
-    const updatedCount = await paymentsService.checkOverdueInstallments();
+    const userId = req.session.user.id;
+    const result = await paymentsService.supplyPayments({ paymentIds: [paymentId], userId });
     res.status(200).json({
       success: true,
-      message: 'Overdue installments checked and updated successfully.',
-      updatedCount
+      message: 'Payment marked as supplied successfully.',
+      ...result
     });
   } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('does not exist')) {
+      return res.status(404).json({ error: 'Not Found', message: err.message });
+    }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
 
-// 5. GET /api/payments/invoice/:invoiceId/metrics - Fetch metrics for a specific invoice
+// 5. POST /api/payments/supply-batch - Mark multiple payments as supplied
+router.post('/supply-batch', requireAuth, checkPermission('payments.supply_batch'), auditLog('supply_payments_batch', 'payments'), async (req, res) => {
+  const { paymentIds } = req.body;
+  if (!paymentIds || !Array.isArray(paymentIds) || paymentIds.length === 0) {
+    return res.status(400).json({ error: 'Bad Request', message: 'paymentIds array is required.' });
+  }
+  try {
+    const userId = req.session.user.id;
+    const result = await paymentsService.supplyPayments({ paymentIds, userId });
+    res.status(200).json({
+      success: true,
+      message: 'Batch payments marked as supplied successfully.',
+      ...result
+    });
+  } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('does not exist')) {
+      return res.status(404).json({ error: 'Not Found', message: err.message });
+    }
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 6. POST /api/payments/:id/reverse-supply - Reverse supply status of a payment
+router.post('/:id/reverse-supply', requireAuth, checkPermission('payments.reverse'), auditLog('reverse_supply_payment', 'payments'), async (req, res) => {
+  const paymentId = parseInt(req.params.id, 10);
+  const { notes = '' } = req.body;
+  try {
+    const userId = req.session.user.id;
+    const result = await paymentsService.reversePaymentSupply(paymentId, { notes, userId });
+    res.status(200).json({
+      success: true,
+      message: 'Payment supply reversed successfully.',
+      ...result
+    });
+  } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('does not exist')) {
+      return res.status(404).json({ error: 'Not Found', message: err.message });
+    }
+    if (msg.includes('not supplied')) {
+      return res.status(400).json({ error: 'Bad Request', message: err.message });
+    }
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 7. GET /api/payments/invoice/:invoiceId/metrics - Fetch metrics for a specific invoice
 router.get('/invoice/:invoiceId/metrics', requireAuth, checkPermission('payments.view'), async (req, res) => {
   const invoiceId = parseInt(req.params.invoiceId, 10);
 

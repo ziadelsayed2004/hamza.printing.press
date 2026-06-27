@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const outletsService = require('./outletsService');
 const outletTypesService = require('../outlet-types/outletTypesService');
+const usersService = require('../users/usersService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
@@ -32,7 +33,19 @@ router.get('/', requireAuth, checkPermission('outlets.view'), async (req, res) =
   const status = req.query.status || '';
 
   try {
-    const outlets = await outletsService.getAll({ limit, offset, search, governorate, outletTypeId, status });
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+
+    let filterUserId = null;
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0) {
+        filterUserId = userId;
+      }
+    }
+
+    const outlets = await outletsService.getAll({ limit, offset, search, governorate, outletTypeId, status, userId: filterUserId });
     res.status(200).json(outlets);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -43,6 +56,20 @@ router.get('/', requireAuth, checkPermission('outlets.view'), async (req, res) =
 router.get('/:id', requireAuth, checkPermission('outlets.view'), async (req, res) => {
   const { id } = req.params;
   try {
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0 && !linkedOutlets.includes(parseInt(id, 10))) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Access denied. You do not have permission to view this outlet.'
+        });
+      }
+    }
+
     const outlet = await outletsService.findById(id);
     if (!outlet) {
       return res.status(404).json({ error: 'Not Found', message: 'Outlet not found.' });
@@ -55,7 +82,7 @@ router.get('/:id', requireAuth, checkPermission('outlets.view'), async (req, res
 
 // 3. POST /api/outlets - Create a new outlet
 router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('create_outlet', 'outlets'), async (req, res) => {
-  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '' } = req.body;
+  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null } = req.body;
 
   if (!name || !outletTypeId || !governorate) {
     return res.status(400).json({ error: 'Bad Request', message: 'Name, outlet type ID, and governorate are required.' });
@@ -71,6 +98,13 @@ router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('creat
       return res.status(400).json({ error: 'Bad Request', message: 'The specified outlet type is inactive.' });
     }
 
+    if (userId) {
+      const user = await usersService.findById(userId);
+      if (!user) {
+        return res.status(400).json({ error: 'Bad Request', message: 'The specified user account does not exist.' });
+      }
+    }
+
     const newOutlet = await outletsService.createOutlet({
       name,
       outletTypeId,
@@ -79,7 +113,8 @@ router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('creat
       phone,
       creditLimit,
       status,
-      notes
+      notes,
+      userId
     });
 
     res.status(201).json({
@@ -95,7 +130,7 @@ router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('creat
 // 4. PUT /api/outlets/:id - Edit an outlet
 router.put('/:id', requireAuth, checkPermission('outlets.update'), auditLog('update_outlet', 'outlets'), async (req, res) => {
   const { id } = req.params;
-  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '' } = req.body;
+  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null } = req.body;
 
   if (!name || !outletTypeId || !governorate) {
     return res.status(400).json({ error: 'Bad Request', message: 'Name, outlet type ID, and governorate are required.' });
@@ -113,6 +148,13 @@ router.put('/:id', requireAuth, checkPermission('outlets.update'), auditLog('upd
       return res.status(400).json({ error: 'Bad Request', message: 'The specified outlet type does not exist.' });
     }
 
+    if (userId) {
+      const user = await usersService.findById(userId);
+      if (!user) {
+        return res.status(400).json({ error: 'Bad Request', message: 'The specified user account does not exist.' });
+      }
+    }
+
     await outletsService.updateOutlet(id, {
       name,
       outletTypeId,
@@ -121,7 +163,8 @@ router.put('/:id', requireAuth, checkPermission('outlets.update'), auditLog('upd
       phone,
       creditLimit,
       status,
-      notes
+      notes,
+      userId
     });
 
     const updated = await outletsService.findById(id);

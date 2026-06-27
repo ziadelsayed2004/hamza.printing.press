@@ -1,7 +1,7 @@
 # Step 022: Payment Status Engine
 
 ## Goal
-Build calculation engine for paid_amount, remaining_amount, payment_status, overdue installments, reversal/correction rules, and audit entries.
+Build calculation engine for paid_amount, remaining_amount, payment_status, pending balances and unsupplied collections, reversal/correction rules, and audit entries.
 
 ## Context
 This project is being modernized from a simple Node/Express + static HTML/Vanilla JS system into a professional single-deployment platform with Express APIs and a React/Vite/Material UI dashboard.

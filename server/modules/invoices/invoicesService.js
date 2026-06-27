@@ -189,8 +189,8 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
     throw new Error(`Invoice with ID ${invoiceId} does not exist`);
   }
 
-  // Get previous item product IDs to run stock checks on them after update
-  const oldItems = await db.all('SELECT product_id FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
+  // Get previous invoice items to compute delta stock levels
+  const oldItems = await db.all('SELECT * FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
 
   // 1. Fetch the outlet
   const outlet = await db.get('SELECT * FROM outlets WHERE id = ?', [outletId]);
@@ -205,8 +205,7 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
   await db.exec('BEGIN TRANSACTION;');
 
   try {
-    // Temporarily delete old invoice items & inventory ledger entries so we can correctly compute stock levels
-    await db.run('DELETE FROM inventory_transactions WHERE reference_type = "invoice" AND reference_id = ?', [invoiceId]);
+    // Delete only the old invoice_items (represents mutable invoice state, not historical log)
     await db.run('DELETE FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
 
     let subtotal = 0;
@@ -238,11 +237,14 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
       }
       const unitPrice = parseFloat(priceRow.price);
 
-      // Validate stock if policy is track
+      // Validate stock if policy is track (taking into account old quantity already reserved by this invoice)
       if (product.stock_policy === 'track') {
+        const oldItem = oldItems.find(i => i.product_id === productId);
+        const oldQty = oldItem ? oldItem.quantity : 0;
         const currentStock = await inventoryService.getRealTimeStock(productId);
-        if (currentStock < qty) {
-          throw new Error(`Insufficient stock for product "${product.title}". Available: ${currentStock}, Requested: ${qty}`);
+        const availableStock = currentStock + oldQty;
+        if (availableStock < qty) {
+          throw new Error(`Insufficient stock for product "${product.title}". Available: ${availableStock}, Requested: ${qty}`);
         }
       }
 
@@ -285,23 +287,49 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
       invoiceId
     ]);
 
-    // Save items & create stock transactions
+    // Save items
     for (const item of validatedItems) {
       const itemSql = `
         INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, total_price)
         VALUES (?, ?, ?, ?, ?)
       `;
       await db.run(itemSql, [invoiceId, item.productId, item.quantity, item.unitPrice, item.totalPrice]);
+    }
 
+    // Compute and save delta stock transactions (append-only ledger)
+    for (const item of validatedItems) {
       if (item.stockPolicy === 'track') {
-        await inventoryService.createTransaction({
-          productId: item.productId,
-          transactionType: 'sale',
-          quantity: -item.quantity,
-          referenceType: 'invoice',
-          referenceId: invoiceId,
-          userId
-        });
+        const oldItem = oldItems.find(i => i.product_id === item.productId);
+        const oldQty = oldItem ? oldItem.quantity : 0;
+        const deltaQty = oldQty - item.quantity;
+        if (deltaQty !== 0) {
+          await inventoryService.createTransaction({
+            productId: item.productId,
+            transactionType: deltaQty < 0 ? 'sale' : 'return',
+            quantity: deltaQty,
+            referenceType: 'invoice',
+            referenceId: invoiceId,
+            userId
+          });
+        }
+      }
+    }
+
+    // Process items that were completely removed from the invoice (return their stock)
+    for (const oldItem of oldItems) {
+      const newItem = validatedItems.find(i => i.productId === oldItem.product_id);
+      if (!newItem) {
+        const product = await db.get('SELECT stock_policy FROM products WHERE id = ?', [oldItem.product_id]);
+        if (product && product.stock_policy === 'track') {
+          await inventoryService.createTransaction({
+            productId: oldItem.product_id,
+            transactionType: 'return',
+            quantity: oldItem.quantity,
+            referenceType: 'invoice',
+            referenceId: invoiceId,
+            userId
+          });
+        }
       }
     }
 
@@ -357,11 +385,22 @@ async function getInvoiceById(id) {
   if (!invoice) return null;
 
   const items = await db.all(`
-    SELECT ii.*, p.title as product_title, p.code as product_code
+    SELECT ii.*, p.title as product_title, p.code as product_code,
+      COALESCE((
+        SELECT SUM(si.quantity)
+        FROM shipment_items si
+        JOIN shipments s ON s.id = si.shipment_id
+        WHERE si.invoice_item_id = ii.id AND s.status IN ('shipped', 'delivered')
+      ), 0) as shipped_quantity
     FROM invoice_items ii
     JOIN products p ON p.id = ii.product_id
     WHERE ii.invoice_id = ?
   `, [id]);
+
+  items.forEach(item => {
+    item.ordered_quantity = item.quantity;
+    item.remaining_quantity = Math.max(0, item.quantity - item.shipped_quantity);
+  });
 
   const history = await db.all(`
     SELECT ish.*, u.full_name as user_full_name
@@ -379,12 +418,7 @@ async function getInvoiceById(id) {
     ORDER BY ip.payment_date ASC
   `, [id]);
 
-  const installments = await db.all(`
-    SELECT pi.*
-    FROM payment_installments pi
-    WHERE pi.invoice_id = ?
-    ORDER BY pi.installment_number ASC
-  `, [id]);
+  const installments = [];
 
   invoice.items = items;
   invoice.history = history;
@@ -413,7 +447,8 @@ async function getInvoices({
   hasRemaining = '', // 'yes' or 'no'
   minRemaining = null,
   maxRemaining = null,
-  authorIds = null
+  authorIds = null,
+  outletIds = null
 } = {}) {
   let sql = `
     SELECT i.*, o.name as outlet_name, o.governorate, o.outlet_type_id,
@@ -429,6 +464,13 @@ async function getInvoices({
     WHERE 1=1
   `;
   const params = [];
+
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND i.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
+    params.push(...outletIds);
+  } else if (outletIds) {
+    sql += ` AND 0=1`;
+  }
 
   if (authorIds && authorIds.length > 0) {
     sql += ` AND i.id IN (

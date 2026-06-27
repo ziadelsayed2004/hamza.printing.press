@@ -225,6 +225,11 @@ describe('Reports API Integration Tests', () => {
       expect(response.body.totalSales).toBe(300);
       expect(response.body.totalPaid).toBe(100);
       expect(response.body.totalRemaining).toBe(200);
+      expect(response.body.totalSupplied).toBe(0);
+      expect(response.body.totalUnsupplied).toBe(100);
+      expect(response.body.countShipped).toBe(0);
+      expect(response.body.countPartiallyShipped).toBe(0);
+      expect(response.body.countNotShipped).toBe(1);
     });
   });
 

@@ -36,7 +36,7 @@
 
 ### Invoice/payment -> finance balance
 
-- Invoice creation affects receivables if unpaid/deferred/installment.
+- Invoice creation affects receivables if unpaid/partial/full collection.
 - Confirmed payment increases collected balance and reduces receivables.
 - Payment reversal/correction updates finance ledger and invoice remaining amount.
 - Manual deposit/withdrawal requires note and audit log.
@@ -51,7 +51,7 @@
 ### Outlet credit limit -> notifications
 
 - Outlet has credit limit.
-- Receivables for outlet are calculated from unpaid/partial/deferred/installment invoices.
+- Receivables for outlet are calculated from unpaid/partial/pending/partial collection invoices.
 - If receivables exceed credit limit, notification is created.
 - If receivables return within limit, notification is resolved.
 

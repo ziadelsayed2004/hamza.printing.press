@@ -38,20 +38,33 @@ import {
 
 // Syrian Governorates for consistency
 const GOVERNORATES = [
-  'دمشق',
-  'ريف دمشق',
-  'حلب',
-  'حمص',
-  'حماة',
-  'اللاذقية',
-  'طرطوس',
-  'إدلب',
-  'درعا',
-  'السويداء',
-  'القنيطرة',
-  'دير الزور',
-  'الحسكة',
-  'الرقة'
+  'القاهرة',
+  'الجيزة',
+  'الإسكندرية',
+  'القليوبية',
+  'بورسعيد',
+  'السويس',
+  'الأقصر',
+  'أسوان',
+  'الدقهلية',
+  'الغربية',
+  'المنوفية',
+  'الشرقية',
+  'البحيرة',
+  'دمياط',
+  'المنيا',
+  'سوهاج',
+  'قنا',
+  'أسيوط',
+  'بني سويف',
+  'كفر الشيخ',
+  'الفيوم',
+  'مطروح',
+  'شمال سيناء',
+  'جنوب سيناء',
+  'البحر الأحمر',
+  'الوادي الجديد',
+  'الإسماعيلية'
 ];
 
 function TabPanel({ children, value, index, ...props }) {
@@ -468,7 +481,7 @@ export const Reports = () => {
             <Grid item xs={12} sm={4}>
               <Card sx={{ bgcolor: '#ebf5fb', borderRight: 6, borderColor: 'primary.main', display: 'flex', alignItems: 'center', p: 2 }}>
                 <TrendingUpIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
-                <CardContent sx={{ py: '0 !important' }}>
+                <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
                   <Typography variant="subtitle2" color="text.secondary">إجمالي المبيعات</Typography>
                   <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }}>{formatCurrencyEGP(summaryData.totalSales)}</Typography>
                 </CardContent>
@@ -478,7 +491,7 @@ export const Reports = () => {
             <Grid item xs={12} sm={4}>
               <Card sx={{ bgcolor: '#e8f8f5', borderRight: 6, borderColor: 'success.main', display: 'flex', alignItems: 'center', p: 2 }}>
                 <PaymentIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
-                <CardContent sx={{ py: '0 !important' }}>
+                <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
                   <Typography variant="subtitle2" color="text.secondary">المبالغ المسددة</Typography>
                   <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }} color="success.main">{formatCurrencyEGP(summaryData.totalPaid)}</Typography>
                 </CardContent>
@@ -488,7 +501,7 @@ export const Reports = () => {
             <Grid item xs={12} sm={4}>
               <Card sx={{ bgcolor: '#fdf2e9', borderRight: 6, borderColor: 'warning.main', display: 'flex', alignItems: 'center', p: 2 }}>
                 <WalletIcon color="warning" sx={{ fontSize: 40, mr: 2 }} />
-                <CardContent sx={{ py: '0 !important' }}>
+                <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
                   <Typography variant="subtitle2" color="text.secondary">المبالغ المتبقية (الديون)</Typography>
                   <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }} color="warning.main">{formatCurrencyEGP(summaryData.totalRemaining)}</Typography>
                 </CardContent>
@@ -496,27 +509,33 @@ export const Reports = () => {
             </Grid>
 
             <Grid item xs={12} sm={3}>
-              <Card sx={{ p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">مبيعات نقدية (كاش)</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>{summaryData.totalCashSales.toLocaleString()}</Typography>
+              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                <Typography variant="body2" color="text.secondary">مدفوعات موردة (Supplied)</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'success.main' }}>{formatCurrencyEGP(summaryData.totalSupplied)}</Typography>
               </Card>
             </Grid>
             <Grid item xs={12} sm={3}>
-              <Card sx={{ p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">متبقي آجل (Deferred)</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>{summaryData.totalDeferredRemaining.toLocaleString()}</Typography>
+              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                <Typography variant="body2" color="text.secondary">مدفوعات غير موردة (Unsupplied)</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'error.main' }}>{formatCurrencyEGP(summaryData.totalUnsupplied)}</Typography>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <Card sx={{ p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">متبقي أقساط (Installments)</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>{summaryData.totalInstallmentsRemaining.toLocaleString()}</Typography>
+            <Grid item xs={12} sm={2}>
+              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                <Typography variant="body2" color="text.secondary">شحنات مكتملة</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>{summaryData.countShipped} فاتورة</Typography>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <Card sx={{ p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">إجمالي الخصومات</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }} color="error">{summaryData.totalDiscount.toLocaleString()}</Typography>
+            <Grid item xs={12} sm={2}>
+              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                <Typography variant="body2" color="text.secondary">شحنات جزئية</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'warning.main' }}>{summaryData.countPartiallyShipped} فاتورة</Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={2}>
+              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                <Typography variant="body2" color="text.secondary">غير مشحون</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'error.main' }}>{summaryData.countNotShipped} فاتورة</Typography>
               </Card>
             </Grid>
           </Grid>

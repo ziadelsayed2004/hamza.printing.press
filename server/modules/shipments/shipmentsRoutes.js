@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const shipmentsService = require('./shipmentsService');
+const outletsService = require('../outlets/outletsService');
+const usersService = require('../users/usersService');
+const invoicesService = require('../invoices/invoicesService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
@@ -12,7 +15,19 @@ router.get('/', requireAuth, checkPermission('shipments.view'), async (req, res)
   const status = req.query.status || null;
 
   try {
-    const list = await shipmentsService.getShipments({ limit, offset, invoiceId, status });
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+
+    let filterOutletIds = null;
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0) {
+        filterOutletIds = linkedOutlets;
+      }
+    }
+
+    const list = await shipmentsService.getShipments({ limit, offset, invoiceId, status, outletIds: filterOutletIds });
     res.status(200).json(list);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -31,6 +46,24 @@ router.get('/:id', requireAuth, checkPermission('shipments.view'), async (req, r
     if (!shipment) {
       return res.status(404).json({ error: 'Not Found', message: `Shipment with ID ${id} does not exist.` });
     }
+
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0) {
+        const invoice = await invoicesService.getInvoiceById(shipment.invoice_id);
+        if (invoice && !linkedOutlets.includes(invoice.outlet_id)) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Access denied. You do not have permission to view this shipment.'
+          });
+        }
+      }
+    }
+
     res.status(200).json(shipment);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

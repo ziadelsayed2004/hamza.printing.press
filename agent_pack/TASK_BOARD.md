@@ -1,7 +1,5 @@
 # TASK BOARD — مطبعة حمزة
-
 Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_review`.
-
 | # | Step | Status | Main output |
 |---|---|---|---|
 | 001 | `001_repo_reality_audit` | done | Audit the current repository, detect framework, database, routes, views, static assets, package scripts, deployment assumptions, and risks. Produce a factual audit report only; do not refactor yet. |
@@ -44,26 +42,26 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 038 | `038_legacy_ui_deprecation` | done | After new MUI screens are verified, deprecate old HTML/SweetAlert-heavy pages, keep fallback only if necessary, and clean routes/assets. |
 | 039 | `039_test_suite_and_quality_gate` | done | Add automated tests for auth/RBAC/pricing/invoices/payments/inventory/reports plus lint/build checks and API smoke tests. |
 | 040 | `040_directadmin_deploy_docs_final_verify` | blocked | Finalize DirectAdmin single Node app deployment docs, build scripts, smoke test checklist, final verification report, and handoff notes. |
-| 041 | `041_fresh_database_reset_super_admin_only` | done | Hard reset SQLite for fresh production start. Seed permissions and a single super_admin account only; no demo data, no staff, no outlet types, no books, no outlets, no invoices. |
-| 042 | `042_flatten_server_structure_no_src` | done | Refactor backend from server/src/* to simpler server/* paths. Update app.js, scripts, package scripts, tests, imports, and docs. Keep one Node.js monolith deployment. |
-| 043 | `043_remove_old_identity_visual_system` | done | Remove old warehouse/bookstore identity, legacy colors, and inconsistent branding from the React UI. Move app name/brand to configurable settings and create a clean neutral professional visual baseline. |
-| 044 | `044_material_light_dark_theme_overhaul` | done | Build a premium Material UI theme system with light/dark mode, RTL tokens, typography, spacing, elevations, form/table/card standards, and persistent mode toggle. |
-| 045 | `045_dashboard_redesign_executive_experience` | done | Replace the current weak dashboard with a professional executive dashboard: KPIs, quick actions, charts/insights, recent activity, alerts, and responsive layout. |
-| 046 | `046_navigation_information_architecture_polish` | done | Rebuild sidebar/topbar navigation into clear grouped sections for operations/catalog/finance/inventory/reports/admin with role-aware visibility and mobile usability. |
-| 047 | `047_forms_tables_dialog_cleanup_ux` | done | Reduce dialog-heavy flows. Convert major create/edit/detail flows to pages or drawers. Standardize DataGrid filters, empty states, loading states, validations, confirmations, and snackbars. |
-| 048 | `048_fresh_start_quality_smoke_verification` | done | Run full fresh-start verification: db reset, super-admin login, CRUD smoke paths, light/dark toggle, build, tests, lint, API health, and DirectAdmin deploy readiness. |
-| 049 | `049_directadmin_deploy_docs_final_verify` | done | Finalize simple deployment docs after the new structure and UI reset: one Node app, React build into public, storage safety, env, npm commands, restart, and handoff notes. |
-| 050 | `050_login_session_sidebar_layout_hotfix` | done | Fix the post-login refresh bug, normalize auth/user permission hydration, and correct RTL sidebar/topbar/content layout positioning. |
-| 051 | `051_professional_material_shell_rebuild` | done | Replace the current weak shell with a premium Material Design style app shell: right sidebar, topbar, content grid, responsive drawer, grouped navigation, active states, and polished spacing. |
-| 052 | `052_egypt_currency_timezone_localization` | done | Standardize all money as Egyptian Pound and all displayed dates/times as Egypt time, with shared server/client formatting utilities and tests. |
-| 053 | `053_finance_balance_engine_egp` | done | Rebuild the legacy balance concept as an advanced finance ledger connected to invoices, payments, credit limits, and manual adjustments in EGP. |
-| 054 | `054_finance_balance_ui_dashboard_history` | done | Add professional finance balance cards, history tables, manual adjustment UI, and dashboard financial overview using the new balance engine. |
-| 055 | `055_notifications_engine_legacy_plus` | done | Restore and upgrade legacy stock/store-limit notifications into a unified advanced notification engine for stock, credit limits, invoices, payments, shipments, and system events. |
-| 056 | `056_notifications_ui_center_badges` | done | Add a polished notification center, topbar badge, dashboard alerts, unread/read/resolved workflow, filters, and action links. |
-| 057 | `057_legacy_feature_parity_merge_audit` | done | Compare the old repo behavior with the modern app, document all remaining functional gaps, and open/implement only critical parity fixes needed for a complete professional system. |
-| 058 | `058_dashboard_executive_ops_finance_perfection` | done | Rebuild the dashboard as a high-value operations + finance command center with KPIs, alerts, cash/receivables, stock risk, latest invoices, payments, and quick actions. |
-| 059 | `059_business_flow_integrity_e2e` | done | Verify and fix connected flows across outlet types, outlets, products, prices, inventory receipts, invoices, payments, balances, shipments, notifications, and reports. |
-| 060 | `060_final_visual_quality_deploy_gate` | done | Run final quality gate for UI polish, light/dark mode, responsive layout, EGP/Egypt time, finance, notifications, tests, build, and simple DirectAdmin deployment. |
+| 041 | `041_fresh_database_reset_super_admin_only` | done | Fresh Database Reset + Super Admin Only |
+| 042 | `042_flatten_server_structure_no_src` | done | Flatten Server Structure No src |
+| 043 | `043_remove_old_identity_visual_system` | done | Remove Old Identity + Visual System |
+| 044 | `044_material_light_dark_theme_overhaul` | done | Material Light/Dark Theme Overhaul |
+| 045 | `045_dashboard_redesign_executive_experience` | done | Dashboard Redesign Executive Experience |
+| 046 | `046_navigation_information_architecture_polish` | done | Navigation Information Architecture Polish |
+| 047 | `047_forms_tables_dialog_cleanup_ux` | done | Forms Tables Dialog Cleanup UX |
+| 048 | `048_fresh_start_quality_smoke_verification` | done | Fresh Start Quality Smoke Verification |
+| 049 | `049_directadmin_deploy_docs_final_verify` | done | DirectAdmin Deploy Docs Final Verify |
+| 050 | `050_login_session_sidebar_layout_hotfix` | done | Login Session Hydration + Sidebar/Layout Hotfix |
+| 051 | `051_professional_material_shell_rebuild` | done | Professional Material Shell Rebuild |
+| 052 | `052_egypt_currency_timezone_localization` | done | Egypt Currency + Timezone Localization |
+| 053 | `053_finance_balance_engine_egp` | done | Finance Balance Engine EGP |
+| 054 | `054_finance_balance_ui_dashboard_history` | done | Finance Balance UI + Dashboard History |
+| 055 | `055_notifications_engine_legacy_plus` | done | Notifications Engine Legacy Plus |
+| 056 | `056_notifications_ui_center_badges` | done | Notifications UI Center + Badges |
+| 057 | `057_legacy_feature_parity_merge_audit` | done | Legacy Feature Parity Merge Audit |
+| 058 | `058_dashboard_executive_ops_finance_perfection` | done | Dashboard Executive Ops/Finance Perfection |
+| 059 | `059_business_flow_integrity_e2e` | done | Business Flow Integrity E2E |
+| 060 | `060_final_visual_quality_deploy_gate` | done | Final Visual Quality + Deploy Gate |
 | 061 | `061_unified_design_system_contract` | done | Convert `agent_pack/docs/design.md` into the active design contract for the repo and prepare the frontend structure needed to apply it. |
 | 062 | `062_frontend_style_inventory_line_by_line` | done | Create a concrete line-by-line frontend style debt inventory before refactoring pages. |
 | 063 | `063_css_extraction_no_inline_styles` | done | Remove inline CSS and move styles into structured CSS files. |
@@ -75,12 +73,27 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 069 | `069_dashboard_command_center_redesign` | done | Rebuild Dashboard as a professional operations + finance command center. |
 | 070 | `070_author_accounts_invoice_scope` | done | Complete author account logic. |
 | 071 | `071_outlet_accounts_invoice_scope` | open | Add outlet accounts. |
-| 072 | `072_balance_finance_ledger_full_reconciliation` | pending | Make balance/finance system complete, auditable, and tied to invoices/payments. |
-| 073 | `073_payments_installments_shipping_logic_integrity` | pending | Verify and complete cash/deferred/installments/shipping logic. |
+| 072 | `072_balance_finance_ledger_full_reconciliation` | pending | Make the finance/balance system complete, auditable, EGP-only, Egypt-timezone-aware, and tied to invoices, collections, and supply/remittance. |
+| 073 | `073_payments_collection_supply_shipping_logic_integrity` | pending | Verify and complete no-installment payment collection, supply/remittance, and partial shipping logic. |
 | 074 | `074_inventory_receipts_stock_ledger_integrity` | pending | Make inventory, receipts, invoice stock deduction, and adjustments fully reliable. |
 | 075 | `075_notifications_legacy_plus_advanced_rules` | pending | Bring back old notification value and expand it professionally. |
 | 076 | `076_pricing_outlets_products_end_to_end` | pending | Verify product pricing by outlet type and invoice snapshots end-to-end. |
 | 077 | `077_legacy_feature_parity_deep_audit` | pending | Ensure the new platform covers the old system and adds the requested upgrades. |
 | 078 | `078_style_quality_gate_script` | pending | Add automated style/design checks to prevent regressions. |
 | 079 | `079_visual_regression_manual_qa_pack` | pending | Create a practical visual QA checklist and fix high-priority visual defects found. |
-| 080 | `080_final_business_design_deploy_gate` | pending | Run the final gate after the new design and logic steps. |
+| 080 | `080_final_business_design_deploy_gate` | blocked | Run the final gate after the new design and logic steps. |
+| 081 | `081_finance_supply_model_purge_installments` | pending | Purge installment/payment-plan behavior from code and replace it with supply-aware finance rules. |
+| 082 | `082_remove_excel_import_pipeline_export_only` | pending | Remove import features completely and keep/export-only system professional. |
+| 083 | `083_invoice_builder_owned_dynamic_workflow` | pending | Rebuild invoice creation into a professional owned workflow connected to outlet type pricing, inventory, collection, supply, and validation. |
+| 084 | `084_partial_shipping_by_invoice_items` | pending | Implement or verify partial shipment by selecting specific invoice products and quantities. |
+| 085 | `085_supply_remittance_finance_ui` | pending | Create a professional finance UI for pending, collected, supplied, and unsupplied balances. |
+| 086 | `086_professional_exports_arabic_reports` | pending | Upgrade exports into client-ready Arabic reports. |
+| 087 | `087_css_cascade_no_important_refactor` | pending | Stop using repeated `!important` and random override hacks; fix the style cascade properly. |
+| 088 | `088_mui_library_style_conflict_cleanup` | pending | Fix MUI component styling conflicts from the root instead of fighting library CSS. |
+| 089 | `089_legacy_parity_enhancement_not_reduction` | pending | Verify that modernization improves the old platform and does not reduce core value. |
+| 090 | `090_end_to_end_business_chain_verification` | pending | Verify the whole connected chain works as one system. |
+| 091 | `091_permissions_for_finance_supply_shipping_exports` | pending | Finalize advanced RBAC for the corrected business model. |
+| 092 | `092_reports_finance_statement_polish` | pending | Make reports and statements reflect corrected finance and shipping rules. |
+| 093 | `093_full_code_logic_dead_feature_audit` | pending | Audit source code for dead/conflicting features after removing imports and installments. |
+| 094 | `094_visual_design_regression_cleanup_no_overrides` | pending | Final visual cleanup pass focused on real UI defects: layout, spacing, RTL, fields, labels, drawers, dialogs, and tables. |
+| 095 | `095_final_unified_quality_gate` | pending | Run final verification after all corrected finance/design/business changes. |

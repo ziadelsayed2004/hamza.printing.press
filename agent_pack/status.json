@@ -3,8 +3,8 @@
   "created_at": "2026-06-26 12:20",
   "mode": "fresh_start_allowed_unified_pack",
   "deployment_strategy": "single_node_monolith_directadmin",
-  "total_steps": 80,
-  "current_step": "071",
+  "total_steps": 95,
+  "current_step": "095",
   "steps": [
     {
       "id": "001",
@@ -641,75 +641,240 @@
       "id": "071",
       "slug": "outlet_accounts_invoice_scope",
       "title": "Outlet Accounts Invoice Scope",
-      "status": "open",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/071_outlet_accounts_invoice_scope_REPORT.md",
+      "started_at": "2026-06-27T17:30:00+03:00",
+      "completed_at": "2026-06-27T17:48:00+03:00"
     },
     {
       "id": "072",
       "slug": "balance_finance_ledger_full_reconciliation",
       "title": "Balance Finance Ledger Full Reconciliation",
-      "status": "pending",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/072_balance_finance_ledger_full_reconciliation_REPORT.md",
+      "started_at": "2026-06-27T17:54:00+03:00",
+      "completed_at": "2026-06-27T18:10:00+03:00"
     },
     {
       "id": "073",
-      "slug": "payments_installments_shipping_logic_integrity",
-      "title": "Payments Installments Shipping Logic Integrity",
-      "status": "pending",
-      "report": null
+      "slug": "payments_collection_supply_shipping_logic_integrity",
+      "title": "Payments Collection Supply Shipping Logic Integrity",
+      "status": "done",
+      "report": "agent_pack/reports/073_payments_collection_supply_shipping_logic_integrity_REPORT.md",
+      "started_at": "2026-06-27T18:35:00+03:00",
+      "completed_at": "2026-06-27T18:52:00+03:00"
     },
     {
       "id": "074",
       "slug": "inventory_receipts_stock_ledger_integrity",
       "title": "Inventory Receipts Stock Ledger Integrity",
-      "status": "pending",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/074_inventory_receipts_stock_ledger_integrity_REPORT.md",
+      "started_at": "2026-06-27T19:10:00+03:00",
+      "completed_at": "2026-06-27T19:30:00+03:00"
     },
     {
       "id": "075",
       "slug": "notifications_legacy_plus_advanced_rules",
       "title": "Notifications Legacy Plus Advanced Rules",
-      "status": "pending",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/075_notifications_legacy_plus_advanced_rules_REPORT.md",
+      "started_at": "2026-06-27T19:32:00+03:00",
+      "completed_at": "2026-06-27T19:45:00+03:00"
     },
     {
       "id": "076",
       "slug": "pricing_outlets_products_end_to_end",
       "title": "Pricing Outlets Products E2E",
-      "status": "pending",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/076_pricing_outlets_products_end_to_end_REPORT.md",
+      "started_at": "2026-06-27T19:54:00+03:00",
+      "completed_at": "2026-06-27T20:00:00+03:00"
     },
     {
       "id": "077",
       "slug": "legacy_feature_parity_deep_audit",
       "title": "Legacy Feature Parity Deep Audit",
-      "status": "pending",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/077_legacy_feature_parity_deep_audit_REPORT.md",
+      "started_at": "2026-06-27T20:05:00+03:00",
+      "completed_at": "2026-06-27T20:18:00+03:00"
     },
     {
       "id": "078",
       "slug": "style_quality_gate_script",
       "title": "Style Quality Gate Script",
-      "status": "pending",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/078_style_quality_gate_script_REPORT.md",
+      "started_at": "2026-06-27T20:19:00+03:00",
+      "completed_at": "2026-06-27T20:30:00+03:00"
     },
     {
       "id": "079",
       "slug": "visual_regression_manual_qa_pack",
       "title": "Visual Regression Manual QA Pack",
-      "status": "pending",
-      "report": null
+      "status": "done",
+      "report": "agent_pack/reports/079_visual_regression_manual_qa_pack_REPORT.md",
+      "started_at": "2026-06-27T20:33:00+03:00",
+      "completed_at": "2026-06-27T20:38:00+03:00"
     },
     {
       "id": "080",
       "slug": "final_business_design_deploy_gate",
-      "title": "Final Business Design Deploy Gate",
-      "status": "pending",
-      "report": null
+      "title": "Former Final Business Design Deploy Gate — Held Until Step 095",
+      "status": "blocked",
+      "report": null,
+      "blocked_reason": "Final gate moved to 095 after new finance/import/style corrections."
+    },
+    {
+      "id": "081",
+      "slug": "finance_supply_model_purge_installments",
+      "title": "Finance Supply Model Purge Installments",
+      "status": "done",
+      "report": "agent_pack/reports/081_finance_supply_model_purge_installments_REPORT.md",
+      "started_at": "2026-06-27T20:42:00+03:00",
+      "completed_at": "2026-06-27T20:56:00+03:00"
+    },
+    {
+      "id": "082",
+      "slug": "remove_excel_import_pipeline_export_only",
+      "title": "Remove Excel Import Pipeline Export Only",
+      "status": "done",
+      "report": "agent_pack/reports/082_remove_excel_import_pipeline_export_only_REPORT.md",
+      "started_at": "2026-06-27T21:31:00+03:00",
+      "completed_at": "2026-06-27T21:36:00+03:00"
+    },
+    {
+      "id": "083",
+      "slug": "invoice_builder_owned_dynamic_workflow",
+      "title": "Invoice Builder Owned Dynamic Workflow",
+      "status": "done",
+      "report": "agent_pack/reports/083_invoice_builder_owned_dynamic_workflow_REPORT.md",
+      "started_at": "2026-06-27T21:38:00+03:00",
+      "completed_at": "2026-06-27T21:48:00+03:00"
+    },
+    {
+      "id": "084",
+      "slug": "partial_shipping_by_invoice_items",
+      "title": "Partial Shipping By Invoice Items",
+      "status": "done",
+      "report": "agent_pack/reports/084_partial_shipping_by_invoice_items_REPORT.md",
+      "started_at": "2026-06-27T21:59:00+03:00",
+      "completed_at": "2026-06-27T22:04:00+03:00"
+    },
+    {
+      "id": "085",
+      "slug": "supply_remittance_finance_ui",
+      "title": "Supply Remittance Finance Ui",
+      "status": "done",
+      "report": "agent_pack/reports/085_supply_remittance_finance_ui_REPORT.md",
+      "started_at": "2026-06-27T22:05:00+03:00",
+      "completed_at": "2026-06-27T22:12:00+03:00"
+    },
+    {
+      "id": "086",
+      "slug": "professional_exports_arabic_reports",
+      "title": "Professional Exports Arabic Reports",
+      "status": "done",
+      "report": "agent_pack/reports/086_professional_exports_arabic_reports_REPORT.md",
+      "started_at": "2026-06-27T22:19:00+03:00",
+      "completed_at": "2026-06-27T22:28:00+03:00"
+    },
+    {
+      "id": "087",
+      "slug": "css_cascade_no_important_refactor",
+      "title": "Css Cascade No Important Refactor",
+      "status": "done",
+      "report": "agent_pack/reports/087_css_cascade_no_important_refactor_REPORT.md",
+      "started_at": "2026-06-27T22:29:00+03:00",
+      "completed_at": "2026-06-27T22:35:00+03:00"
+    },
+    {
+      "id": "088",
+      "slug": "mui_library_style_conflict_cleanup",
+      "title": "Mui Library Style Conflict Cleanup",
+      "status": "done",
+      "report": "agent_pack/reports/088_mui_library_style_conflict_cleanup_REPORT.md",
+      "started_at": "2026-06-27T22:36:00+03:00",
+      "completed_at": "2026-06-27T22:41:00+03:00"
+    },
+    {
+      "id": "089",
+      "slug": "legacy_parity_enhancement_not_reduction",
+      "title": "Legacy Parity Enhancement Not Reduction",
+      "status": "done",
+      "report": "agent_pack/reports/089_legacy_parity_enhancement_not_reduction_REPORT.md",
+      "started_at": "2026-06-27T22:42:00+03:00",
+      "completed_at": "2026-06-27T22:51:00+03:00"
+    },
+    {
+      "id": "090",
+      "slug": "end_to_end_business_chain_verification",
+      "title": "End To End Business Chain Verification",
+      "status": "done",
+      "report": "agent_pack/reports/090_end_to_end_business_chain_verification_REPORT.md",
+      "started_at": "2026-06-27T22:53:00+03:00",
+      "completed_at": "2026-06-27T23:21:00+03:00"
+    },
+    {
+      "id": "091",
+      "slug": "permissions_for_finance_supply_shipping_exports",
+      "title": "Permissions For Finance Supply Shipping Exports",
+      "status": "done",
+      "report": "agent_pack/reports/091_permissions_for_finance_supply_shipping_exports_REPORT.md",
+      "started_at": "2026-06-27T23:29:00+03:00",
+      "completed_at": "2026-06-27T23:32:00+03:00"
+    },
+    {
+      "id": "092",
+      "slug": "reports_finance_statement_polish",
+      "title": "Reports Finance Statement Polish",
+      "status": "done",
+      "report": "agent_pack/reports/092_reports_finance_statement_polish_REPORT.md",
+      "started_at": "2026-06-27T23:37:00+03:00",
+      "completed_at": "2026-06-27T23:50:00+03:00"
+    },
+    {
+      "id": "093",
+      "slug": "full_code_logic_dead_feature_audit",
+      "title": "Full Code Logic Dead Feature Audit",
+      "status": "done",
+      "report": "agent_pack/reports/093_full_code_logic_dead_feature_audit_REPORT.md",
+      "started_at": "2026-06-27T23:51:00+03:00",
+      "completed_at": "2026-06-27T23:54:00+03:00"
+    },
+    {
+      "id": "094",
+      "slug": "visual_design_regression_cleanup_no_overrides",
+      "title": "Visual Design Regression Cleanup No Overrides",
+      "status": "done",
+      "report": "agent_pack/reports/094_visual_design_regression_cleanup_no_overrides_REPORT.md",
+      "started_at": "2026-06-27T23:55:00+03:00",
+      "completed_at": "2026-06-27T23:58:00+03:00"
+    },
+    {
+      "id": "095",
+      "slug": "final_unified_quality_gate",
+      "title": "Final Unified Quality Gate",
+      "status": "done",
+      "report": "agent_pack/reports/095_final_unified_quality_gate_REPORT.md",
+      "started_at": "2026-06-28T00:04:00+03:00",
+      "completed_at": "2026-06-28T00:07:00+03:00"
     }
   ],
   "change_request": "post_completion_fix_login_layout_finance_balance_notifications_egp_egypt_time_professional_mui",
   "last_updated_at": "2026-06-27T15:40:00+03:00",
   "client_name": "مطبعة حمزة",
-  "developer": "Ziad Elsayed CodzHub"
+  "developer": "Ziad Elsayed CodzHub",
+  "updated_at": "2026-06-27T17:55:00+03:00",
+  "active_corrections": {
+    "no_installments": true,
+    "no_imports": true,
+    "export_only": true,
+    "finance_model": "pending_collected_supplied_unsupplied",
+    "partial_shipping_by_invoice_items": true,
+    "css_policy": "no_inline_no_important_abuse",
+    "project_name": "مطبعة حمزة",
+    "developer_credit": "Ziad Elsayed CodzHub"
+  }
 }

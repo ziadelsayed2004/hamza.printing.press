@@ -22,7 +22,7 @@ Rebuild the old balance feature as a professional finance ledger connected to in
    - manual deposit/withdrawal/adjustment
    - balances by outlet/governorate/outlet type
 3. Connect invoice/payment lifecycle:
-   - creating unpaid/deferred/installment invoice affects receivables
+   - creating unpaid/partial/full collection invoice affects receivables
    - confirmed payment increases collected/cash balance and reduces receivables
    - payment reversal updates balances
    - invoice cancel/delete/reversal updates balances correctly

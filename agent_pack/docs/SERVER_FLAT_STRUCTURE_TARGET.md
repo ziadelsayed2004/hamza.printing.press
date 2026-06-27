@@ -28,7 +28,7 @@ server/
     inventory/
     reports/
     exports/
-    imports/
+    exports/  # import modules are forbidden by current business rules
     audit/
   utils/
   routes.js

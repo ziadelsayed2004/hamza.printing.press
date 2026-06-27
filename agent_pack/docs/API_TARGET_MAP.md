@@ -34,3 +34,18 @@ All APIs live under `/api`.
 - Validation on every mutation.
 - Permission middleware on protected endpoints.
 - Audit log on sensitive mutations.
+
+## Active API correction: export only and supply-aware finance
+
+Remove user-facing imports:
+
+- `/api/imports/*` must be removed or return 410 during cleanup, then deleted.
+
+Required API areas:
+
+- `/api/payments` for collect/reverse.
+- `/api/payments/:id/mark-supplied` or `/api/finance/supply` for remittance.
+- `/api/finance/ledger`.
+- `/api/finance/outlets/:id/statement`.
+- `/api/shipments` with invoice-item partial shipment.
+- `/api/exports/*` only.

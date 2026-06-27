@@ -1,7 +1,7 @@
 # Step 035: Payments Installments Ui
 
 ## Goal
-Build payments UI inside invoice and standalone: add payment, create installment plan, view remaining, overdue, and payment history.
+Build payments UI inside invoice and standalone: add payment, add partial/full collection, supplied/not supplied, view remaining, and payment history.
 
 ## Context
 This project is being modernized from a simple Node/Express + static HTML/Vanilla JS system into a professional single-deployment platform with Express APIs and a React/Vite/Material UI dashboard.
@@ -17,7 +17,7 @@ Production must remain one Node.js app. The frontend build must be served by Exp
 5. Add or update tests/checks if this step affects behavior.
 6. Update docs when this step changes architecture, deployment, database, permissions, or business behavior.
 7. Update `agent_pack/status.json`.
-8. Write a report in `agent_pack/reports/035_payments_installments_ui_REPORT.md`.
+8. Write a report in `agent_pack/reports/035_payments_collections_ui_REPORT.md`.
 
 ## Acceptance criteria
 
@@ -37,3 +37,6 @@ Production must remain one Node.js app. The frontend build must be served by Exp
 
 ## Stop rule
 Stop immediately after this one step and reporting are complete.
+
+## Current correction
+This old completed step is superseded by the active business corrections in steps 081–095. Do not reintroduce installments or imports.

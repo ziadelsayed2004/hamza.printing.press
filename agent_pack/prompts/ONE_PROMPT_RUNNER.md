@@ -19,6 +19,11 @@ Before editing anything, read:
 12. `agent_pack/docs/LEGACY_BALANCE_NOTIFICATIONS_TARGET.md`
 13. `agent_pack/docs/FINANCE_NOTIFICATIONS_TIMEZONE_UI_FIX_SCOPE.md`
 14. `agent_pack/docs/PROFESSIONAL_MATERIAL_DASHBOARD_STANDARD.md`
+15. `agent_pack/docs/FINANCE_COLLECTION_SUPPLY_RULES.md`
+16. `agent_pack/docs/INVOICE_CREATION_PARTIAL_SHIPPING_RULES.md`
+17. `agent_pack/docs/EXPORT_ONLY_NO_IMPORT_POLICY.md`
+18. `agent_pack/docs/CSS_CASCADE_NO_IMPORTANT_POLICY.md`
+19. `agent_pack/docs/LEGACY_ENHANCEMENT_NOT_REDUCTION_POLICY.md`
 12. `agent_pack/checklists/VERIFY_GATE.md`
 10. The selected step file under `agent_pack/steps/`
 
@@ -64,8 +69,13 @@ Forbidden:
 - Outlet types are admin-defined.
 - Each book/product can have a separate price per outlet type.
 - Invoice item price must be snapshotted at invoice creation.
-- Payments support cash, deferred, installments and automatic remaining calculations.
+- Payments/collections support only unpaid, partial collection, and full collection. Installments/payment plans are forbidden.
 - Inventory changes must go through receipts/ledger/transactions, not silent stock edits.
+- Finance must separate pending receivables, collected actual balance, supplied collected balance, and collected-not-supplied balance.
+- Every collected payment must be marked supplied/not supplied and can later be supplied by authorized users.
+- Excel/CSV import features are forbidden; exports remain and must be professional.
+- Partial shipping is allowed by selecting invoice item quantities; shipping must not break finance math.
+- Do not reduce old platform value; enhance legacy behavior and remove only explicitly unnecessary features.
 
 ## Verification before closing the step
 Run what is available and relevant:
@@ -124,6 +134,9 @@ Hard rules:
 - Do not add inline styles.
 - Do not add `style={{...}}`.
 - Do not add new `sx={{...}}` except with a written temporary-debt note and a later cleanup task.
+- Do not add new `!important`; fix cascade/theme/component structure instead.
+- Remove import UI/API/modules unless a step explicitly needs a temporary compatibility removal path.
+- Remove installment/payment-plan UI/API/schema references.
 - Prefer CSS files per page/component plus shared CSS variables.
 - Keep the server path flat as `server/`, not `server/src/`.
 - Execute exactly one open/pending step only, update tracking, run verification, write report, then stop.

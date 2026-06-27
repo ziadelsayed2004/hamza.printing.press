@@ -30,3 +30,17 @@ You are working on the Hamza Printing Press Bookstore Manager repo. Read `agent_
 - العملة جنيه مصري.
 - التوقيت توقيت مصر.
 - كل مرة خطوة واحدة فقط.
+
+## Active unified corrections — collection/supply, no installments/imports
+
+Current business correction:
+
+- The platform has no installment/payment-plan system.
+- Payment/collection supports unpaid, partial collection, and full collection only.
+- Collected money must be marked supplied or not supplied.
+- Finance separates pending balance, collected balance, supplied collected balance, and unsupplied collected balance.
+- Excel/CSV import is removed completely.
+- Exports remain and must be professional.
+- Partial shipping is required by selecting invoice item quantities.
+- CSS must be fixed through design system/cascade, not `!important` spam.
+- The old system value must be enhanced, not reduced.

@@ -70,3 +70,22 @@ Examples:
 - Author users only see linked author data unless granted broader permissions.
 - Menu visibility must be permission-aware.
 - API must still enforce permissions even if menu item is hidden.
+
+## Active permission correction: no imports, collection/supply permissions
+
+Remove import permissions from UI and API.
+
+Required permissions:
+
+- `payments.collect`
+- `payments.reverse`
+- `payments.mark_supplied`
+- `payments.supply_batch`
+- `finance.view`
+- `finance.statement.view`
+- `finance.export`
+- `shipments.create_partial`
+- `shipments.update_status`
+- `exports.run`
+- `exports.finance`
+- `exports.inventory`

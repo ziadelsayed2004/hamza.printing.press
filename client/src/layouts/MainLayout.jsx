@@ -45,7 +45,6 @@ import {
   AccountBalanceWallet as WalletIcon,
   LocalShipping as LocalShippingIcon,
   Assessment as AssessmentIcon,
-  CloudUpload as CloudUploadIcon,
   CloudDownload as CloudDownloadIcon,
   History as HistoryIcon,
   ExitToApp as ExitToAppIcon,
@@ -149,7 +148,6 @@ export const MainLayout = () => {
       'finance': t('nav.finance'),
       'shipments': t('nav.shipments'),
       'reports': t('nav.reports'),
-      'imports': t('nav.imports'),
       'exports': t('nav.exports'),
       'audit': t('nav.audit'),
       'notifications': t('nav.notifications')
@@ -235,7 +233,6 @@ export const MainLayout = () => {
       title: 'التقارير والتصدير',
       items: [
         { textKey: 'nav.reports', text: 'التقارير', icon: <AssessmentIcon />, path: '/reports', permission: 'reports.view' },
-        { textKey: 'nav.imports', text: 'استيراد البيانات', icon: <CloudUploadIcon />, path: '/imports', permission: 'imports.run' },
         { textKey: 'nav.exports', text: 'تصدير البيانات', icon: <CloudDownloadIcon />, path: '/exports', permission: 'exports.run' }
       ]
     },

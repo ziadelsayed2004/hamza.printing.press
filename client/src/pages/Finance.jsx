@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { formatCurrencyEGP, formatEgyptDateTime } from '../utils/formatters';
+import { formatCurrencyEGP, formatEgyptDate, formatEgyptDateTime } from '../utils/formatters';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
@@ -34,7 +34,9 @@ import {
   Stack,
   TablePagination,
   Divider,
-  InputAdornment
+  InputAdornment,
+  Checkbox,
+  Chip
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -71,7 +73,9 @@ const entryTypeTranslations = {
   'invoice_updated': 'تعديل فاتورة مبيعات',
   'payment_recorded': 'تحصيل نقدي (سداد فاتورة)',
   'payment_reversed': 'إلغاء تحصيل نقدي (عكس سداد)',
-  'manual_adjustment': 'تسوية يدوية بالخزينة'
+  'manual_adjustment': 'تسوية يدوية بالخزينة',
+  'payment_supplied': 'توريد نقدية تحصيل لمقر الشركة',
+  'supply_reversed': 'إلغاء توريد نقدية تحصيل'
 };
 
 export const Finance = () => {
@@ -122,6 +126,22 @@ export const Finance = () => {
   const [adjType, setAdjType] = useState('deposit');
   const [adjNotes, setAdjNotes] = useState('');
   const [submittingAdj, setSubmittingAdj] = useState(false);
+
+  // Payments & Supply Ledger state
+  const [paymentsList, setPaymentsList] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsPage, setPaymentsPage] = useState(0);
+  const [paymentsRowsPerPage, setPaymentsRowsPerPage] = useState(25);
+  const [paymentsTotalCount, setPaymentsTotalCount] = useState(0);
+  const [paymentsFilterOutlet, setPaymentsFilterOutlet] = useState('');
+  const [paymentsFilterSupplyStatus, setPaymentsFilterSupplyStatus] = useState('');
+  const [selectedPaymentIds, setSelectedPaymentIds] = useState([]);
+  const [supplySubmitting, setSupplySubmitting] = useState(false);
+
+  // Client Statement state
+  const [statementOutletId, setStatementOutletId] = useState('');
+  const [statementData, setStatementData] = useState(null);
+  const [statementLoading, setStatementLoading] = useState(false);
 
   // Fetch Dropdown data
   useEffect(() => {
@@ -206,6 +226,42 @@ export const Finance = () => {
     }
   }, []);
 
+  // Fetch Payments list (for Tab 4)
+  const fetchPaymentsList = useCallback(async () => {
+    setPaymentsLoading(true);
+    try {
+      const offset = paymentsPage * paymentsRowsPerPage;
+      let q = `/payments?limit=${paymentsRowsPerPage}&offset=${offset}`;
+      if (paymentsFilterOutlet) q += `&outletId=${paymentsFilterOutlet}`;
+      if (paymentsFilterSupplyStatus) q += `&supplyStatus=${paymentsFilterSupplyStatus}`;
+      const data = await apiClient.get(q);
+      setPaymentsList(data);
+      setPaymentsTotalCount(data.length >= paymentsRowsPerPage ? offset + paymentsRowsPerPage + 1 : offset + data.length);
+    } catch (err) {
+      showToast(err.message || 'خطأ في تحميل سجل المدفوعات والتوريد', 'error');
+    } finally {
+      setPaymentsLoading(false);
+    }
+  }, [paymentsPage, paymentsRowsPerPage, paymentsFilterOutlet, paymentsFilterSupplyStatus]);
+
+  // Fetch Client Statement (for Tab 5)
+  const fetchStatementData = useCallback(async () => {
+    if (!statementOutletId) {
+      setStatementData(null);
+      return;
+    }
+    setStatementLoading(true);
+    try {
+      const data = await apiClient.get(`/finance/outlets/${statementOutletId}/statement`);
+      setStatementData(data);
+    } catch (err) {
+      showToast(err.message || 'خطأ في تحميل كشف حساب العميل', 'error');
+      setStatementData(null);
+    } finally {
+      setStatementLoading(false);
+    }
+  }, [statementOutletId]);
+
   // Trigger loading based on Active Tab
   useEffect(() => {
     fetchSummary();
@@ -217,13 +273,23 @@ export const Finance = () => {
       fetchGovernorateBalances();
     } else if (tab === 3) {
       fetchOutletTypeBalances();
+    } else if (tab === 4) {
+      fetchPaymentsList();
+    } else if (tab === 5) {
+      fetchStatementData();
     }
-  }, [tab, fetchSummary, fetchLedger, fetchOutletBalances, fetchGovernorateBalances, fetchOutletTypeBalances]);
+  }, [tab, fetchSummary, fetchLedger, fetchOutletBalances, fetchGovernorateBalances, fetchOutletTypeBalances, fetchPaymentsList, fetchStatementData]);
 
   // Reset page on filter changes
   useEffect(() => {
     setPage(0);
   }, [filterOutlet, filterEntryType, filterStartDate, filterEndDate]);
+
+  // Reset payments page on filter changes
+  useEffect(() => {
+    setPaymentsPage(0);
+    setSelectedPaymentIds([]);
+  }, [paymentsFilterOutlet, paymentsFilterSupplyStatus]);
 
   // Reset Filters
   const handleClearFilters = () => {
@@ -274,6 +340,39 @@ export const Finance = () => {
     }
   };
 
+  // Confirm single payment supply
+  const handleConfirmSupply = async (paymentId) => {
+    setSupplySubmitting(true);
+    try {
+      await apiClient.post(`/payments/${paymentId}/supply`);
+      showToast('تم تأكيد توريد الدفعة بنجاح وتحديث أرصدة الخزينة.', 'success');
+      fetchSummary();
+      fetchPaymentsList();
+      setSelectedPaymentIds(prev => prev.filter(id => id !== paymentId));
+    } catch (err) {
+      showToast(err.message || 'خطأ أثناء تسجيل توريد الدفعة', 'error');
+    } finally {
+      setSupplySubmitting(false);
+    }
+  };
+
+  // Confirm batch payments supply
+  const handleBatchConfirmSupply = async () => {
+    if (selectedPaymentIds.length === 0) return;
+    setSupplySubmitting(true);
+    try {
+      await apiClient.post('/payments/supply-batch', { paymentIds: selectedPaymentIds });
+      showToast(`تم تأكيد توريد عدد (${selectedPaymentIds.length}) دفعة بنجاح وتحديث أرصدة الخزينة.`, 'success');
+      fetchSummary();
+      fetchPaymentsList();
+      setSelectedPaymentIds([]);
+    } catch (err) {
+      showToast(err.message || 'خطأ أثناء تسجيل توريد الدفعات دفعةً واحدة', 'error');
+    } finally {
+      setSupplySubmitting(false);
+    }
+  };
+
   if (summaryLoading && !summary) {
     return <LoadingState message="جاري تحميل البيانات المالية وإحصائيات الخزينة..." />;
   }
@@ -299,7 +398,7 @@ export const Finance = () => {
 
       {/* Summary Stat Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card sx={{ borderLeft: '5px solid', borderColor: 'primary.main', height: '100%' }}>
             <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
               <Box sx={{ p: 1.5, mr: 2, bg: 'primary.light', color: 'primary.main', borderRadius: 2, display: 'flex' }}>
@@ -307,7 +406,7 @@ export const Finance = () => {
               </Box>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary">
-                  إجمالي فواتير المبيعات
+                  إجمالي الفواتير (المبيعات)
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 0.5 }}>
                   {formatCurrencyEGP(summary?.totalInvoices || 0)}
@@ -317,7 +416,25 @@ export const Finance = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card sx={{ borderLeft: '5px solid', borderColor: 'warning.main', height: '100%' }}>
+            <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
+              <Box sx={{ p: 1.5, mr: 2, bg: 'warning.light', color: 'warning.main', borderRadius: 2, display: 'flex' }}>
+                <WalletIcon sx={{ fontSize: 28 }} />
+              </Box>
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary">
+                  الرصيد المعلق (الذمم المدينة)
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 0.5, color: 'warning.main' }}>
+                  {formatCurrencyEGP(summary?.pendingBalance || 0)}
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card sx={{ borderLeft: '5px solid', borderColor: 'success.main', height: '100%' }}>
             <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
               <Box sx={{ p: 1.5, mr: 2, bg: 'success.light', color: 'success.main', borderRadius: 2, display: 'flex' }}>
@@ -325,7 +442,7 @@ export const Finance = () => {
               </Box>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary">
-                  رصيد المقبوضات النقدي (المحصل)
+                  إجمالي النقدية المحصلة
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 0.5, color: 'success.main' }}>
                   {formatCurrencyEGP(summary?.totalCollected || 0)}
@@ -335,25 +452,25 @@ export const Finance = () => {
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ borderLeft: '5px solid', borderColor: 'warning.main', height: '100%' }}>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card sx={{ borderLeft: '5px solid', borderColor: 'info.main', height: '100%' }}>
             <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
-              <Box sx={{ p: 1.5, mr: 2, bg: 'warning.light', color: 'warning.main', borderRadius: 2, display: 'flex' }}>
-                <WalletIcon sx={{ fontSize: 28 }} />
+              <Box sx={{ p: 1.5, mr: 2, bg: 'info.light', color: 'info.main', borderRadius: 2, display: 'flex' }}>
+                <PaymentIcon sx={{ fontSize: 28 }} />
               </Box>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary">
-                  الذمم المدينة المتبقية (المديونيات)
+                  نقدية موردة للشركة (مستلمة)
                 </Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 0.5, color: 'warning.main' }}>
-                  {formatCurrencyEGP(summary?.totalReceivables || 0)}
+                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 0.5, color: 'info.main' }}>
+                  {formatCurrencyEGP(summary?.suppliedBalance || 0)}
                 </Typography>
               </Box>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <Card sx={{ borderLeft: '5px solid', borderColor: 'error.main', height: '100%' }}>
             <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
               <Box sx={{ p: 1.5, mr: 2, bg: 'error.light', color: 'error.main', borderRadius: 2, display: 'flex' }}>
@@ -361,10 +478,10 @@ export const Finance = () => {
               </Box>
               <Box>
                 <Typography variant="subtitle2" color="text.secondary">
-                  الأقساط والمبالغ المتأخرة
+                  نقدية معلقة (غير موردة)
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 0.5, color: 'error.main' }}>
-                  {formatCurrencyEGP(summary?.totalOverdue || 0)}
+                  {formatCurrencyEGP(summary?.unsuppliedBalance || 0)}
                 </Typography>
               </Box>
             </CardContent>
@@ -386,6 +503,8 @@ export const Finance = () => {
           <Tab label="أرصدة منافذ التوزيع" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
           <Tab label="المبيعات والأرصدة بالمحافظات" icon={<MapIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
           <Tab label="أرصدة فئات منافذ البيع" icon={<CategoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
+          <Tab label="سجل المدفوعات والتوريد" icon={<PaymentIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
+          <Tab label="كشف حساب عميل" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
         </Tabs>
 
         {/* TAB 0: LEDGER HISTORY */}
@@ -664,6 +783,329 @@ export const Finance = () => {
             </TableContainer>
           ) : (
             <EmptyState message="لا توجد فئات منافذ مسجلة." />
+          )}
+        </TabPanel>
+
+        {/* TAB 4: PAYMENTS & SUPPLY LEDGER */}
+        <TabPanel value={tab} index={4}>
+          {/* Filters */}
+          <Box sx={{ p: 2, mb: 2, bg: 'action.hover', borderRadius: 2 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Outlet Filter */}
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>تصفية حسب المنفذ</InputLabel>
+                  <Select
+                    value={paymentsFilterOutlet}
+                    onChange={(e) => setPaymentsFilterOutlet(e.target.value)}
+                    label="تصفية حسب المنفذ"
+                  >
+                    <MenuItem value="">الكل</MenuItem>
+                    {outlets.map(o => (
+                      <MenuItem key={o.id} value={o.id}>{o.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Supply Status Filter */}
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>حالة التوريد</InputLabel>
+                  <Select
+                    value={paymentsFilterSupplyStatus}
+                    onChange={(e) => setPaymentsFilterSupplyStatus(e.target.value)}
+                    label="حالة التوريد"
+                  >
+                    <MenuItem value="">الكل</MenuItem>
+                    <MenuItem value="supplied">تم التوريد لمقر الشركة</MenuItem>
+                    <MenuItem value="not_supplied">لم يتم التوريد (بالخزينة الفرعية)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Reset Filters */}
+              <Grid item xs={12} sm={4}>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setPaymentsFilterOutlet('');
+                    setPaymentsFilterSupplyStatus('');
+                  }}
+                  startIcon={<ClearIcon />}
+                  size="small"
+                  fullWidth
+                >
+                  إعادة تعيين الفلاتر
+                </Button>
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* Batch action bar */}
+          {selectedPaymentIds.length > 0 && hasPermission('payments.supply_batch') && (
+            <Alert
+              severity="info"
+              sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
+              action={
+                <Button
+                  color="primary"
+                  variant="contained"
+                  size="small"
+                  onClick={handleBatchConfirmSupply}
+                  disabled={supplySubmitting}
+                >
+                  {supplySubmitting ? 'جاري تأكيد التوريد...' : `تأكيد توريد ${selectedPaymentIds.length} دفعة`}
+                </Button>
+              }
+            >
+              تم تحديد {selectedPaymentIds.length} دفعة مالية غير موردة.
+            </Alert>
+          )}
+
+          {paymentsLoading ? (
+            <LoadingState message="جاري تحميل سجل المدفوعات والتوريد..." />
+          ) : paymentsList.length > 0 ? (
+            <Box>
+              <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
+                <Table sx={{ minWidth: 650 }} size="small">
+                  <TableHead sx={{ bgcolor: 'action.selected' }}>
+                    <TableRow>
+                      {/* Checkbox Header */}
+                      {hasPermission('payments.supply_batch') && (
+                        <TableCell align="center" sx={{ fontWeight: 'bold', width: 50 }}>
+                          <Checkbox
+                            size="small"
+                            checked={
+                              paymentsList.length > 0 &&
+                              paymentsList.filter(p => p.supply_status === 'not_supplied').every(p => selectedPaymentIds.includes(p.id))
+                            }
+                            onChange={(e) => {
+                              const notSupplied = paymentsList.filter(p => p.supply_status === 'not_supplied');
+                              if (e.target.checked) {
+                                const newIds = [...new Set([...selectedPaymentIds, ...notSupplied.map(p => p.id)])];
+                                setSelectedPaymentIds(newIds);
+                              } else {
+                                const notSuppliedIds = notSupplied.map(p => p.id);
+                                setSelectedPaymentIds(prev => prev.filter(id => !notSuppliedIds.includes(id)));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                      )}
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>رقم الفاتورة</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>طريقة الدفع</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ المحصل</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>حالة التوريد</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الإجراءات</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {paymentsList.map((pay) => {
+                      const isChecked = selectedPaymentIds.includes(pay.id);
+                      return (
+                        <TableRow key={pay.id} hover>
+                          {/* Checkbox Row */}
+                          {hasPermission('payments.supply_batch') && (
+                            <TableCell align="center">
+                              {pay.supply_status === 'not_supplied' ? (
+                                <Checkbox
+                                  size="small"
+                                  checked={isChecked}
+                                  onChange={() => {
+                                    if (isChecked) {
+                                      setSelectedPaymentIds(prev => prev.filter(id => id !== pay.id));
+                                    } else {
+                                      setSelectedPaymentIds(prev => [...prev, pay.id]);
+                                    }
+                                  }}
+                                />
+                              ) : null}
+                            </TableCell>
+                          )}
+                          <TableCell align="right">{pay.payment_date ? formatEgyptDate(pay.payment_date) : '—'}</TableCell>
+                          <TableCell align="right" sx={{ fontFamily: 'monospace' }}>{pay.invoice_number}</TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={pay.payment_method === 'cash' ? 'نقدي (Cash)' : 'تحويل/شيك (Bank)'}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                            {formatCurrencyEGP(pay.amount)}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={pay.supply_status === 'supplied' ? 'تم التوريد للشركة' : 'معلق في الخزينة الفرعية'}
+                              color={pay.supply_status === 'supplied' ? 'success' : 'warning'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell align="right">{pay.user_full_name || '—'}</TableCell>
+                          <TableCell align="center">
+                            {pay.supply_status === 'not_supplied' && hasPermission('payments.mark_supplied') ? (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="success"
+                                onClick={() => handleConfirmSupply(pay.id)}
+                                disabled={supplySubmitting}
+                                sx={{ py: 0.2, px: 1, fontSize: '0.75rem' }}
+                              >
+                                تأكيد التوريد
+                              </Button>
+                            ) : pay.supply_status === 'supplied' ? (
+                              <Chip label="مورّد ومغلق" size="small" variant="outlined" sx={{ color: 'text.secondary' }} />
+                            ) : (
+                              '—'
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              {/* Pagination */}
+              <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(224,224,224,1)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button size="small" disabled={paymentsPage === 0} onClick={() => setPaymentsPage(prev => prev - 1)}>السابق</Button>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>الصفحة {paymentsPage + 1}</Typography>
+                  <Button size="small" disabled={paymentsList.length < paymentsRowsPerPage} onClick={() => setPaymentsPage(prev => prev + 1)}>التالي</Button>
+                </Box>
+              </Box>
+            </Box>
+          ) : (
+            <EmptyState message="لا يوجد حركات تحصيل مدفوعات مطابقة للمواصفات حالياً." />
+          )}
+        </TabPanel>
+
+        {/* TAB 5: CLIENT STATEMENT OF ACCOUNT */}
+        <TabPanel value={tab} index={5}>
+          {/* Outlet Selection Dropdown */}
+          <Box sx={{ p: 2, mb: 3, bg: 'action.hover', borderRadius: 2 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>اختر منفذ البيع لعرض كشف الحساب</InputLabel>
+                  <Select
+                    value={statementOutletId}
+                    onChange={(e) => setStatementOutletId(e.target.value)}
+                    label="اختر منفذ البيع لعرض كشف الحساب"
+                  >
+                    <MenuItem value="">-- اختر المنفذ --</MenuItem>
+                    {outlets.map(o => (
+                      <MenuItem key={o.id} value={o.id}>{o.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Box>
+
+          {statementLoading ? (
+            <LoadingState message="جاري جلب وتجميع حركات كشف الحساب..." />
+          ) : statementData ? (
+            <Box>
+              {/* Statement Summary Card */}
+              <Card variant="outlined" sx={{ mb: 3, backgroundColor: '#fafafa' }}>
+                <CardContent>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.dark' }}>
+                    ملخص كشف حساب العميل: {statementData.outlet.name} ({statementData.outlet.governorate})
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="caption" color="text.secondary">إجمالي المبيعات الآجلة (المدين)</Typography>
+                        <Typography variant="h6" sx={{ color: 'warning.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(
+                            statementData.statement.reduce((sum, item) => sum + (item.receivable_amount > 0 ? item.receivable_amount : 0), 0)
+                          )}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
+                        <Typography variant="caption" color="text.secondary">إجمالي المدفوعات المسددة (الدائن)</Typography>
+                        <Typography variant="h6" sx={{ color: 'success.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(
+                            Math.abs(statementData.statement.reduce((sum, item) => sum + (item.receivable_amount < 0 ? item.receivable_amount : 0), 0))
+                          )}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundColor: '#fffbe6' }}>
+                        <Typography variant="caption" color="text.secondary">الرصيد المتبقي المستحق (الذمم)</Typography>
+                        <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(
+                            statementData.statement.length > 0 ? statementData.statement[statementData.statement.length - 1].running_receivable : 0
+                          )}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </Card>
+
+              {/* Statement General Ledger Table */}
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'text.secondary' }}>
+                الحركات التفصيلية مرتبة زمنياً
+              </Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableRow>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>المستند</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>نوع المعاملة</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>المدين (مبيعات/مديونية +)</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>الدائن (دفعة مسددة -)</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>الرصيد المستحق الجاري</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>البيان والتفاصيل</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {statementData.statement.map((item, idx) => {
+                      const debitVal = item.receivable_amount > 0 ? item.receivable_amount : 0;
+                      const creditVal = item.receivable_amount < 0 ? Math.abs(item.receivable_amount) : 0;
+                      return (
+                        <TableRow key={idx} hover>
+                          <TableCell align="right">{item.created_at ? formatEgyptDate(item.created_at) : '—'}</TableCell>
+                          <TableCell align="right" sx={{ fontFamily: 'monospace' }}>
+                            {item.reference_type === 'invoice' ? `فاتورة #${item.reference_id}` : `سند #${item.reference_id}`}
+                          </TableCell>
+                          <TableCell align="right">
+                            <Chip
+                              label={entryTypeTranslations[item.entry_type] || item.entry_type}
+                              size="small"
+                              variant="outlined"
+                              color={debitVal > 0 ? 'primary' : 'success'}
+                            />
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: debitVal > 0 ? 'warning.main' : 'inherit', fontWeight: debitVal > 0 ? 'bold' : 'normal' }}>
+                            {debitVal > 0 ? formatCurrencyEGP(debitVal) : '—'}
+                          </TableCell>
+                          <TableCell align="right" sx={{ color: creditVal > 0 ? 'success.main' : 'inherit', fontWeight: creditVal > 0 ? 'bold' : 'normal' }}>
+                            {creditVal > 0 ? formatCurrencyEGP(creditVal) : '—'}
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold', color: item.running_receivable > 0 ? 'error.main' : 'success.main' }}>
+                            {formatCurrencyEGP(item.running_receivable)}
+                          </TableCell>
+                          <TableCell align="right">{item.notes || '—'}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          ) : (
+            <Alert severity="info">يرجى اختيار منفذ بيع من القائمة المنسدلة أعلاه لعرض كشف حساب تفصيلي.</Alert>
           )}
         </TabPanel>
       </Paper>

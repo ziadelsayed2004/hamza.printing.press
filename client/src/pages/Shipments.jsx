@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { formatCurrencyEGP, formatEgyptDate, formatEgyptDateTime } from '../utils/formatters';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -6,6 +7,7 @@ import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import {
   Box,
+  Autocomplete,
   Typography,
   Paper,
   Table,
@@ -55,6 +57,7 @@ import {
 
 export const Shipments = () => {
   const { hasPermission } = useAuth();
+  const location = useLocation();
 
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +86,9 @@ export const Shipments = () => {
   const [csTracking, setCsTracking] = useState('');
   const [csItems, setCsItems] = useState([{ invoiceItemId: '', quantity: '' }]);
   const [csSubmitting, setCsSubmitting] = useState(false);
+  const [loadedInvoice, setLoadedInvoice] = useState(null);
+  const [loadingInvoice, setLoadingInvoice] = useState(false);
+  const [invoicesList, setInvoicesList] = useState([]);
 
   // Update Status dialog
   const [openStatusDlg, setOpenStatusDlg] = useState(false);
@@ -111,6 +117,49 @@ export const Shipments = () => {
 
   useEffect(() => { fetchShipments(); }, [fetchShipments]);
 
+  useEffect(() => {
+    if (!csInvoiceId) {
+      setLoadedInvoice(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setLoadingInvoice(true);
+      try {
+        const inv = await apiClient.get(`/invoices/${csInvoiceId}`);
+        setLoadedInvoice(inv);
+      } catch (err) {
+        setLoadedInvoice(null);
+      } finally {
+        setLoadingInvoice(false);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [csInvoiceId]);
+
+  // Deep linking from Invoices
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const invId = params.get('invoiceId');
+    const act = params.get('action');
+    if (invId && act === 'create') {
+      const prepareDrawer = async () => {
+        try {
+          const list = await apiClient.get('/invoices?limit=500');
+          const filtered = list.filter(inv => inv.shipping_status === 'pending' || inv.shipping_status === 'partially_shipped');
+          setInvoicesList(filtered);
+        } catch (err) {
+          console.error(err);
+        }
+        setCsInvoiceId(invId);
+        setCsCarrier('');
+        setCsTracking('');
+        setCsItems([{ invoiceItemId: '', quantity: '' }]);
+        setOpenCreate(true);
+      };
+      prepareDrawer();
+    }
+  }, [location.search]);
+
   // ── Detail ──
 
   const handleViewDetail = async (id) => {
@@ -130,12 +179,21 @@ export const Shipments = () => {
 
   // ── Create Shipment ──
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = async () => {
     setCsInvoiceId('');
     setCsCarrier('');
     setCsTracking('');
     setCsItems([{ invoiceItemId: '', quantity: '' }]);
+    setLoadedInvoice(null);
+    setLoadingInvoice(false);
     setOpenCreate(true);
+    try {
+      const list = await apiClient.get('/invoices?limit=500');
+      const filtered = list.filter(inv => inv.shipping_status === 'pending' || inv.shipping_status === 'partially_shipped');
+      setInvoicesList(filtered);
+    } catch (err) {
+      console.error('Error fetching active invoices:', err);
+    }
   };
 
   const handleCsAddItem = () => {
@@ -158,6 +216,26 @@ export const Shipments = () => {
       showToast('رقم الفاتورة ومعرّف صنف الفاتورة والكمية مطلوبة.', 'error');
       return;
     }
+
+    if (!loadedInvoice) {
+      showToast('يرجى إدخال رقم فاتورة صحيح وتحميل تفاصيلها أولاً.', 'error');
+      return;
+    }
+
+    // Client-side quantity validation
+    for (const item of csItems) {
+      const invItem = loadedInvoice.items.find(i => i.id === parseInt(item.invoiceItemId, 10));
+      if (!invItem) {
+        showToast('صنف الفاتورة المحدد غير صالح.', 'error');
+        return;
+      }
+      const qty = parseInt(item.quantity, 10);
+      if (qty > invItem.remaining_quantity) {
+        showToast(`الكمية المطلوبة للكتاب "${invItem.product_title}" (${qty}) تتجاوز الكمية المتبقية غير المشحونة وهي ${invItem.remaining_quantity}.`, 'error');
+        return;
+      }
+    }
+
     setCsSubmitting(true);
     try {
       await apiClient.post('/shipments', {
@@ -431,13 +509,35 @@ export const Shipments = () => {
         <form onSubmit={handleSubmitCreate} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflowY: 'auto' }}>
           <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
             <Alert severity="info" sx={{ mb: 2 }}>
-              يجب تحديد أصناف الفاتورة (Invoice Item IDs) والكمية المراد شحنها لكل صنف.
-              يتم حساب الكمية المتبقية تلقائياً بناءً على الشحنات السابقة.
+              يتم تحميل أصناف الفاتورة تلقائياً عند اختيار الفاتورة. يرجى تحديد الكتب والكميات المراد شحنها.
             </Alert>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={4}>
-                <TextField fullWidth required label="معرّف الفاتورة (Invoice ID)" size="small" type="number"
-                  value={csInvoiceId} onChange={(e) => setCsInvoiceId(e.target.value)} />
+                <Autocomplete
+                  options={invoicesList}
+                  getOptionLabel={(option) => `${option.invoice_number} - ${option.outlet_name}`}
+                  size="small"
+                  value={invoicesList.find(inv => inv.id === parseInt(csInvoiceId, 10)) || null}
+                  onChange={(e, val) => {
+                    setCsInvoiceId(val ? val.id.toString() : '');
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      required
+                      label="اختر الفاتورة"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingInvoice ? <span style={{ fontSize: '11px', color: '#999', whiteSpace: 'nowrap' }}>جاري التحميل...</span> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField fullWidth label="شركة الشحن" size="small"
@@ -448,31 +548,86 @@ export const Shipments = () => {
                   value={csTracking} onChange={(e) => setCsTracking(e.target.value)} />
               </Grid>
 
+              {/* Display loaded invoice summary */}
+              {loadedInvoice && (
+                <Grid item xs={12}>
+                  <Box sx={{ mt: 1, mb: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>تفاصيل الفاتورة: {loadedInvoice.invoice_number}</Typography>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ fontWeight: 'bold', p: 0.5 }}>اسم الكتاب</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المطلوب</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المشحون</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المتبقي للشحن</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {loadedInvoice.items.map(it => (
+                          <TableRow key={it.id}>
+                            <TableCell sx={{ p: 0.5 }}>{it.product_title}</TableCell>
+                            <TableCell align="center" sx={{ p: 0.5 }}>{it.quantity}</TableCell>
+                            <TableCell align="center" sx={{ p: 0.5 }}>{it.shipped_quantity}</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5, color: it.remaining_quantity > 0 ? 'warning.main' : 'success.main' }}>
+                              {it.remaining_quantity}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                </Grid>
+              )}
+
               {/* Items */}
               <Grid item xs={12}>
                 <Divider sx={{ my: 1 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>أصناف الشحنة</Typography>
-                  <Button size="small" startIcon={<AddIcon />} onClick={handleCsAddItem}>إضافة صنف</Button>
+                  <Button size="small" startIcon={<AddIcon />} onClick={handleCsAddItem} disabled={!loadedInvoice}>إضافة صنف</Button>
                 </Box>
 
-                {csItems.map((item, idx) => (
-                  <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
-                    <Grid item xs={5}>
-                      <TextField fullWidth required label="معرّف صنف الفاتورة (Invoice Item ID)" size="small" type="number"
-                        value={item.invoiceItemId} onChange={(e) => handleCsItemChange(idx, 'invoiceItemId', e.target.value)} />
+                {csItems.map((item, idx) => {
+                  const selectedInvItem = loadedInvoice ? loadedInvoice.items.find(i => i.id === parseInt(item.invoiceItemId, 10)) : null;
+                  const maxQty = selectedInvItem ? selectedInvItem.remaining_quantity : 1;
+                  return (
+                    <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
+                      <Grid item xs={5}>
+                        <FormControl fullWidth size="small" required disabled={!loadedInvoice}>
+                          <InputLabel>اختر الكتاب</InputLabel>
+                          <Select
+                            label="اختر الكتاب"
+                            value={item.invoiceItemId}
+                            onChange={(e) => handleCsItemChange(idx, 'invoiceItemId', e.target.value)}
+                          >
+                            {loadedInvoice ? (
+                              loadedInvoice.items.map(it => (
+                                <MenuItem key={it.id} value={it.id} disabled={it.remaining_quantity <= 0}>
+                                  {it.product_title} (المتبقي: {it.remaining_quantity})
+                                </MenuItem>
+                              ))
+                            ) : (
+                              <MenuItem value="">يرجى إدخال رقم فاتورة صحيح</MenuItem>
+                            )}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={5}>
+                        <TextField fullWidth required label="الكمية" size="small" type="number"
+                          inputProps={{ min: 1, max: maxQty }}
+                          disabled={!item.invoiceItemId}
+                          value={item.quantity} onChange={(e) => handleCsItemChange(idx, 'quantity', e.target.value)}
+                          helperText={selectedInvItem ? `الحد الأقصى: ${maxQty}` : ''}
+                        />
+                      </Grid>
+                      <Grid item xs={2}>
+                        <IconButton color="error" onClick={() => handleCsRemoveItem(idx)} disabled={csItems.length <= 1}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Grid>
                     </Grid>
-                    <Grid item xs={5}>
-                      <TextField fullWidth required label="الكمية" size="small" type="number" inputProps={{ min: 1 }}
-                        value={item.quantity} onChange={(e) => handleCsItemChange(idx, 'quantity', e.target.value)} />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <IconButton color="error" onClick={() => handleCsRemoveItem(idx)} disabled={csItems.length <= 1}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Grid>
-                  </Grid>
-                ))}
+                  );
+                })}
               </Grid>
             </Grid>
           </Box>

@@ -13,9 +13,9 @@ const paymentsRoutes = require('./modules/payments/paymentsRoutes');
 const shipmentsRoutes = require('./modules/shipments/shipmentsRoutes');
 const reportsRoutes = require('./modules/reports/reportsRoutes');
 const exportsRoutes = require('./modules/exports/exportsRoutes');
-const importsRoutes = require('./modules/imports/importsRoutes');
 const financeRoutes = require('./modules/finance/financeRoutes');
 const notificationsRoutes = require('./modules/notifications/notificationsRoutes');
+const adminRoutes = require('./modules/admin/adminRoutes');
 
 // Mount sub-routers
 router.use('/auth', authRoutes);
@@ -31,8 +31,8 @@ router.use('/payments', paymentsRoutes);
 router.use('/shipments', shipmentsRoutes);
 router.use('/reports', reportsRoutes);
 router.use('/exports', exportsRoutes);
-router.use('/imports', importsRoutes);
 router.use('/finance', financeRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;

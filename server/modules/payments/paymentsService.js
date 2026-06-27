@@ -1,57 +1,16 @@
 const db = require('../../db');
 const notificationsService = require('../notifications/notificationsService');
-
+const auditService = require('../audit/auditService');
 
 /**
- * Generate installment schedule for an invoice.
+ * Stub generateInstallmentSchedule to satisfy structural parity without legacy behavior.
  */
-async function generateInstallmentSchedule({ invoiceId, totalAmount, installmentsCount, intervalDays = 30, startDate = new Date(), notes = '' }) {
-  const count = parseInt(installmentsCount, 10);
-  if (isNaN(count) || count <= 0) {
-    throw new Error('Installments count must be a positive integer');
-  }
-
-  // Delete any existing unpaid installments first
-  await db.run('DELETE FROM payment_installments WHERE invoice_id = ?', [invoiceId]);
-
-  const amountPerInstallment = parseFloat((totalAmount / count).toFixed(2));
-  const items = [];
-
-  let dateCursor = new Date(startDate);
-
-  for (let i = 1; i <= count; i++) {
-    let amount = amountPerInstallment;
-    // Adjust the last installment to absorb rounding errors
-    if (i === count) {
-      const sumPrior = amountPerInstallment * (count - 1);
-      amount = parseFloat((totalAmount - sumPrior).toFixed(2));
-    }
-
-    const dueDateStr = dateCursor.toISOString();
-
-    const sql = `
-      INSERT INTO payment_installments (invoice_id, installment_number, due_date, amount, paid_amount, status, notes)
-      VALUES (?, ?, ?, ?, 0.0, 'unpaid', ?)
-    `;
-    await db.run(sql, [invoiceId, i, dueDateStr, amount, notes || `Installment #${i} of ${count}`]);
-
-    items.push({
-      installmentNumber: i,
-      dueDate: dueDateStr,
-      amount,
-      paidAmount: 0,
-      status: 'unpaid'
-    });
-
-    // Advance cursor date
-    dateCursor.setDate(dateCursor.getDate() + intervalDays);
-  }
-
-  return items;
+async function generateInstallmentSchedule() {
+  return [];
 }
 
 /**
- * Recalculate invoice payment status and distribute payments to installments.
+ * Recalculate invoice payment status.
  */
 async function recalculatePaymentMetrics(invoiceId) {
   const invoice = await db.get('SELECT total_price, payment_status, payment_type FROM invoices WHERE id = ?', [invoiceId]);
@@ -78,42 +37,12 @@ async function recalculatePaymentMetrics(invoiceId) {
       [invoiceId, 'payment', invoice.payment_status, newStatus, `Payment status updated to ${newStatus}.`]
     );
   }
-
-  // Distribute totalPaid sequentially to installments
-  const installments = await db.all('SELECT * FROM payment_installments WHERE invoice_id = ? ORDER BY installment_number ASC', [invoiceId]);
-  if (installments.length > 0) {
-    let remainingToDistribute = totalPaid;
-    const nowStr = new Date().toISOString();
-
-    for (const inst of installments) {
-      let paidAmt = 0;
-      let status = 'unpaid';
-
-      if (remainingToDistribute >= inst.amount) {
-        paidAmt = inst.amount;
-        status = 'paid';
-        remainingToDistribute = parseFloat((remainingToDistribute - inst.amount).toFixed(2));
-      } else if (remainingToDistribute > 0) {
-        paidAmt = remainingToDistribute;
-        status = 'partially_paid';
-        remainingToDistribute = 0;
-      } else {
-        paidAmt = 0;
-        status = (inst.due_date < nowStr) ? 'overdue' : 'unpaid';
-      }
-
-      await db.run(
-        'UPDATE payment_installments SET paid_amount = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [paidAmt, status, inst.id]
-      );
-    }
-  }
 }
 
 /**
- * Record a payment.
+ * Record a payment collection.
  */
-async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, referenceNumber = '', notes = '', userId }) {
+async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, referenceNumber = '', notes = '', supplyStatus = 'not_supplied', userId }) {
   if (!invoiceId) {
     throw new Error('Invoice ID is required');
   }
@@ -123,6 +52,9 @@ async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, re
   }
   if (!paymentMethod) {
     throw new Error('Payment method is required');
+  }
+  if (!['supplied', 'not_supplied'].includes(supplyStatus)) {
+    throw new Error('Invalid supply status');
   }
 
   const invoice = await db.get('SELECT total_price, payment_status, outlet_id, invoice_number FROM invoices WHERE id = ?', [invoiceId]);
@@ -146,9 +78,13 @@ async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, re
   await db.exec('BEGIN TRANSACTION;');
 
   try {
+    const isSupplied = supplyStatus === 'supplied';
+    const suppliedAt = isSupplied ? new Date().toISOString() : null;
+    const suppliedBy = isSupplied ? userId : null;
+
     const sql = `
-      INSERT INTO invoice_payments (invoice_id, amount, payment_method, payment_date, reference_number, notes, recorded_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO invoice_payments (invoice_id, amount, payment_method, payment_date, reference_number, notes, recorded_by, supply_status, supplied_at, supplied_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const result = await db.run(sql, [
       invoiceId,
@@ -157,7 +93,10 @@ async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, re
       dateStr,
       referenceNumber.trim() || null,
       notes.trim() || null,
-      userId
+      userId,
+      supplyStatus,
+      suppliedAt,
+      suppliedBy
     ]);
     const paymentId = result.lastID;
 
@@ -172,9 +111,18 @@ async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, re
       ) VALUES (?, 'payment_recorded', 'payment', ?, ?, ?, ?, ?)
     `, [invoice.outlet_id, paymentId, parsedAmount, -parsedAmount, `Payment for invoice ${invoice.invoice_number} recorded.`, userId]);
 
+    if (supplyStatus === 'supplied') {
+      await db.run(`
+        INSERT INTO finance_ledger_entries (
+          outlet_id, entry_type, reference_type, reference_id,
+          cash_amount, receivable_amount, notes, created_by
+        ) VALUES (?, 'payment_supplied', 'payment', ?, 0, 0, ?, ?)
+      `, [invoice.outlet_id, paymentId, `Payment marked as supplied upon recording.`, userId]);
+    }
+
     await db.exec('COMMIT;');
 
-    // Trigger notification checks and record payment received info
+    // Trigger notification checks after commit
     try {
       await notificationsService.createOrUpdateNotification({
         category: 'payment_received',
@@ -188,7 +136,7 @@ async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, re
       });
 
       await notificationsService.checkOutletCreditLimitNotifications(invoice.outlet_id);
-      await notificationsService.checkOverdueInstallmentsNotifications();
+      await notificationsService.checkOutletFinanceNotifications(invoice.outlet_id);
     } catch (e) {
       console.error('Error running notification checks on payment recording:', e);
     }
@@ -234,12 +182,12 @@ async function reversePayment(paymentId, { notes = '', userId }) {
 
     await db.exec('COMMIT;');
 
-    // Trigger notification checks and resolve/cancel payment received notification
+    // Trigger notification checks
     try {
       if (invoice) {
         await notificationsService.checkOutletCreditLimitNotifications(invoice.outlet_id);
+        await notificationsService.checkOutletFinanceNotifications(invoice.outlet_id);
       }
-      await notificationsService.checkOverdueInstallmentsNotifications();
       await notificationsService.resolveNotificationByDedupeKey(`payment_received:${paymentId}`);
     } catch (e) {
       console.error('Error running notification checks on payment reversal:', e);
@@ -253,9 +201,122 @@ async function reversePayment(paymentId, { notes = '', userId }) {
 }
 
 /**
+ * Supply a list of payments.
+ */
+async function supplyPayments({ paymentIds, userId }) {
+  if (!paymentIds || !Array.isArray(paymentIds) || paymentIds.length === 0) {
+    throw new Error('Payment IDs array is required');
+  }
+
+  await db.exec('BEGIN TRANSACTION;');
+
+  try {
+    const updatedPayments = [];
+    const outletIds = new Set();
+
+    for (const paymentId of paymentIds) {
+      const payment = await db.get('SELECT p.*, i.outlet_id FROM invoice_payments p JOIN invoices i ON i.id = p.invoice_id WHERE p.id = ?', [paymentId]);
+      if (!payment) {
+        throw new Error(`Payment record with ID ${paymentId} does not exist`);
+      }
+      if (payment.supply_status === 'supplied') {
+        continue;
+      }
+
+      await db.run(
+        'UPDATE invoice_payments SET supply_status = "supplied", supplied_at = ?, supplied_by = ? WHERE id = ?',
+        [new Date().toISOString(), userId, paymentId]
+      );
+
+      await db.run(`
+        INSERT INTO finance_ledger_entries (
+          outlet_id, entry_type, reference_type, reference_id,
+          cash_amount, receivable_amount, notes, created_by
+        ) VALUES (?, 'payment_supplied', 'payment', ?, 0, 0, 'Payment marked as supplied.', ?)
+      `, [payment.outlet_id, paymentId, userId]);
+
+      await auditService.log({
+        userId,
+        action: 'supply_payment',
+        targetType: 'payments',
+        targetId: paymentId.toString(),
+        details: { amount: payment.amount }
+      });
+
+      if (payment.outlet_id) {
+        outletIds.add(payment.outlet_id);
+      }
+      updatedPayments.push(paymentId);
+    }
+
+    await db.exec('COMMIT;');
+
+    for (const oId of outletIds) {
+      try {
+        await notificationsService.checkOutletFinanceNotifications(oId);
+      } catch (e) {
+        console.error('Error checking finance notifications after supply:', e);
+      }
+    }
+
+    return { success: true, suppliedCount: updatedPayments.length, paymentIds: updatedPayments };
+  } catch (err) {
+    await db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
+/**
+ * Reverse a payment supply.
+ */
+async function reversePaymentSupply(paymentId, { notes = '', userId }) {
+  const payment = await db.get('SELECT p.*, i.outlet_id FROM invoice_payments p JOIN invoices i ON i.id = p.invoice_id WHERE p.id = ?', [paymentId]);
+  if (!payment) {
+    throw new Error(`Payment record with ID ${paymentId} does not exist`);
+  }
+  if (payment.supply_status !== 'supplied') {
+    throw new Error('Payment is not supplied');
+  }
+
+  await db.exec('BEGIN TRANSACTION;');
+
+  try {
+    await db.run('UPDATE invoice_payments SET supply_status = "not_supplied", supplied_at = NULL, supplied_by = NULL WHERE id = ?', [paymentId]);
+
+    await db.run(`
+      INSERT INTO finance_ledger_entries (
+        outlet_id, entry_type, reference_type, reference_id,
+        cash_amount, receivable_amount, notes, created_by
+      ) VALUES (?, 'supply_reversed', 'payment', ?, 0, 0, ?, ?)
+    `, [payment.outlet_id, paymentId, notes.trim() || 'Payment supply reversed.', userId]);
+
+    await auditService.log({
+      userId,
+      action: 'reverse_supply_payment',
+      targetType: 'payments',
+      targetId: paymentId.toString(),
+      details: { amount: payment.amount }
+    });
+
+    await db.exec('COMMIT;');
+
+    try {
+      await notificationsService.checkOutletFinanceNotifications(payment.outlet_id);
+    } catch (e) {
+      console.error('Error checking finance notifications after supply reversal:', e);
+    }
+
+    return { success: true, paymentId };
+  } catch (err) {
+    await db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
+/**
  * Retrieve payments list.
  */
-async function getPayments({ limit = 50, offset = 0, invoiceId = null } = {}) {
+async function getPayments({ limit = 50, offset = 0, invoiceId = null, outletIds = null, supplyStatus = '' } = {}) {
   let sql = `
     SELECT p.*, i.invoice_number, u.full_name as user_full_name
     FROM invoice_payments p
@@ -270,6 +331,18 @@ async function getPayments({ limit = 50, offset = 0, invoiceId = null } = {}) {
     params.push(invoiceId);
   }
 
+  if (supplyStatus) {
+    sql += ` AND p.supply_status = ?`;
+    params.push(supplyStatus);
+  }
+
+  if (outletIds && outletIds.length > 0) {
+    sql += ` AND i.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
+    params.push(...outletIds);
+  } else if (outletIds) {
+    sql += ` AND 0=1`;
+  }
+
   sql += ` ORDER BY p.payment_date DESC, p.created_at DESC LIMIT ? OFFSET ?`;
   params.push(limit, offset);
 
@@ -277,17 +350,10 @@ async function getPayments({ limit = 50, offset = 0, invoiceId = null } = {}) {
 }
 
 /**
- * Run calculations to set installments past their due date to 'overdue'.
+ * Stub checkOverdueInstallments.
  */
 async function checkOverdueInstallments() {
-  const nowStr = new Date().toISOString();
-  const sql = `
-    UPDATE payment_installments
-    SET status = 'overdue', updated_at = CURRENT_TIMESTAMP
-    WHERE due_date < ? AND status IN ('unpaid', 'partially_paid')
-  `;
-  const result = await db.run(sql, [nowStr]);
-  return result.changes;
+  return 0;
 }
 
 /**
@@ -302,12 +368,9 @@ async function getPaymentMetrics(invoiceId) {
 
   if (!invoice) return null;
 
-  const payments = await db.all('SELECT amount FROM invoice_payments WHERE invoice_id = ?', [invoiceId]);
+  const payments = await db.all('SELECT amount, supply_status FROM invoice_payments WHERE invoice_id = ?', [invoiceId]);
   const paidAmount = parseFloat(payments.reduce((sum, p) => sum + p.amount, 0).toFixed(2));
   const remainingAmount = parseFloat((invoice.total_price - paidAmount).toFixed(2));
-
-  const installments = await db.all('SELECT * FROM payment_installments WHERE invoice_id = ? ORDER BY installment_number ASC', [invoiceId]);
-  const overdueCount = installments.filter(i => i.status === 'overdue').length;
 
   return {
     invoiceId: invoice.id,
@@ -317,8 +380,7 @@ async function getPaymentMetrics(invoiceId) {
     paidAmount,
     remainingAmount,
     paymentStatus: invoice.payment_status,
-    overdueCount,
-    installments
+    installments: []
   };
 }
 
@@ -326,6 +388,8 @@ module.exports = {
   generateInstallmentSchedule,
   recordPayment,
   reversePayment,
+  supplyPayments,
+  reversePaymentSupply,
   getPayments,
   recalculatePaymentMetrics,
   checkOverdueInstallments,

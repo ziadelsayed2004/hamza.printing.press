@@ -49,7 +49,7 @@ The dashboard and shell must look like a serious business platform, not a basic 
    - collected balance
    - receivables
    - overdue
-   - installment due soon
+   - collected-not-supplied warning
 4. Operations overview:
    - low/negative stock
    - invoices pending shipment
@@ -58,7 +58,7 @@ The dashboard and shell must look like a serious business platform, not a basic 
 5. Alerts and notifications:
    - critical stock alerts
    - credit limit alerts
-   - overdue invoices/installments
+   - pending invoices and unsupplied collections
 6. Recent activity:
    - invoices
    - payments

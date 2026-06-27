@@ -267,4 +267,96 @@ describe('Notifications API Integration Tests', () => {
       expect(check.resolved_at).not.toBeNull();
     });
   });
+
+  describe('Advanced Notifications Rules Integration', () => {
+    it('should trigger missing price notifications on active products and resolve them when prices are configured', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_notif_api_admin', password: 'password123' });
+
+      // 1. Create a product with no price configurations
+      const product = await productsService.createProduct({
+        title: 'Book without prices',
+        code: 'BK-WITHOUT-PRICES',
+        category: 'Literature',
+        status: 'active',
+        stockPolicy: 'track'
+      });
+
+      // Verify that the price_missing notification was triggered
+      let res = await agent.get('/api/notifications?status=unread');
+      let priceAlert = res.body.find(n => n.category === 'price_missing' && n.source_id === product.id);
+      expect(priceAlert).toBeDefined();
+      expect(priceAlert.severity).toBe('warning');
+
+      // 2. Configure price for all active outlet types
+      const outletTypes = await db.all("SELECT id FROM outlet_types WHERE status = 'active'");
+      const pricesPayload = outletTypes.map(ot => ({ outletTypeId: ot.id, price: 100.0 }));
+      
+      const priceRes = await agent.put(`/api/product-prices/product/${product.id}`).send({
+        prices: pricesPayload
+      });
+      expect(priceRes.status).toBe(200);
+
+      // Verify that the price_missing alert was resolved
+      res = await agent.get('/api/notifications');
+      let activePriceAlerts = res.body.filter(n => n.category === 'price_missing' && n.source_id === product.id && n.status !== 'resolved');
+      expect(activePriceAlerts.length).toBe(0);
+    });
+
+    it('should trigger collected-not-supplied cash warning notifications when unsupplied balance exceeds 1000 EGP', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_notif_api_admin', password: 'password123' });
+
+      // Seed stock and increase credit limit so invoice creation succeeds
+      await inventoryService.createTransaction({
+        productId: testProduct.id,
+        transactionType: 'receipt',
+        quantity: 100,
+        referenceType: 'receipt',
+        referenceId: 99999,
+        userId: adminUser.id
+      });
+      await db.run('UPDATE outlets SET credit_limit = 10000 WHERE id = ?', [testOutlet.id]);
+
+      // Create a test invoice
+      const invRes = await agent
+        .post('/api/invoices')
+        .send({
+          outletId: testOutlet.id,
+          discount: 0,
+          shippingCost: 0,
+          paymentType: 'deferred',
+          items: [{ productId: testProduct.id, quantity: 15 }] // 15 * 100 = 1500 EGP
+        });
+      expect(invRes.status).toBe(201);
+      const invoiceId = invRes.body.invoice.id;
+
+      // Record a payment of 1100 EGP (exceeds 1000 EGP limit) with status not_supplied
+      const payRes = await agent
+        .post('/api/payments')
+        .send({
+          invoiceId,
+          amount: 1100,
+          paymentMethod: 'cash',
+          supplyStatus: 'not_supplied',
+          notes: 'Unsupplied payment'
+        });
+      expect(payRes.status).toBe(201);
+      const paymentId = payRes.body.payment.id;
+
+      // Verify that the finance_warning notification was triggered for collected-not-supplied cash
+      let res = await agent.get('/api/notifications?status=unread');
+      let financeAlert = res.body.find(n => n.category === 'finance_warning' && n.dedupe_key === `outlet_unsupplied_cash:${testOutlet.id}`);
+      expect(financeAlert).toBeDefined();
+
+      // Supply the payment
+      const supplyRes = await agent.post(`/api/payments/${paymentId}/supply`);
+      expect(supplyRes.status).toBe(200);
+
+      // Verify that the finance_warning notification is resolved
+      res = await agent.get('/api/notifications');
+      let activeFinanceAlerts = res.body.filter(n => n.dedupe_key === `outlet_unsupplied_cash:${testOutlet.id}` && n.status !== 'resolved');
+      expect(activeFinanceAlerts.length).toBe(0);
+    });
+  });
 });

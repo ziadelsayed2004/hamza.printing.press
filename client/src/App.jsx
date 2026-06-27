@@ -113,7 +113,6 @@ export function App() {
                 <Route path="finance" element={<Finance />} />
                 <Route path="shipments" element={<Shipments />} />
                 <Route path="reports" element={<Reports />} />
-                <Route path="imports" element={<PlaceholderPage title="استيراد البيانات من Excel" />} />
                 <Route path="exports" element={<Exports />} />
                 <Route path="audit" element={<AuditLogs />} />
                 <Route path="notifications" element={<Notifications />} />

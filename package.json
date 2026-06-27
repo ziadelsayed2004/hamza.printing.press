@@ -13,6 +13,7 @@
     "db:migrate": "node server/db/migrate.js",
     "db:reset": "node server/db/reset.js",
     "backup": "node scripts/backup-db.js",
+    "style:gate": "node scripts/style_quality_gate.js",
     "test": "node scripts/test_runner.js",
     "smoke": "node scripts/smoke_test.js",
     "lint": "eslint ."

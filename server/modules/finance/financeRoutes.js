@@ -1,13 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const financeService = require('./financeService');
+const outletsService = require('../outlets/outletsService');
+const usersService = require('../users/usersService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
 // 1. GET /api/finance/summary - Fetch general finance overview
 router.get('/summary', requireAuth, checkPermission('finance.view'), async (req, res) => {
   try {
-    const summary = await financeService.getFinanceSummary();
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+
+    let filterOutletIds = null;
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0) {
+        filterOutletIds = linkedOutlets;
+      }
+    }
+
+    const summary = await financeService.getFinanceSummary(filterOutletIds);
     res.status(200).json(summary);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -24,13 +38,26 @@ router.get('/balances/history', requireAuth, checkPermission('finance.view'), as
   const endDate = req.query.endDate || '';
 
   try {
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+
+    let filterOutletIds = null;
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0) {
+        filterOutletIds = linkedOutlets;
+      }
+    }
+
     const history = await financeService.getLedgerHistory({
       limit,
       offset,
       outletId,
       startDate,
       endDate,
-      entryType
+      entryType,
+      outletIds: filterOutletIds
     });
     res.status(200).json(history);
   } catch (err) {
@@ -73,14 +100,55 @@ router.post('/manual-adjustments', requireAuth, checkPermission('finance.adjust'
 // 4. GET /api/finance/outlets - Get balances by outlet
 router.get('/outlets', requireAuth, checkPermission('finance.view'), async (req, res) => {
   try {
-    const balances = await financeService.getBalancesByOutlet();
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+
+    let filterOutletIds = null;
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0) {
+        filterOutletIds = linkedOutlets;
+      }
+    }
+
+    const balances = await financeService.getBalancesByOutlet(filterOutletIds);
     res.status(200).json(balances);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
 
-// 5. GET /api/finance/governorates - Get balances by governorate
+// 5. GET /api/finance/outlets/:id/statement - Fetch per-outlet statement
+router.get('/outlets/:id/statement', requireAuth, checkPermission('finance.statement.view'), async (req, res) => {
+  const outletId = parseInt(req.params.id, 10);
+  try {
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0 && !linkedOutlets.includes(outletId)) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Access denied. You do not have permission to view this statement.'
+        });
+      }
+    }
+
+    const statement = await financeService.getOutletStatement(outletId);
+    res.status(200).json(statement);
+  } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('does not exist')) {
+      return res.status(404).json({ error: 'Not Found', message: err.message });
+    }
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 6. GET /api/finance/governorates - Get balances by governorate
 router.get('/governorates', requireAuth, checkPermission('finance.view'), async (req, res) => {
   try {
     const balances = await financeService.getBalancesByGovernorate();

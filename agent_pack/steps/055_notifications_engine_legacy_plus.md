@@ -26,7 +26,7 @@ Restore and upgrade the old notifications system into a unified professional not
    - low stock threshold
    - outlet credit limit exceeded
    - invoice overdue
-   - installment due/overdue
+   - pending balance and unsupplied collection warnings
    - payment received optional info notification
    - shipment partial/delayed optional warning
 4. Trigger checks after relevant actions:

@@ -22,7 +22,7 @@ async function createOrUpdateNotification({
   const allowedCategories = [
     'stock_negative', 'stock_low', 'outlet_credit_limit_exceeded',
     'invoice_overdue', 'installment_due', 'payment_received',
-    'shipment_partial', 'shipment_delayed', 'system'
+    'shipment_partial', 'shipment_delayed', 'system', 'finance_warning', 'price_missing'
   ];
   if (!allowedCategories.includes(category)) {
     throw new Error(`Invalid notification category: ${category}`);
@@ -241,36 +241,8 @@ async function checkOutletCreditLimitNotifications(outletId) {
  * Check overdue installment alerts.
  */
 async function checkOverdueInstallmentsNotifications() {
-  const overdueInstallments = await db.all(`
-    SELECT pi.*, i.invoice_number, i.outlet_id, o.name as outlet_name
-    FROM payment_installments pi
-    JOIN invoices i ON i.id = pi.invoice_id
-    JOIN outlets o ON o.id = i.outlet_id
-    WHERE pi.status = 'overdue'
-  `);
-
-  for (const inst of overdueInstallments) {
-    await createOrUpdateNotification({
-      category: 'installment_due',
-      severity: 'warning',
-      title: 'قسط متأخر',
-      message: `القسط رقم ${inst.installment_number} للفاتورة ${inst.invoice_number} (المنفذ: ${inst.outlet_name}) متأخر. القيمة: ${inst.amount} EGP.`,
-      source_type: 'installment',
-      source_id: inst.id,
-      dedupe_key: `installment_overdue:${inst.id}`,
-      action_url: `/finance/invoices/${inst.invoice_id}`
-    });
-  }
-
-  // Resolve any active notifications for paid installments
-  const resolvedInstallments = await db.all(`
-    SELECT pi.id
-    FROM payment_installments pi
-    WHERE pi.status = 'paid'
-  `);
-  for (const inst of resolvedInstallments) {
-    await resolveNotificationByDedupeKey(`installment_overdue:${inst.id}`);
-  }
+  // Deactivated - installments are disabled.
+  return 0;
 }
 
 /**
@@ -307,6 +279,107 @@ async function checkOverdueInvoicesNotifications() {
   }
 }
 
+/**
+ * Check missing price configurations for a product.
+ */
+async function checkProductPriceNotifications(productId) {
+  const product = await db.get('SELECT title, status FROM products WHERE id = ?', [productId]);
+  if (!product) return;
+
+  if (product.status !== 'active') {
+    await resolveNotificationByDedupeKey(`product_price_missing:${productId}`);
+    return;
+  }
+
+  const activeTypes = await db.all("SELECT id, name FROM outlet_types WHERE status = 'active'");
+  const missingFor = [];
+
+  for (const type of activeTypes) {
+    const priceRow = await db.get(
+      'SELECT price FROM product_prices WHERE product_id = ? AND outlet_type_id = ?',
+      [productId, type.id]
+    );
+    if (!priceRow || priceRow.price === null || priceRow.price === undefined) {
+      missingFor.push(type.name);
+    }
+  }
+
+  if (missingFor.length > 0) {
+    await createOrUpdateNotification({
+      category: 'price_missing',
+      severity: 'warning',
+      title: 'سعر منتج غير مهيأ',
+      message: `المنتج "${product.title}" يفتقد لتهيئة السعر لأنواع المنافذ التالية: ${missingFor.join(', ')}.`,
+      source_type: 'product',
+      source_id: productId,
+      dedupe_key: `product_price_missing:${productId}`,
+      action_url: `/catalog/products/${productId}`
+    });
+  } else {
+    await resolveNotificationByDedupeKey(`product_price_missing:${productId}`);
+  }
+}
+
+/**
+ * Check finance warning alerts for an outlet.
+ */
+async function checkOutletFinanceNotifications(outletId) {
+  const outlet = await db.get('SELECT name, credit_limit FROM outlets WHERE id = ?', [outletId]);
+  if (!outlet) return;
+
+  // 1. Check collected-not-supplied cash
+  const row = await db.get(`
+    SELECT COALESCE(SUM(p.amount), 0) as unsupplied
+    FROM invoice_payments p
+    JOIN invoices i ON i.id = p.invoice_id
+    WHERE i.outlet_id = ? AND p.supply_status = 'not_supplied'
+  `, [outletId]);
+  const unsupplied = row ? row.unsupplied : 0;
+
+  if (unsupplied > 1000) {
+    await createOrUpdateNotification({
+      category: 'finance_warning',
+      severity: 'warning',
+      title: 'نقدية غير موردة مرتفعة',
+      message: `المنفذ "${outlet.name}" لديه نقدية محصلة ولم تورد بقيمة ${unsupplied} EGP.`,
+      source_type: 'outlet',
+      source_id: outletId,
+      dedupe_key: `outlet_unsupplied_cash:${outletId}`,
+      action_url: '/finance/payments'
+    });
+  } else {
+    await resolveNotificationByDedupeKey(`outlet_unsupplied_cash:${outletId}`);
+  }
+
+  // 2. Check pending-balance approaching credit limit
+  const creditLimit = outlet.credit_limit || 0;
+  if (creditLimit > 0) {
+    const ledgerRow = await db.get(`
+      SELECT COALESCE(SUM(receivable_amount), 0) as totalReceivable
+      FROM finance_ledger_entries
+      WHERE outlet_id = ?
+    `, [outletId]);
+    const totalReceivable = ledgerRow ? ledgerRow.totalReceivable : 0;
+
+    if (totalReceivable >= creditLimit * 0.8 && totalReceivable <= creditLimit) {
+      await createOrUpdateNotification({
+        category: 'finance_warning',
+        severity: 'warning',
+        title: 'اقتراب من الحد الائتماني للمنفذ',
+        message: `المديونية الحالية للمنفذ "${outlet.name}" هي ${totalReceivable} EGP، والتي تقترب من الحد الائتماني (${creditLimit} EGP).`,
+        source_type: 'outlet',
+        source_id: outletId,
+        dedupe_key: `outlet_credit_warning:${outletId}`,
+        action_url: `/operations/outlets/${outletId}`
+      });
+    } else if (totalReceivable < creditLimit * 0.8) {
+      await resolveNotificationByDedupeKey(`outlet_credit_warning:${outletId}`);
+    }
+  } else {
+    await resolveNotificationByDedupeKey(`outlet_credit_warning:${outletId}`);
+  }
+}
+
 module.exports = {
   createOrUpdateNotification,
   markAsRead,
@@ -317,5 +390,7 @@ module.exports = {
   checkStockNotifications,
   checkOutletCreditLimitNotifications,
   checkOverdueInstallmentsNotifications,
-  checkOverdueInvoicesNotifications
+  checkOverdueInvoicesNotifications,
+  checkProductPriceNotifications,
+  checkOutletFinanceNotifications
 };

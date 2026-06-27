@@ -303,6 +303,20 @@ describe('Invoices API Integration Tests', () => {
       // Remaining should be: 5
       const stockAfter = await inventoryService.getRealTimeStock(activeBookTrack.id);
       expect(stockAfter).toBe(5);
+
+      // Verify ledger transactions to check append-only integrity (no deletions)
+      const txs = await db.all(
+        'SELECT * FROM inventory_transactions WHERE reference_type = "invoice" AND reference_id = ? ORDER BY id ASC',
+        [createdInvoiceId]
+      );
+      // We expect 2 transactions:
+      // 1. The original sale: quantity = -3
+      // 2. The delta: quantity = -2
+      expect(txs).toHaveLength(2);
+      expect(txs[0].transaction_type).toBe('sale');
+      expect(txs[0].quantity).toBe(-3);
+      expect(txs[1].transaction_type).toBe('sale');
+      expect(txs[1].quantity).toBe(-2);
     });
   });
 

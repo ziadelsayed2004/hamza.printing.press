@@ -192,44 +192,44 @@ describe('E2E Business Flow Integrity Tests', () => {
     const finRes2 = await agent.get('/api/finance/summary');
     expect(finRes2.status).toBe(200);
 
-    // 9. Installment scenario
+    // 9. Deferred payment and supply scenario
     // Create another invoice for 200 EGP (2 * 100 EGP)
     const inv2Res = await agent.post('/api/invoices').send({
       outletId: outlet.id,
       discount: 0,
       shippingCost: 0,
-      paymentType: 'installments',
+      paymentType: 'deferred',
       notes: 'E2E E2E Second Invoice',
       items: [{ productId: product.id, quantity: 2 }]
     });
     expect(inv2Res.status).toBe(201);
     const invoice2 = inv2Res.body.invoice;
 
-    // Generate installment schedule
-    const schedRes = await agent.post(`/api/invoices/${invoice2.id}/installment-schedule`).send({
-      installmentsCount: 2,
-      intervalDays: 30,
-      startDate: new Date().toISOString(),
-      notes: 'E2E Installments'
+    // Verify pending balance increased
+    const finResBefore = await agent.get('/api/finance/summary');
+    const prevPending = finResBefore.body.pendingBalance;
+
+    // Record a payment of 120 (not supplied)
+    const payRes2 = await agent.post('/api/payments').send({
+      invoiceId: invoice2.id,
+      amount: 120.0,
+      paymentMethod: 'cash',
+      supplyStatus: 'not_supplied'
     });
-    expect(schedRes.status).toBe(201);
+    expect(payRes2.status).toBe(201);
+    const payment2 = payRes2.body.payment;
 
-    // Force one installment to be overdue in the DB
-    await db.run(
-      `UPDATE payment_installments 
-       SET due_date = datetime('now', '-5 days') 
-       WHERE invoice_id = ? AND installment_number = 1`,
-      [invoice2.id]
-    );
+    // Verify unsupplied balance increases
+    const finResAfterPay = await agent.get('/api/finance/summary');
+    expect(finResAfterPay.body.unsuppliedBalance).toBeGreaterThanOrEqual(120.0);
 
-    // Run overdue checker
-    const checkRes = await agent.post('/api/payments/check-overdue');
-    expect(checkRes.status).toBe(200);
-    expect(checkRes.body.updatedCount).toBeGreaterThanOrEqual(1);
+    // Supply the payment
+    const supplyRes = await agent.post(`/api/payments/${payment2.id}/supply`);
+    expect(supplyRes.status).toBe(200);
 
-    // Verify overdue balance in finance summary
-    const finRes3 = await agent.get('/api/finance/summary');
-    expect(finRes3.body.totalOverdue).toBeGreaterThanOrEqual(100); // 200 / 2 = 100
+    // Verify supplied balance increases
+    const finResAfterSupply = await agent.get('/api/finance/summary');
+    expect(finResAfterSupply.body.suppliedBalance).toBeGreaterThanOrEqual(120.0);
 
     // 10. Trigger low stock warning (stock of tracked book drops to 5, which is low stock threshold of 5)
     // Currently stock is 45 (50 - 3 - 2). Let's checkout 40 units to leave exactly 5.

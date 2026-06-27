@@ -19,10 +19,11 @@ async function seed() {
     'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
     'shipments.view', 'shipments.create', 'shipments.update',
     'reports.view', 'reports.export',
-    'imports.run', 'exports.run',
+    'exports.run',
     'audit.view', 'settings.update',
     'backup.create', 'backup.restore',
-    'finance.view', 'finance.adjust', 'finance.export',
+    'finance.view', 'finance.adjust', 'finance.export', 'finance.statement.view',
+    'payments.mark_supplied', 'payments.supply_batch',
     'notifications.view', 'notifications.manage'
   ];
 
@@ -99,7 +100,7 @@ async function seed() {
     // Accountant permissions
     const accountantPerms = [
       'invoices.view', 'payments.view', 'payments.create', 'payments.reverse', 'reports.view', 'reports.export',
-      'finance.view', 'finance.export'
+      'finance.view', 'finance.export', 'finance.statement.view', 'payments.mark_supplied', 'payments.supply_batch'
     ];
     for (const p of accountantPerms) {
       await linkPerm('accountant', p);
@@ -107,7 +108,7 @@ async function seed() {
 
     // Sales Staff permissions
     const salesPerms = [
-      'products.view', 'outlets.view', 'invoices.view', 'invoices.create', 'invoices.update', 'payments.view', 'payments.create'
+      'products.view', 'outlets.view', 'invoices.view', 'invoices.create', 'invoices.update', 'payments.view', 'payments.create', 'payments.mark_supplied'
     ];
     for (const p of salesPerms) {
       await linkPerm('sales_staff', p);

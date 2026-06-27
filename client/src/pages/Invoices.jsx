@@ -140,6 +140,11 @@ export const Invoices = () => {
   const [formNotes, setFormNotes] = useState('');
   const [formItems, setFormItems] = useState([]); // [{ productId, productTitle, productCode, quantity, price, stock, stockPolicy, error }]
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formCollectionType, setFormCollectionType] = useState('none'); // 'none', 'partial', 'full'
+  const [formCollectedAmount, setFormCollectedAmount] = useState(0);
+  const [formSupplyStatus, setFormSupplyStatus] = useState('not_supplied'); // 'not_supplied', 'supplied'
+  const [formCollectionNotes, setFormCollectionNotes] = useState('');
+  const [outletBalances, setOutletBalances] = useState([]);
 
   // Toast trigger
   const showToast = (msg, severity = 'success') => {
@@ -173,6 +178,13 @@ export const Invoices = () => {
         };
       });
       setProductsList(combined);
+
+      try {
+        const balancesData = await apiClient.get('/finance/outlets');
+        setOutletBalances(balancesData);
+      } catch (err) {
+        console.error('Error fetching outlet balances:', err);
+      }
     } catch (err) {
       console.error('Error fetching metadata:', err);
     }
@@ -390,6 +402,10 @@ export const Invoices = () => {
     setFormPaymentType('cash');
     setFormNotes('');
     setFormItems([]);
+    setFormCollectionType('none');
+    setFormCollectedAmount(0);
+    setFormSupplyStatus('not_supplied');
+    setFormCollectionNotes('');
     setOpenFormModal(true);
   };
 
@@ -570,11 +586,38 @@ export const Invoices = () => {
       return;
     }
 
+    const totals = calculateFormTotals();
+    const subtotalVal = parseFloat(totals.subtotal) || 0;
+    const finalTotal = parseFloat(totals.total) || 0;
+    const discountVal = parseFloat(formDiscount) || 0;
+
+    if (discountVal > subtotalVal) {
+      showToast('قيمة الخصم المباشر لا يمكن أن تتجاوز المجموع الفرعي.', 'error');
+      return;
+    }
+
+    let collectedVal = 0;
+    if (formMode === 'create') {
+      if (formCollectionType === 'full') {
+        collectedVal = finalTotal;
+      } else if (formCollectionType === 'partial') {
+        collectedVal = parseFloat(formCollectedAmount) || 0;
+        if (collectedVal <= 0) {
+          showToast('يرجى إدخال مبلغ التحصيل للدفعة الجزئية.', 'error');
+          return;
+        }
+        if (collectedVal > finalTotal) {
+          showToast('المبلغ المحصل لا يمكن أن يتجاوز المجموع الإجمالي للفاتورة.', 'error');
+          return;
+        }
+      }
+    }
+
     setFormSubmitting(true);
     try {
       const payload = {
         outletId: parseInt(formOutletId, 10),
-        discount: parseFloat(formDiscount) || 0,
+        discount: discountVal,
         shippingCost: parseFloat(formShippingCost) || 0,
         paymentType: formPaymentType,
         notes: formNotes,
@@ -585,8 +628,18 @@ export const Invoices = () => {
       };
 
       if (formMode === 'create') {
-        await apiClient.post('/invoices', payload);
-        showToast('تم إنشاء الفاتورة وحسم الكميات بنجاح.');
+        const createdInvoice = await apiClient.post('/invoices', payload);
+        if (collectedVal > 0) {
+          await apiClient.post('/payments', {
+            invoiceId: createdInvoice.id,
+            amount: collectedVal,
+            paymentMethod: 'cash',
+            paymentDate: new Date().toISOString().split('T')[0],
+            supplyStatus: formSupplyStatus,
+            notes: formCollectionNotes || 'تحصيل تلقائي عند إنشاء الفاتورة.'
+          });
+        }
+        showToast('تم إنشاء الفاتورة وحسم الكميات وتسجيل التحصيل بنجاح.');
       } else {
         await apiClient.put(`/invoices/${selectedFormInvoice.id}`, payload);
         showToast('تم تحديث الفاتورة وتعديل حركة المخزون بنجاح.');
@@ -594,6 +647,13 @@ export const Invoices = () => {
 
       setOpenFormModal(false);
       fetchInvoices();
+      // Reload balances to ensure UI is perfectly synced
+      try {
+        const balancesData = await apiClient.get('/finance/outlets');
+        setOutletBalances(balancesData);
+      } catch (err) {
+        console.error('Error reloading balances:', err);
+      }
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل حفظ الفاتورة.', 'error');
@@ -649,6 +709,8 @@ export const Invoices = () => {
   };
 
   const formTotals = calculateFormTotals();
+  const selectedOutlet = outlets.find(o => o.id === formOutletId);
+  const selectedOutletBalance = outletBalances.find(b => b.id === formOutletId);
 
   return (
     <Box sx={{ p: 1 }}>
@@ -1217,11 +1279,9 @@ export const Invoices = () => {
                 </Box>
               </Box>
 
-              {/* Sub-panels tabs (payments, installments, history) */}
               <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
                 <Tabs value={detailsTabValue} onChange={(e, val) => setDetailsTabValue(val)}>
                   <Tab label="سجل التحصيلات والمدفوعات" icon={<PaymentsIcon />} iconPosition="start" />
-                  <Tab label="خطة وجدولة الأقساط" icon={<EventNoteIcon />} iconPosition="start" />
                   <Tab label="سجل حالات الفاتورة" />
                 </Tabs>
               </Box>
@@ -1267,7 +1327,7 @@ export const Invoices = () => {
               )}
 
               {/* TAB 1: Installments */}
-              {detailsTabValue === 1 && (
+              {detailsTabValue === 999 && (
                 <Box>
                   {/* Show current installment schedule */}
                   {detailsInvoice.installments && detailsInvoice.installments.length > 0 && (
@@ -1382,7 +1442,7 @@ export const Invoices = () => {
               )}
 
               {/* TAB 2: Status History */}
-              {detailsTabValue === 2 && (
+              {detailsTabValue === 1 && (
                 <Box>
                   <TableContainer component={Paper}>
                     <Table size="small">
@@ -1425,6 +1485,19 @@ export const Invoices = () => {
                   onClick={() => handleSinglePdfExport(detailsInvoice.id)}
                 >
                   تنزيل PDF
+                </Button>
+              )}
+              {hasPermission('shipments.create') && 
+               (detailsInvoice.shipping_status === 'pending' || detailsInvoice.shipping_status === 'partially_shipped') && (
+                <Button
+                  variant="contained"
+                  color="warning"
+                  onClick={() => {
+                    setOpenDetailsModal(false);
+                    navigate(`/shipments?invoiceId=${detailsInvoice.id}&action=create`);
+                  }}
+                >
+                  تسجيل شحنة (Ship)
                 </Button>
               )}
               <Button onClick={() => setOpenDetailsModal(false)} variant="contained" color="inherit">
@@ -1472,12 +1545,50 @@ export const Invoices = () => {
                     ))}
                   </Select>
                 </FormControl>
-                {formOutletTypeLabel && (
-                  <Typography variant="caption" sx={{ color: 'secondary.main', display: 'block', mt: 0.5, fontWeight: 500 }}>
-                    فئة المنفذ المحددة: {formOutletTypeLabel} (سيتم احتساب الأسعار بناءً عليها تلقائياً)
-                  </Typography>
-                )}
               </Grid>
+
+              {/* Outlet Metadata & Credit Summary */}
+              {selectedOutlet && (
+                <Grid item xs={12}>
+                  <Paper variant="outlined" sx={{ p: 2, mb: 1, backgroundColor: '#f8fafc', borderColor: 'primary.light' }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="textSecondary" display="block">فئة المنفذ</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formOutletTypeLabel || 'غير محددة'}</Typography>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="textSecondary" display="block">المحافظة</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.governorate || '-'}</Typography>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="textSecondary" display="block">الهاتف</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.phone || '-'}</Typography>
+                      </Grid>
+                      <Grid item xs={6} sm={3}>
+                        <Typography variant="caption" color="textSecondary" display="block">الحد الائتماني</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(selectedOutlet.credit_limit || 0)}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="textSecondary" display="block">تفاصيل العنوان</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.address_details || '-'}</Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="textSecondary" display="block">المديونية (الرصيد المعلق الحالي)</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: (selectedOutletBalance?.pending_balance || 0) > 0 ? 'warning.main' : 'success.main' }}>
+                          {formatCurrencyEGP(selectedOutletBalance?.pending_balance || 0)}
+                        </Typography>
+                      </Grid>
+                      {selectedOutlet.credit_limit > 0 && (selectedOutletBalance?.pending_balance || 0) > selectedOutlet.credit_limit && (
+                        <Grid item xs={12}>
+                          <Alert severity="warning" sx={{ mt: 1 }}>
+                            تنبيه: مديونية هذا العميل تتجاوز الحد الائتماني المسموح به!
+                          </Alert>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Paper>
+                </Grid>
+              )}
 
               {/* Payment Type */}
               <Grid item xs={12} sm={6}>
@@ -1490,8 +1601,6 @@ export const Invoices = () => {
                   >
                     <MenuItem value="cash">نقدي (Cash)</MenuItem>
                     <MenuItem value="deferred">آجل ذمم (Deferred)</MenuItem>
-                    <MenuItem value="installments">أقساط (Installments)</MenuItem>
-                    <MenuItem value="mixed">مختلط (Mixed - دفعة نقدية + أقساط)</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1540,6 +1649,91 @@ export const Invoices = () => {
                   onChange={(e) => setFormNotes(e.target.value)}
                 />
               </Grid>
+
+              {/* Payment Collection Section (Only on creation) */}
+              {formMode === 'create' && (
+                <Grid item xs={12}>
+                  <Paper variant="outlined" sx={{ p: 2, mt: 1, backgroundColor: '#fcfcfc', border: '1px dashed #ccc' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.dark' }}>
+                      تحصيل دفعة مالية عند الإنشاء
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {/* Collection Type Select */}
+                      <Grid item xs={12} sm={4}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>خيار تحصيل الدفعة</InputLabel>
+                          <Select
+                            value={formCollectionType}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormCollectionType(val);
+                              if (val === 'none') {
+                                setFormCollectedAmount(0);
+                              } else if (val === 'full') {
+                                setFormCollectedAmount(parseFloat(formTotals.total) || 0);
+                              }
+                            }}
+                            label="خيار تحصيل الدفعة"
+                          >
+                            <MenuItem value="none">لا يوجد تحصيل الآن</MenuItem>
+                            <MenuItem value="partial">تحصيل دفعة جزئية</MenuItem>
+                            <MenuItem value="full">تحصيل القيمة كاملة</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      {/* Collected Amount Input */}
+                      {formCollectionType !== 'none' && (
+                        <Grid item xs={12} sm={4}>
+                          <TextField
+                            fullWidth
+                            label="المبلغ المحصل"
+                            size="small"
+                            type="number"
+                            disabled={formCollectionType === 'full'}
+                            inputProps={{ step: '0.01', min: '0' }}
+                            value={formCollectionType === 'full' ? formTotals.total : formCollectedAmount}
+                            onChange={(e) => setFormCollectedAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                            InputProps={{
+                              endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
+                            }}
+                          />
+                        </Grid>
+                      )}
+
+                      {/* Supply Status */}
+                      {formCollectionType !== 'none' && (
+                        <Grid item xs={12} sm={4}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>حالة توريد النقدية</InputLabel>
+                            <Select
+                              value={formSupplyStatus}
+                              onChange={(e) => setFormSupplyStatus(e.target.value)}
+                              label="حالة توريد النقدية"
+                            >
+                              <MenuItem value="not_supplied">لم يتم التوريد (في الخزينة الفرعية)</MenuItem>
+                              <MenuItem value="supplied">تم التوريد (إلى خزينة الشركة)</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      )}
+
+                      {/* Collection Notes */}
+                      {formCollectionType !== 'none' && (
+                        <Grid item xs={12}>
+                          <TextField
+                            fullWidth
+                            label="ملاحظات عملية السداد/التحصيل"
+                            size="small"
+                            value={formCollectionNotes}
+                            onChange={(e) => setFormCollectionNotes(e.target.value)}
+                          />
+                        </Grid>
+                      )}
+                    </Grid>
+                  </Paper>
+                </Grid>
+              )}
             </Grid>
 
             <Divider sx={{ my: 2 }} />
@@ -1622,7 +1816,7 @@ export const Invoices = () => {
 
                       {/* Stock info & Price/Stock Error indicator */}
                       {(item.productId || item.error) && (
-                        <Grid item xs={12} sx={{ pt: '0px !important' }}>
+                        <Grid item xs={12} sx={{ '&&': { pt: 0 } }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
                             {item.productId && (
                               <Typography variant="caption" sx={{ color: item.stockPolicy === 'track' && item.stock <= 0 ? 'error.main' : 'text.secondary', fontWeight: 500 }}>

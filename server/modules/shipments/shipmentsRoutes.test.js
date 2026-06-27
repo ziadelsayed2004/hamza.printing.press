@@ -380,5 +380,22 @@ describe('Shipments API Integration Tests', () => {
       expect(response.body.items).toBeDefined();
       expect(response.body.history).toBeDefined();
     });
+
+    it('should expose shipped_quantity and remaining_quantity on invoice items', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_shp_api_staff', password: 'password123' });
+
+      const response = await agent.get(`/api/invoices/${invoice.id}`);
+      expect(response.status).toBe(200);
+      const items = response.body.items;
+      expect(items).toBeDefined();
+      expect(items.length).toBeGreaterThan(0);
+      
+      const item = items.find(i => i.id === invoiceItemId);
+      expect(item).toBeDefined();
+      expect(item.ordered_quantity).toBe(5);
+      expect(item.shipped_quantity).toBe(5); // fully shipped from the test scenarios before
+      expect(item.remaining_quantity).toBe(0);
+    });
   });
 });

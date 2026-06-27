@@ -63,3 +63,24 @@ Fields: id, name, outlet_type_id, governorate, address_details, phone, credit_li
 - Use status fields instead of destructive deletion for business records.
 - Keep invoice item snapshots.
 - Keep audit logs for sensitive changes.
+
+## Active schema correction: collection/supply, no installments/imports
+
+Remove/deprecate these schema areas:
+
+- `payment_installments`
+- payment plans
+- import jobs/import rows
+
+Required finance additions or verification:
+
+- payment collection amount.
+- payment supplied status.
+- supplied_at, supplied_by.
+- supply batch or remittance record if helpful.
+- finance ledger entry type for `payment_collected`, `payment_supplied`, `payment_reversed`, `supply_reversed`.
+
+Required shipping additions or verification:
+
+- shipment_items must reference invoice_item and quantity.
+- invoice_items must expose ordered, shipped, remaining quantities through query/view/service.

@@ -8,6 +8,8 @@ const productsService = require('./productsService');
 const productPricesService = require('./productPricesService');
 const outletTypesService = require('../outlet-types/outletTypesService');
 const outletsService = require('../outlets/outletsService');
+const inventoryService = require('../inventory/inventoryService');
+const invoicesService = require('../invoices/invoicesService');
 
 describe('Product Prices API Integration Tests', () => {
   let adminUser;
@@ -137,6 +139,16 @@ describe('Product Prices API Integration Tests', () => {
     await db.run('DELETE FROM user_roles WHERE user_id IN (SELECT id FROM users WHERE username LIKE "test_prices_%")');
     await db.run('DELETE FROM users WHERE username LIKE "test_prices_%"');
 
+    // Clean up E2E pricing data
+    await db.run('DELETE FROM invoice_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "End to End%")');
+    await db.run('DELETE FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name LIKE "%Outlet")');
+    await db.run('DELETE FROM finance_ledger_entries WHERE outlet_id IN (SELECT id FROM outlets WHERE name LIKE "%Outlet")');
+    await db.run('DELETE FROM product_prices WHERE product_id IN (SELECT id FROM products WHERE title LIKE "End to End%")');
+    await db.run('DELETE FROM inventory_transactions WHERE product_id IN (SELECT id FROM products WHERE title LIKE "End to End%")');
+    await db.run('DELETE FROM products WHERE title LIKE "End to End%"');
+    await db.run('DELETE FROM outlets WHERE name LIKE "%Outlet"');
+    await db.run('DELETE FROM outlet_types WHERE name LIKE "E2E %"');
+
     await new Promise((resolve) => {
       db.db.close(resolve);
     });
@@ -236,5 +248,79 @@ describe('Product Prices API Integration Tests', () => {
     expect(response.status).toBe(200);
     expect(response.body.price).toBe(95.00);
     expect(response.body.outletTypeId).toBe(activeOutletType.id);
+  });
+
+  describe('End-to-End Pricing and Invoice Snapshot Integrity', () => {
+    it('should assign distinct prices for a book across Wholesale, Retail, and Special Outlets and preserve invoice price snapshots', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_prices_admin', password: 'password123' });
+
+      // 1. Create three active outlet types
+      const tWholesale = await outletTypesService.createOutletType({ name: 'E2E Wholesale', description: 'Wholesale type' });
+      const tRetail = await outletTypesService.createOutletType({ name: 'E2E Retail', description: 'Retail type' });
+      const tSpecial = await outletTypesService.createOutletType({ name: 'E2E Special Outlets', description: 'Special outlets type' });
+
+      // 2. Create three outlets matching those types
+      const oWholesale = await outletsService.createOutlet({
+        name: 'Wholesale Outlet', outletTypeId: tWholesale.id, governorate: 'Cairo', addressDetails: 'Address', phone: '01000000001', creditLimit: 10000
+      });
+      const oRetail = await outletsService.createOutlet({
+        name: 'Retail Outlet', outletTypeId: tRetail.id, governorate: 'Cairo', addressDetails: 'Address', phone: '01000000002', creditLimit: 10000
+      });
+      const oSpecial = await outletsService.createOutlet({
+        name: 'Special Outlet', outletTypeId: tSpecial.id, governorate: 'Cairo', addressDetails: 'Address', phone: '01000000003', creditLimit: 10000
+      });
+
+      // 3. Create a book product and add inventory stock
+      const book = await productsService.createProduct({
+        title: 'End to End Pricing Book', code: 'BK-E2E-PRICE', category: 'Literature', status: 'active', stockPolicy: 'track'
+      });
+      await inventoryService.createTransaction({
+        productId: book.id, transactionType: 'receipt', quantity: 100, referenceType: 'receipt', referenceId: 9876, userId: adminUser.id
+      });
+
+      // 4. Assign distinct prices per outlet type
+      // Wholesale: 100 EGP, Retail: 150 EGP, Special Outlets: 120 EGP
+      await productPricesService.updatePricesForProduct(book.id, [
+        { outletTypeId: tWholesale.id, price: 100.0 },
+        { outletTypeId: tRetail.id, price: 150.0 },
+        { outletTypeId: tSpecial.id, price: 120.0 }
+      ]);
+
+      // 5. Create invoices and verify auto-picked price snapshots
+      // Wholesale Invoice
+      let res = await agent.post('/api/invoices').send({
+        outletId: oWholesale.id, paymentType: 'deferred', items: [{ productId: book.id, quantity: 2 }]
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.invoice.total_price).toBe(200.0);
+      expect(res.body.invoice.items[0].unit_price).toBe(100.0);
+      const invWholesaleId = res.body.invoice.id;
+
+      // Retail Invoice
+      res = await agent.post('/api/invoices').send({
+        outletId: oRetail.id, paymentType: 'deferred', items: [{ productId: book.id, quantity: 2 }]
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.invoice.total_price).toBe(300.0);
+      expect(res.body.invoice.items[0].unit_price).toBe(150.0);
+
+      // Special Outlets Invoice
+      res = await agent.post('/api/invoices').send({
+        outletId: oSpecial.id, paymentType: 'deferred', items: [{ productId: book.id, quantity: 2 }]
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.invoice.total_price).toBe(240.0);
+      expect(res.body.invoice.items[0].unit_price).toBe(120.0);
+
+      // 6. Update the Wholesale price of the product to 200 EGP, and verify that the previously created invoice snapshot is unaffected
+      await productPricesService.updatePricesForProduct(book.id, [
+        { outletTypeId: tWholesale.id, price: 200.0 }
+      ]);
+
+      const fetchedWholesale = await invoicesService.getInvoiceById(invWholesaleId);
+      expect(fetchedWholesale.total_price).toBe(200.0);
+      expect(fetchedWholesale.items[0].unit_price).toBe(100.0); // Remains 100 EGP snapshot
+    });
   });
 });

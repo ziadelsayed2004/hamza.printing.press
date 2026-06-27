@@ -192,4 +192,56 @@ describe('Outlets API Integration Tests', () => {
     const updated = await outletsService.findById(outlet.id);
     expect(updated.status).toBe('disabled');
   });
+
+  it('should enforce scoped access for linked outlet users', async () => {
+    // 1. Ensure 'outlet' role exists and has 'outlets.view' permission
+    await db.run('INSERT OR IGNORE INTO roles (name, description) VALUES (?, ?)', ['outlet', 'Outlet Partner Account']);
+    const roleRow = await db.get('SELECT id FROM roles WHERE name = ?', ['outlet']);
+    const permRow = await db.get('SELECT id FROM permissions WHERE name = ?', ['outlets.view']);
+    if (roleRow && permRow) {
+      await db.run('INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)', [roleRow.id, permRow.id]);
+    }
+
+    // 2. Create a scoped outlet user
+    const scopedUser = await usersService.createUser({
+      username: 'test_outlets_user_scoped',
+      password: 'password123',
+      fullName: 'Scoped Outlet User'
+    });
+    await usersService.assignRole(scopedUser.id, roleRow.id);
+
+    // 3. Create two outlets
+    const cairoOutlet = await outletsService.createOutlet({
+      name: 'Test Outlet Cairo Scoped',
+      outletTypeId: activeOutletType.id,
+      governorate: 'Cairo',
+      userId: scopedUser.id
+    });
+
+    const gizaOutlet = await outletsService.createOutlet({
+      name: 'Test Outlet Giza Scoped',
+      outletTypeId: activeOutletType.id,
+      governorate: 'Giza'
+    });
+
+    // 4. Login as scopedUser
+    const agent = request.agent(app);
+    await agent.post('/api/auth/login').send({ username: 'test_outlets_user_scoped', password: 'password123' });
+
+    // 5. GET /api/outlets should only return Cairo outlet, NOT Giza outlet
+    const listRes = await agent.get('/api/outlets');
+    expect(listRes.status).toBe(200);
+    const ids = listRes.body.map(o => o.id);
+    expect(ids).toContain(cairoOutlet.id);
+    expect(ids).not.toContain(gizaOutlet.id);
+
+    // 6. GET /api/outlets/:cairo_id should succeed
+    const cairoRes = await agent.get(`/api/outlets/${cairoOutlet.id}`);
+    expect(cairoRes.status).toBe(200);
+    expect(cairoRes.body.name).toBe('Test Outlet Cairo Scoped');
+
+    // 7. GET /api/outlets/:giza_id should return 403 Forbidden
+    const gizaRes = await agent.get(`/api/outlets/${gizaOutlet.id}`);
+    expect(gizaRes.status).toBe(403);
+  });
 });

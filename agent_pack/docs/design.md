@@ -980,3 +980,40 @@ export const t = (key, fallback = key) => ar[key] || fallback;
 - التاريخ بتوقيت مصر.
 - report مكتوب داخل agent_pack/reports.
 - status.json محدث.
+
+## Active design correction: no important overrides and owner-grade invoice builder
+
+The current design goal is not just “make it look better.” The frontend must become an owner-grade business system for مطبعة حمزة.
+
+### Styling correction
+
+- Stop solving MUI/library conflicts with repeated `!important`.
+- Fix cascade order, theme tokens, component classes, and scoped CSS structure.
+- Scan all JSX/CSS line by line and reduce inline/sx/important debt.
+- Field labels must never collide with field values.
+- Fields must have natural widths and consistent grid spacing.
+- RTL alignment is the default for every text, table, form, drawer, menu, and page.
+
+### Invoice builder design
+
+Invoice creation must feel like a complete proprietary workflow:
+
+- Select outlet first.
+- Show outlet type and balance context.
+- Add books with dynamic outlet-type price.
+- Show stock/available quantities.
+- Support partial/full/no collection at creation.
+- Support supplied/not-supplied for collected money.
+- Show sticky totals and validation.
+- Allow partial shipment later by invoice item quantities.
+
+### Finance design
+
+Dashboards must separate:
+
+- الرصيد المعلق: غير محصل من المنافذ.
+- الرصيد الفعلي: محصل فعليًا.
+- محصل ومورد.
+- محصل ولم يورد.
+
+No installment widgets, due installments, or payment plan cards.
