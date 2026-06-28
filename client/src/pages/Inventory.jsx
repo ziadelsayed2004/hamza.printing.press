@@ -5,6 +5,8 @@ import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
+import { FormSection } from '../components/forms/FormSection';
+import { FieldGrid } from '../components/forms/FieldGrid';
 import {
   Box,
   Typography,
@@ -609,62 +611,52 @@ export const Inventory = () => {
         }
       >
         <form onSubmit={handleSubmitReceipt} id="create-receipt-form">
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+          <FormSection title="البيانات الأساسية لإذن الوارد">
+            <FieldGrid columns={2}>
               <TextField fullWidth label="اسم المورّد (اختياري)" size="small" value={rcSupplier} onChange={(e) => setRcSupplier(e.target.value)} />
-            </Grid>
-            <Grid item xs={12} sm={6}>
               <TextField fullWidth required label="تاريخ الاستلام" size="small" type="date" InputLabelProps={{ shrink: true }} value={rcDate} onChange={(e) => setRcDate(e.target.value)} />
-            </Grid>
-            <Grid item xs={12}>
+            </FieldGrid>
+            <Box sx={{ mt: 2 }}>
               <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={rcNotes} onChange={(e) => setRcNotes(e.target.value)} />
-            </Grid>
+            </Box>
+          </FormSection>
 
-            {/* Items */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>أصناف الوارد</Typography>
-                <Button size="small" startIcon={<AddIcon />} onClick={handleRcAddItem}>إضافة صنف</Button>
+          <FormSection title="أصناف الوارد">
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Button size="small" startIcon={<AddIcon />} onClick={handleRcAddItem} variant="outlined" color="secondary">إضافة صنف</Button>
+            </Box>
+
+            {rcItems.map((item, idx) => (
+              <Box key={idx} sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                <FormControl fullWidth size="small" required sx={{ flex: 2 }}>
+                  <InputLabel>الكتاب</InputLabel>
+                  <Select
+                    value={item.productId}
+                    label="الكتاب"
+                    onChange={(e) => handleRcItemChange(idx, 'productId', e.target.value)}
+                  >
+                    <MenuItem value="" disabled>اختر كتاباً...</MenuItem>
+                    {allProducts.map(p => (
+                      <MenuItem key={p.id} value={p.id}>
+                        {p.title} ({p.code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <TextField required label="الكمية" size="small" type="number" inputProps={{ min: 1 }} sx={{ flex: 1 }}
+                  value={item.quantity} onChange={(e) => handleRcItemChange(idx, 'quantity', e.target.value)} />
+
+                <TextField required label="تكلفة الوحدة" size="small" type="number" inputProps={{ step: '0.01', min: 0 }} sx={{ flex: 1.5 }}
+                  value={item.unitCost} onChange={(e) => handleRcItemChange(idx, 'unitCost', e.target.value)}
+                  InputProps={{ endAdornment: <InputAdornment position="end">ج.م</InputAdornment> }} />
+
+                <IconButton color="error" onClick={() => handleRcRemoveItem(idx)} disabled={rcItems.length <= 1} size="small">
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
               </Box>
-
-              {rcItems.map((item, idx) => (
-                <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
-                  <Grid item xs={4}>
-                    <FormControl fullWidth size="small" required>
-                      <InputLabel>الكتاب</InputLabel>
-                      <Select
-                        value={item.productId}
-                        label="الكتاب"
-                        onChange={(e) => handleRcItemChange(idx, 'productId', e.target.value)}
-                      >
-                        <MenuItem value="" disabled>اختر كتاباً...</MenuItem>
-                        {allProducts.map(p => (
-                          <MenuItem key={p.id} value={p.id}>
-                            {p.title} ({p.code})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField fullWidth required label="الكمية" size="small" type="number" inputProps={{ min: 1 }}
-                      value={item.quantity} onChange={(e) => handleRcItemChange(idx, 'quantity', e.target.value)} />
-                  </Grid>
-                  <Grid item xs={3}>
-                    <TextField fullWidth required label="تكلفة الوحدة" size="small" type="number" inputProps={{ step: '0.01', min: 0 }}
-                      value={item.unitCost} onChange={(e) => handleRcItemChange(idx, 'unitCost', e.target.value)}
-                      InputProps={{ endAdornment: <InputAdornment position="end">ج.م</InputAdornment> }} />
-                  </Grid>
-                  <Grid item xs={2}>
-                    <IconButton color="error" onClick={() => handleRcRemoveItem(idx)} disabled={rcItems.length <= 1}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Grid>
-                </Grid>
-              ))}
-            </Grid>
-          </Grid>
+            ))}
+          </FormSection>
         </form>
       </EntityDrawer>
 
@@ -748,58 +740,51 @@ export const Inventory = () => {
         }
       >
         <form onSubmit={handleSubmitAdjustment} id="adjustment-form">
-          <Alert severity="info" sx={{ mb: 2 }}>
-            استخدم كمية موجبة لزيادة الرصيد وكمية سالبة لخصم الرصيد (مثلاً: تلف، فقدان).
-          </Alert>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
+          <FormSection title="البيانات الأساسية للتسوية">
+            <Alert severity="info" sx={{ mb: 2 }}>
+              استخدم كمية موجبة لزيادة الرصيد وكمية سالبة لخصم الرصيد (مثلاً: تلف، فقدان).
+            </Alert>
+            <Box sx={{ mb: 2 }}>
               <TextField fullWidth required label="سبب التسوية" size="small" value={adjReason} onChange={(e) => setAdjReason(e.target.value)}
                 placeholder="مثل: جرد فعلي، تلف بضاعة، تصحيح أخطاء..." />
-            </Grid>
-            <Grid item xs={12}>
+            </Box>
+            <Box>
               <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={adjNotes} onChange={(e) => setAdjNotes(e.target.value)} />
-            </Grid>
+            </Box>
+          </FormSection>
 
-            {/* Items */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>الأصناف</Typography>
-                <Button size="small" startIcon={<AddIcon />} onClick={handleAdjAddItem}>إضافة صنف</Button>
+          <FormSection title="أصناف التسوية">
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Button size="small" startIcon={<AddIcon />} onClick={handleAdjAddItem} variant="outlined" color="secondary">إضافة صنف</Button>
+            </Box>
+
+            {adjItems.map((item, idx) => (
+              <Box key={idx} sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                <FormControl fullWidth size="small" required sx={{ flex: 2 }}>
+                  <InputLabel>الكتاب</InputLabel>
+                  <Select
+                    value={item.productId}
+                    label="الكتاب"
+                    onChange={(e) => handleAdjItemChange(idx, 'productId', e.target.value)}
+                  >
+                    <MenuItem value="" disabled>اختر كتاباً...</MenuItem>
+                    {allProducts.map(p => (
+                      <MenuItem key={p.id} value={p.id}>
+                        {p.title} ({p.code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <TextField required label="الكمية (+/-)" size="small" type="number" sx={{ flex: 1 }}
+                  value={item.quantity} onChange={(e) => handleAdjItemChange(idx, 'quantity', e.target.value)} />
+
+                <IconButton color="error" onClick={() => handleAdjRemoveItem(idx)} disabled={adjItems.length <= 1} size="small">
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
               </Box>
-
-              {adjItems.map((item, idx) => (
-                <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
-                  <Grid item xs={5}>
-                    <FormControl fullWidth size="small" required>
-                      <InputLabel>الكتاب</InputLabel>
-                      <Select
-                        value={item.productId}
-                        label="الكتاب"
-                        onChange={(e) => handleAdjItemChange(idx, 'productId', e.target.value)}
-                      >
-                        <MenuItem value="" disabled>اختر كتاباً...</MenuItem>
-                        {allProducts.map(p => (
-                          <MenuItem key={p.id} value={p.id}>
-                            {p.title} ({p.code})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={5}>
-                    <TextField fullWidth required label="الكمية (+/-)" size="small" type="number"
-                      value={item.quantity} onChange={(e) => handleAdjItemChange(idx, 'quantity', e.target.value)} />
-                  </Grid>
-                  <Grid item xs={2}>
-                    <IconButton color="error" onClick={() => handleAdjRemoveItem(idx)} disabled={adjItems.length <= 1}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Grid>
-                </Grid>
-              ))}
-            </Grid>
-          </Grid>
+            ))}
+          </FormSection>
         </form>
       </EntityDrawer>
 

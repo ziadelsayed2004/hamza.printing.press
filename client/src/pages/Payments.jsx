@@ -7,6 +7,8 @@ import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
+import { FormSection } from '../components/forms/FormSection';
+import { FieldGrid } from '../components/forms/FieldGrid';
 import {
   Box,
   Typography,
@@ -742,9 +744,8 @@ export const Payments = () => {
         }
       >
         <form onSubmit={handleSubmitPayment} id="add-payment-form">
-          <Grid container spacing={2}>
-            {/* Invoice ID */}
-            <Grid item xs={12}>
+          <FormSection title="تفاصيل الدفعة المالية">
+            <Box sx={{ mb: 2 }}>
               <TextField
                 fullWidth
                 required
@@ -755,12 +756,12 @@ export const Payments = () => {
                 onChange={(e) => setPayFormInvoiceId(e.target.value)}
                 onBlur={handlePayFormInvoiceBlur}
               />
-            </Grid>
+            </Box>
 
             {/* Live invoice metrics preview */}
-            {payFormMetricsLoading && <Grid item xs={12}><LinearProgress color="secondary" /></Grid>}
+            {payFormMetricsLoading && <Box sx={{ mb: 2 }}><LinearProgress color="secondary" /></Box>}
             {payFormMetrics && (
-              <Grid item xs={12}>
+              <Box sx={{ mb: 2 }}>
                 <Paper variant="outlined" sx={{ p: 2, backgroundColor: '#f8fafc' }}>
                   <Grid container spacing={1}>
                     <Grid item xs={6} sm={3}>
@@ -805,11 +806,11 @@ export const Payments = () => {
                     </Grid>
                   </Grid>
                 </Paper>
-              </Grid>
+              </Box>
             )}
 
-            {/* Amount */}
-            <Grid item xs={12} sm={6}>
+            <FieldGrid columns={2}>
+              {/* Amount */}
               <TextField
                 fullWidth
                 required
@@ -828,10 +829,8 @@ export const Payments = () => {
                     : ''
                 }
               />
-            </Grid>
 
-            {/* Payment Method */}
-            <Grid item xs={12} sm={6}>
+              {/* Payment Method */}
               <FormControl fullWidth size="small" required>
                 <InputLabel>طريقة الدفع</InputLabel>
                 <Select
@@ -844,10 +843,8 @@ export const Payments = () => {
                   <MenuItem value="bank_transfer">تحويل بنكي (Bank Transfer)</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
 
-            {/* Payment Date */}
-            <Grid item xs={12} sm={6}>
+              {/* Payment Date */}
               <TextField
                 fullWidth
                 label="تاريخ الدفع"
@@ -857,10 +854,8 @@ export const Payments = () => {
                 value={payFormDate}
                 onChange={(e) => setPayFormDate(e.target.value)}
               />
-            </Grid>
 
-            {/* Reference Number */}
-            <Grid item xs={12} sm={6}>
+              {/* Reference Number */}
               <TextField
                 fullWidth
                 label="رقم مرجعي / رقم الإيصال"
@@ -868,10 +863,10 @@ export const Payments = () => {
                 value={payFormReference}
                 onChange={(e) => setPayFormReference(e.target.value)}
               />
-            </Grid>
+            </FieldGrid>
 
             {/* Notes */}
-            <Grid item xs={12}>
+            <Box sx={{ mt: 2 }}>
               <TextField
                 fullWidth
                 label="ملاحظات"
@@ -881,8 +876,8 @@ export const Payments = () => {
                 value={payFormNotes}
                 onChange={(e) => setPayFormNotes(e.target.value)}
               />
-            </Grid>
-          </Grid>
+            </Box>
+          </FormSection>
         </form>
       </EntityDrawer>
 

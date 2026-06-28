@@ -24,9 +24,9 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 115 | `115_reports_dashboard_finance_command_center_final` | done | Reports/Dashboard Finance Command Center Final |
 | 116 | `116_end_to_end_business_flows_automation` | done | End-to-End Business Flows Automation |
 | 117 | `117_visual_material_regression_full_app_pass` | done | Visual Material Regression Full App Pass |
-| 118 | `118_security_rbac_audit_for_new_actions` | open | Security/RBAC Audit for New Actions |
-| 119 | `119_final_codebase_cleanup_build_test_gate` | pending | Final Codebase Cleanup + Build/Test Gate |
-| 120 | `120_final_directadmin_delivery_smoke_gate` | pending | Final DirectAdmin Delivery Smoke Gate |
+| 118 | `118_security_rbac_audit_for_new_actions` | done | Security/RBAC Audit for New Actions |
+| 119 | `119_final_codebase_cleanup_build_test_gate` | done | Final Codebase Cleanup + Build/Test Gate |
+| 120 | `120_final_directadmin_delivery_smoke_gate` | done | Final DirectAdmin Delivery Smoke Gate |
 
 ## Historical / Completed Steps
 

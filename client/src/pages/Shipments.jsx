@@ -540,11 +540,11 @@ export const Shipments = () => {
                     required
                     label="اختر الفاتورة"
                     InputProps={{
-                      ...params.InputProps,
+                      ...(params.InputProps || {}),
                       endAdornment: (
                         <>
                           {loadingInvoice ? <span style={{ fontSize: '11px', color: '#999', whiteSpace: 'nowrap' }}>جاري التحميل...</span> : null}
-                          {params.InputProps.endAdornment}
+                          {params.InputProps?.endAdornment}
                         </>
                       )
                     }}
