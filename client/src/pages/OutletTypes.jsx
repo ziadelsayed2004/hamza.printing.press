@@ -225,47 +225,47 @@ export const OutletTypes = () => {
         open={openModal}
         onClose={() => setOpenModal(false)}
         title={modalMode === 'create' ? 'إضافة فئة منفذ توزيع' : 'تعديل فئة منفذ توزيع'}
-      >
-        <form onSubmit={handleFormSubmit} className="entity-drawer__form">
-          <Box className="entity-drawer__content">
-            <FormSection title="بيانات فئة منفذ التوزيع">
-              <FieldGrid columns={1}>
-                <TextField
-                  required
-                  fullWidth
-                  size="small"
-                  label="اسم الفئة (مثال: جملة، مفرق، معارض خارجية)"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  multiline
-                  rows={3}
-                  label="الوصف والتفاصيل"
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                />
-                <FormControl fullWidth size="small">
-                  <InputLabel id="status-label">الحالة</InputLabel>
-                  <Select
-                    labelId="status-label"
-                    value={formStatus}
-                    label="الحالة"
-                    onChange={(e) => setFormStatus(e.target.value)}
-                  >
-                    <MenuItem value="active">نشط</MenuItem>
-                    <MenuItem value="disabled">معطل</MenuItem>
-                  </Select>
-                </FormControl>
-              </FieldGrid>
-            </FormSection>
-          </Box>
-          <FormActions className="entity-drawer__actions">
+        actions={
+          <>
             <Button onClick={() => setOpenModal(false)}>إلغاء</Button>
-            <Button type="submit" variant="contained" color="secondary">حفظ</Button>
-          </FormActions>
+            <Button type="submit" form="outlet-type-form" variant="contained" color="secondary">حفظ</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleFormSubmit} id="outlet-type-form">
+          <FormSection title="بيانات فئة منفذ التوزيع">
+            <FieldGrid columns={1}>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="اسم الفئة (مثال: جملة، مفرق، معارض خارجية)"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={3}
+                label="الوصف والتفاصيل"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel id="status-label">الحالة</InputLabel>
+                <Select
+                  labelId="status-label"
+                  value={formStatus}
+                  label="الحالة"
+                  onChange={(e) => setFormStatus(e.target.value)}
+                >
+                  <MenuItem value="active">نشط</MenuItem>
+                  <MenuItem value="disabled">معطل</MenuItem>
+                </Select>
+              </FormControl>
+            </FieldGrid>
+          </FormSection>
         </form>
       </EntityDrawer>
 

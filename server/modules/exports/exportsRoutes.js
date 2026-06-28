@@ -81,6 +81,26 @@ router.get('/inventory', requireAuth, checkPermission('exports.run'), auditLog('
   }
 });
 
+// 7a. GET /api/exports/returns - Export returns history
+router.get('/returns', requireAuth, checkPermission('exports.run'), auditLog('export_returns', 'exports'), async (req, res) => {
+  try {
+    const csv = await exportsService.exportReturns(req.query);
+    sendCsvDownload(res, 'returns_export.csv', csv);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 7b. GET /api/exports/shipments - Export shipments history
+router.get('/shipments', requireAuth, checkPermission('exports.run'), auditLog('export_shipments', 'exports'), async (req, res) => {
+  try {
+    const csv = await exportsService.exportShipments(req.query);
+    sendCsvDownload(res, 'shipments_export.csv', csv);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
 // 8. GET /api/exports/reports - Export dynamic report sheets (balances, stock, authors, receipts)
 router.get('/reports', requireAuth, checkPermission('exports.run'), auditLog('export_reports', 'exports'), async (req, res) => {
   const { type } = req.query;

@@ -3,7 +3,6 @@ const db = require('../../db');
 describe('Invoice V2 Database Schema Integration Tests', () => {
   beforeAll(async () => {
     // Clean test records if any
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
@@ -16,7 +15,6 @@ describe('Invoice V2 Database Schema Integration Tests', () => {
 
   afterAll(async () => {
     // Clean test records
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE invoice_number LIKE "TEST-INV-%")');
@@ -39,7 +37,7 @@ describe('Invoice V2 Database Schema Integration Tests', () => {
     expect(tableNames).toContain('invoice_items');
     expect(tableNames).toContain('invoice_status_history');
     expect(tableNames).toContain('invoice_payments');
-    expect(tableNames).toContain('payment_installments');
+    expect(tableNames).not.toContain('payment_installments');
   });
 
   it('should verify schema constraints and record insertions successfully', async () => {
@@ -102,15 +100,6 @@ describe('Invoice V2 Database Schema Integration Tests', () => {
     ]);
     expect(paymentRes.lastID).toBeDefined();
 
-    // 8. Insert into payment_installments table
-    const installmentRes = await db.run(`
-      INSERT INTO payment_installments (
-        invoice_id, installment_number, due_date, amount, paid_amount, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [
-      invoiceId, 1, new Date().toISOString(), 45.0, 0.0, 'unpaid', 'First installment'
-    ]);
-    expect(installmentRes.lastID).toBeDefined();
 
     // Verify all records were inserted and match
     const invoice = await db.get('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
@@ -126,9 +115,5 @@ describe('Invoice V2 Database Schema Integration Tests', () => {
 
     const payment = await db.get('SELECT * FROM invoice_payments WHERE invoice_id = ?', [invoiceId]);
     expect(payment.amount).toBe(50.0);
-
-    const installment = await db.get('SELECT * FROM payment_installments WHERE invoice_id = ?', [invoiceId]);
-    expect(installment.installment_number).toBe(1);
-    expect(installment.amount).toBe(45.0);
   });
 });

@@ -1,46 +1,28 @@
 # 00 START HERE — مطبعة حمزة
 
-هذا هو الـ Agent Pack الموحد لمنصة **مطبعة حمزة**.
+الـ Agent Pack موحد حاليًا ولا يحتوي إصدارات منفصلة. استخدم البرومبت الموجود في:
 
-المطور: **Ziad Elsayed CodzHub**
+`agent_pack/prompts/COPY_THIS_PROMPT_AR.md`
 
-## طريقة التشغيل مع الـ coding agent
+أول خطوة مفتوحة حاليًا هي 096.
 
-استخدم هذا البرومبت فقط كل مرة:
+قبل أي تنفيذ يجب قراءة:
 
-```txt
-You are working on the Hamza Printing Press Bookstore Manager repo. Read `agent_pack/prompts/ONE_PROMPT_RUNNER.md` and follow it exactly. Execute exactly one open/pending step from `agent_pack/status.json`, update tracking, run verification, write the step report, then stop. Do not execute more than one step.
-```
+- `agent_pack/prompts/ONE_PROMPT_RUNNER.md`
+- `agent_pack/docs/CURRENT_LATEST_REPO_AUDIT.md`
+- `agent_pack/docs/FINAL_BUSINESS_RULES_CURRENT.md`
+- `agent_pack/docs/FINAL_MATERIAL_RTL_DESIGN_SYSTEM.md`
+- `agent_pack/TASK_BOARD.md`
+- `agent_pack/status.json`
 
-## قبل أي خطوة Frontend
+القواعد النهائية:
 
-يجب قراءة:
-
-1. `agent_pack/docs/design.md`
-2. `agent_pack/docs/FRONTEND_STYLE_LOGIC_AUDIT.md`
-3. `agent_pack/checklists/FRONTEND_PERFECTION_CHECKLIST.md`
-
-## قواعد ثابتة
-
-- لا إصدارات منفصلة للـ agent pack؛ كل الخطوات داخل نفس الباك الموحد.
-- السيرفر في `server/` مباشرة وليس `server/src/`.
-- الواجهة React + Material UI + CSS منظم.
-- ممنوع inline styles.
-- ممنوع ترك مشاكل RTL أو layout.
-- العملة جنيه مصري.
-- التوقيت توقيت مصر.
-- كل مرة خطوة واحدة فقط.
-
-## Active unified corrections — collection/supply, no installments/imports
-
-Current business correction:
-
-- The platform has no installment/payment-plan system.
-- Payment/collection supports unpaid, partial collection, and full collection only.
-- Collected money must be marked supplied or not supplied.
-- Finance separates pending balance, collected balance, supplied collected balance, and unsupplied collected balance.
-- Excel/CSV import is removed completely.
-- Exports remain and must be professional.
-- Partial shipping is required by selecting invoice item quantities.
-- CSS must be fixed through design system/cascade, not `!important` spam.
-- The old system value must be enhanced, not reduced.
+- لا تقسيط.
+- لا Import.
+- Export فقط.
+- دفع: مؤجل كلي / مدفوع جزئي / مدفوع كلي.
+- التوريد منفصل عن التحصيل.
+- شحن جزئي حسب منتجات الفاتورة.
+- استرجاع مرتبط بالمخزون والرصيد والليميت.
+- Material UI احترافي، RTL، EGP، Africa/Cairo.
+- لا inline style ولا `!important` جديد.

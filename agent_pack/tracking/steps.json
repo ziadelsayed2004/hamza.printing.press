@@ -398,5 +398,155 @@
     "id": "080",
     "slug": "final_business_design_deploy_gate",
     "description": "Run the final gate after the new design and logic steps."
+  },
+  {
+    "id": "096",
+    "slug": "agent_pack_unified_cleanup_and_obsolete_purge",
+    "title": "Agent Pack Unified Cleanup + Obsolete Purge",
+    "status": "open"
+  },
+  {
+    "id": "097",
+    "slug": "latest_repo_deep_style_logic_audit",
+    "title": "Latest Repo Deep Style + Logic Audit",
+    "status": "pending"
+  },
+  {
+    "id": "098",
+    "slug": "material_css_architecture_no_important_rebuild",
+    "title": "Material CSS Architecture No-Important Rebuild",
+    "status": "pending"
+  },
+  {
+    "id": "099",
+    "slug": "rtl_fields_labels_alignment_global_fix",
+    "title": "RTL Fields Labels Alignment Global Fix",
+    "status": "pending"
+  },
+  {
+    "id": "100",
+    "slug": "sidebar_topbar_layout_final_fix",
+    "title": "Sidebar + Topbar Layout Final Fix",
+    "status": "pending"
+  },
+  {
+    "id": "101",
+    "slug": "side_drawers_dialogs_unified_for_all_entities",
+    "title": "Unified Side Drawers/Dialogs for All Entities",
+    "status": "pending"
+  },
+  {
+    "id": "102",
+    "slug": "invoice_builder_final_owned_workflow",
+    "title": "Invoice Builder Final Owned Workflow",
+    "status": "pending"
+  },
+  {
+    "id": "103",
+    "slug": "invoice_list_actions_pay_supply_ship_return",
+    "title": "Invoice List Actions: Pay, Supply, Ship, Return",
+    "status": "pending"
+  },
+  {
+    "id": "104",
+    "slug": "finance_model_final_no_installments_with_supply",
+    "title": "Finance Model Final No-Installments With Supply",
+    "status": "pending"
+  },
+  {
+    "id": "105",
+    "slug": "payment_supply_remittance_ui_and_permissions",
+    "title": "Payment Supply/Remittance UI + Permissions",
+    "status": "pending"
+  },
+  {
+    "id": "106",
+    "slug": "partial_shipping_invoice_items_final_logic",
+    "title": "Partial Shipping by Invoice Items Final Logic",
+    "status": "pending"
+  },
+  {
+    "id": "107",
+    "slug": "returns_refunds_outlet_return_balance",
+    "title": "Returns/Refunds + Outlet Return Balance",
+    "status": "pending"
+  },
+  {
+    "id": "108",
+    "slug": "outlet_balance_limit_engine_with_returns",
+    "title": "Outlet Balance + Limit Engine With Returns",
+    "status": "pending"
+  },
+  {
+    "id": "109",
+    "slug": "notifications_actions_legacy_plus_final",
+    "title": "Notifications + Actions Legacy Plus Final",
+    "status": "pending"
+  },
+  {
+    "id": "110",
+    "slug": "inventory_receipts_sales_returns_reconciliation",
+    "title": "Inventory Receipts/Sales/Returns Reconciliation",
+    "status": "pending"
+  },
+  {
+    "id": "111",
+    "slug": "professional_exports_only_final",
+    "title": "Professional Exports Only Final",
+    "status": "pending"
+  },
+  {
+    "id": "112",
+    "slug": "backend_dead_code_filter_and_tests_cleanup",
+    "title": "Backend Dead Code Filter + Tests Cleanup",
+    "status": "pending"
+  },
+  {
+    "id": "113",
+    "slug": "frontend_page_css_component_split_cleanup",
+    "title": "Frontend Page CSS + Component Split Cleanup",
+    "status": "pending"
+  },
+  {
+    "id": "114",
+    "slug": "author_and_outlet_accounts_scope_final",
+    "title": "Author + Outlet Accounts Scope Final",
+    "status": "pending"
+  },
+  {
+    "id": "115",
+    "slug": "reports_dashboard_finance_command_center_final",
+    "title": "Reports/Dashboard Finance Command Center Final",
+    "status": "pending"
+  },
+  {
+    "id": "116",
+    "slug": "end_to_end_business_flows_automation",
+    "title": "End-to-End Business Flows Automation",
+    "status": "pending"
+  },
+  {
+    "id": "117",
+    "slug": "visual_material_regression_full_app_pass",
+    "title": "Visual Material Regression Full App Pass",
+    "status": "pending"
+  },
+  {
+    "id": "118",
+    "slug": "security_rbac_audit_for_new_actions",
+    "title": "Security/RBAC Audit for New Actions",
+    "status": "pending"
+  },
+  {
+    "id": "119",
+    "slug": "final_codebase_cleanup_build_test_gate",
+    "title": "Final Codebase Cleanup + Build/Test Gate",
+    "status": "pending"
+  },
+  {
+    "id": "120",
+    "slug": "final_directadmin_delivery_smoke_gate",
+    "title": "Final DirectAdmin Delivery Smoke Gate",
+    "status": "pending"
   }
 ]

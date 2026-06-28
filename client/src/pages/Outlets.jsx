@@ -434,127 +434,130 @@ export const Outlets = () => {
       )}
 
       {/* Editor Drawer */}
+      {/* Editor Drawer */}
       <EntityDrawer
         open={openModal}
         onClose={() => setOpenModal(false)}
         title={modalMode === 'create' ? 'إضافة منفذ توزيع جديد' : 'تعديل بيانات المنفذ'}
-      >
-        <form onSubmit={handleFormSubmit} className="entity-drawer__form">
-          <Box className="entity-drawer__content">
-            <FormSection title="البيانات الأساسية للمنفذ">
-              <FieldGrid columns={2}>
-                <TextField
-                  required
-                  fullWidth
-                  size="small"
-                  label="اسم المنفذ / المعرض"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                />
-                <FormControl fullWidth size="small">
-                  <InputLabel id="form-type-label">فئة المنفذ التسعيرية</InputLabel>
-                  <Select
-                    labelId="form-type-label"
-                    value={formOutletTypeId}
-                    label="فئة المنفذ التسعيرية"
-                    onChange={(e) => setFormOutletTypeId(e.target.value)}
-                  >
-                    {outletTypes.map((ot) => (
-                      <MenuItem key={ot.id} value={ot.id}>
-                        {ot.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="form-gov-label">المحافظة</InputLabel>
-                  <Select
-                    labelId="form-gov-label"
-                    value={formGovernorate}
-                    label="المحافظة"
-                    onChange={(e) => setFormGovernorate(e.target.value)}
-                  >
-                    {egyptGovernorates.map((gov) => (
-                      <MenuItem key={gov} value={gov}>
-                        {gov}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="رقم الهاتف"
-                  value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                />
-                <TextField
-                  type="number"
-                  fullWidth
-                  size="small"
-                  label="السقف الائتماني المالي"
-                  value={formCreditLimit}
-                  onChange={(e) => setFormCreditLimit(e.target.value)}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
-                  }}
-                />
-                <FormControl fullWidth size="small">
-                  <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
-                  <Select
-                    labelId="link-user-label"
-                    value={formUserId}
-                    label="ربط الحساب البرمجي (اختياري)"
-                    onChange={(e) => setFormUserId(e.target.value)}
-                  >
-                    <MenuItem value="">غير مرتبط</MenuItem>
-                    {usersList.map((u) => (
-                      <MenuItem key={u.id} value={u.id}>
-                        {u.full_name} ({u.username})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="form-status-label">الحالة</InputLabel>
-                  <Select
-                    labelId="form-status-label"
-                    value={formStatus}
-                    label="الحالة"
-                    onChange={(e) => setFormStatus(e.target.value)}
-                  >
-                    <MenuItem value="active">نشط</MenuItem>
-                    <MenuItem value="disabled">معطل</MenuItem>
-                  </Select>
-                </FormControl>
-              </FieldGrid>
-            </FormSection>
-
-            <FormSection title="العنوان والملاحظات">
-              <FieldGrid columns={1}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="تفاصيل العنوان (شارع، بناية، رقم المكتب)"
-                  value={formAddressDetails}
-                  onChange={(e) => setFormAddressDetails(e.target.value)}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  multiline
-                  rows={2}
-                  label="ملاحظات وشروط خاصة بالمنفذ"
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                />
-              </FieldGrid>
-            </FormSection>
-          </Box>
-          <FormActions className="entity-drawer__actions">
+        actions={
+          <>
             <Button onClick={() => setOpenModal(false)}>إلغاء</Button>
-            <Button type="submit" variant="contained" color="secondary">حفظ</Button>
-          </FormActions>
+            <Button type="submit" form="outlet-editor-form" variant="contained" color="secondary">حفظ</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleFormSubmit} id="outlet-editor-form">
+          <FormSection title="البيانات الأساسية للمنفذ">
+            <FieldGrid columns={2}>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="اسم المنفذ / المعرض"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-type-label">فئة المنفذ التسعيرية</InputLabel>
+                <Select
+                  labelId="form-type-label"
+                  value={formOutletTypeId}
+                  label="فئة المنفذ التسعيرية"
+                  onChange={(e) => setFormOutletTypeId(e.target.value)}
+                >
+                  {outletTypes.map((ot) => (
+                    <MenuItem key={ot.id} value={ot.id}>
+                      {ot.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-gov-label">المحافظة</InputLabel>
+                <Select
+                  labelId="form-gov-label"
+                  value={formGovernorate}
+                  label="المحافظة"
+                  onChange={(e) => setFormGovernorate(e.target.value)}
+                >
+                  {egyptGovernorates.map((gov) => (
+                    <MenuItem key={gov} value={gov}>
+                      {gov}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                size="small"
+                label="رقم الهاتف"
+                value={formPhone}
+                onChange={(e) => setFormPhone(e.target.value)}
+                inputProps={{ className: 'ltr-value' }}
+              />
+              <TextField
+                type="number"
+                fullWidth
+                size="small"
+                label="السقف الائتماني المالي"
+                value={formCreditLimit}
+                onChange={(e) => setFormCreditLimit(e.target.value)}
+                inputProps={{ className: 'ltr-value' }}
+                InputProps={{
+                  endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
+                }}
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
+                <Select
+                  labelId="link-user-label"
+                  value={formUserId}
+                  label="ربط الحساب البرمجي (اختياري)"
+                  onChange={(e) => setFormUserId(e.target.value)}
+                >
+                  <MenuItem value="">غير مرتبط</MenuItem>
+                  {usersList.map((u) => (
+                    <MenuItem key={u.id} value={u.id}>
+                      {u.full_name} ({u.username})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-status-label">الحالة</InputLabel>
+                <Select
+                  labelId="form-status-label"
+                  value={formStatus}
+                  label="الحالة"
+                  onChange={(e) => setFormStatus(e.target.value)}
+                >
+                  <MenuItem value="active">نشط</MenuItem>
+                  <MenuItem value="disabled">معطل</MenuItem>
+                </Select>
+              </FormControl>
+            </FieldGrid>
+          </FormSection>
+
+          <FormSection title="العنوان والملاحظات">
+            <FieldGrid columns={1}>
+              <TextField
+                fullWidth
+                size="small"
+                label="تفاصيل العنوان (شارع، بناية، رقم المكتب)"
+                value={formAddressDetails}
+                onChange={(e) => setFormAddressDetails(e.target.value)}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                multiline
+                rows={2}
+                label="ملاحظات وشروط خاصة بالمنفذ"
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+              />
+            </FieldGrid>
+          </FormSection>
         </form>
       </EntityDrawer>
 

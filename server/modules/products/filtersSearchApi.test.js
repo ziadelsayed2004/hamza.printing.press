@@ -26,15 +26,6 @@ describe('Filters Search API Integration Tests', () => {
 
   const cleanup = async () => {
     // 1. Delete payment installments
-    await db.run(`
-      DELETE FROM payment_installments 
-      WHERE invoice_id IN (
-        SELECT id FROM invoices 
-        WHERE outlet_id IN (
-          SELECT id FROM outlets WHERE name LIKE "Test % Filter Outlet %"
-        )
-      )
-    `);
 
     // 2. Delete payments
     await db.run(`

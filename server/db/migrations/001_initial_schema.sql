@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   total_price REAL NOT NULL DEFAULT 0 CHECK (total_price >= 0),
   payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK (payment_status IN ('unpaid', 'partially_paid', 'paid', 'cancelled')),
   shipping_status TEXT NOT NULL DEFAULT 'pending' CHECK (shipping_status IN ('pending', 'partially_shipped', 'shipped', 'delivered')),
-  payment_type TEXT NOT NULL DEFAULT 'cash' CHECK (payment_type IN ('cash', 'deferred', 'installments', 'mixed')),
+  payment_type TEXT NOT NULL DEFAULT 'cash' CHECK (payment_type IN ('cash', 'deferred')),
   notes TEXT,
   created_by INTEGER,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -222,20 +222,6 @@ CREATE TABLE IF NOT EXISTS invoice_payments (
   FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE IF NOT EXISTS payment_installments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  invoice_id INTEGER NOT NULL,
-  installment_number INTEGER NOT NULL CHECK (installment_number > 0),
-  due_date DATETIME NOT NULL,
-  amount REAL NOT NULL CHECK (amount > 0),
-  paid_amount REAL NOT NULL DEFAULT 0 CHECK (paid_amount >= 0),
-  status TEXT NOT NULL DEFAULT 'unpaid' CHECK (status IN ('unpaid', 'partially_paid', 'paid', 'overdue')),
-  notes TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (invoice_id, installment_number),
-  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
-);
 
 -- 6. Shipping Management
 CREATE TABLE IF NOT EXISTS shipments (

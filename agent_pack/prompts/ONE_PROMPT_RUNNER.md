@@ -1,38 +1,69 @@
-You are the implementation agent for the Bookstore Manager Modernization project.
+You are the implementation agent for **مطبعة حمزة — Bookstore Manager**.
 
-Your job in this run is to execute EXACTLY ONE step from `agent_pack/status.json`.
+Your job in this run is to execute **EXACTLY ONE** open/pending step from `agent_pack/status.json`, then stop.
 
 ## Mandatory first reads
-Before editing anything, read:
+
+Read these files in full before editing anything:
 
 1. `agent_pack/00_START_HERE.md`
 2. `agent_pack/status.json`
 3. `agent_pack/TASK_BOARD.md`
-4. `agent_pack/docs/ARCHITECTURE_TARGET.md`
-5. `agent_pack/docs/BUSINESS_RULES.md`
-6. `agent_pack/docs/DB_SCHEMA_TARGET.md`
-7. `agent_pack/docs/RBAC_PERMISSION_MATRIX.md`
-8. `agent_pack/docs/DEPLOYMENT_DIRECTADMIN.md`
-9. `agent_pack/docs/FRESH_RESET_AND_UI_REDESIGN_SCOPE.md`
-10. `agent_pack/docs/SERVER_FLAT_STRUCTURE_TARGET.md`
-11. `agent_pack/docs/DASHBOARD_VISUAL_STANDARD.md`
-12. `agent_pack/docs/LEGACY_BALANCE_NOTIFICATIONS_TARGET.md`
-13. `agent_pack/docs/FINANCE_NOTIFICATIONS_TIMEZONE_UI_FIX_SCOPE.md`
-14. `agent_pack/docs/PROFESSIONAL_MATERIAL_DASHBOARD_STANDARD.md`
-15. `agent_pack/docs/FINANCE_COLLECTION_SUPPLY_RULES.md`
-16. `agent_pack/docs/INVOICE_CREATION_PARTIAL_SHIPPING_RULES.md`
-17. `agent_pack/docs/EXPORT_ONLY_NO_IMPORT_POLICY.md`
-18. `agent_pack/docs/CSS_CASCADE_NO_IMPORTANT_POLICY.md`
-19. `agent_pack/docs/LEGACY_ENHANCEMENT_NOT_REDUCTION_POLICY.md`
+4. `agent_pack/docs/CURRENT_LATEST_REPO_AUDIT.md`
+5. `agent_pack/docs/UNIFIED_AGENT_PACK_CLEANUP_POLICY.md`
+6. `agent_pack/docs/FINAL_BUSINESS_RULES_CURRENT.md`
+7. `agent_pack/docs/FINAL_MATERIAL_RTL_DESIGN_SYSTEM.md`
+8. `agent_pack/docs/RBAC_PERMISSION_MATRIX.md`
+9. `agent_pack/docs/DEPLOYMENT_DIRECTADMIN.md`
+10. `agent_pack/checklists/VISUAL_RTL_MATERIAL_QA_CHECKLIST.md`
+11. `agent_pack/checklists/FINANCE_SHIPPING_RETURNS_QA_CHECKLIST.md`
 12. `agent_pack/checklists/VERIFY_GATE.md`
-10. The selected step file under `agent_pack/steps/`
+13. The selected step file from `agent_pack/steps/`.
 
 ## Step selection rule
 
 - Find the first step with status `open`.
-- If there is no `open`, find the first step with status `pending` and set it to `open` then `in_progress`.
-- If all steps are `done`, run final verification only and create a final report.
-- Execute only that one selected step.
+- If there is no `open`, find the first step with status `pending`, set it to `open`, then `in_progress`.
+- Ignore historical/obsolete/cancelled/superseded notes.
+- Do not execute final/deploy gates until all prior current steps are done.
+- Execute only one selected step.
+
+## Hard product rules
+
+- Product name: `مطبعة حمزة`.
+- Developer credit: `Ziad Elsayed CodzHub`.
+- Arabic-only UI.
+- RTL-first layout.
+- EGP only.
+- Egypt timezone only: `Africa/Cairo`.
+- Single Node.js monolith deployment for DirectAdmin.
+- Express serves `/api/*`; React/Vite/MUI builds into `public/`.
+- Fresh DB is allowed; seed only Super Admin by default unless the selected step requires otherwise.
+
+## Business rules
+
+- Installments/payment plans are forbidden.
+- Excel/CSV imports are forbidden.
+- Exports remain and must be professional.
+- Payment states: fully deferred, partially paid, fully paid.
+- Collection and supply/remittance are different.
+- Finance must show: pending receivable, actual collected, supplied collected, unsupplied collected, return balance.
+- Returns/refunds must be records, affect stock, outlet return balance, outlet limit, statements, and notifications.
+- Partial shipping must be by invoice item quantities and must not exceed remaining unshipped quantities.
+- Invoice actions must include pay, mark paid, supply, ship, return, export/print according to permissions.
+- Keep and improve old platform value; remove only explicitly cancelled features.
+
+## Design rules
+
+- Use professional Google Material UI style.
+- Do not add `style={{...}}`.
+- Do not add random `sx={{...}}`; move layout/design to CSS/component classes/theme.
+- Do not add `!important`.
+- Fix cascade/theme instead of fighting MUI libraries with overrides.
+- Each important page/component should have its own CSS sibling.
+- All form labels/fields must be RTL, spaced, full width, and not clipped.
+- Entity side drawers must share one clean system with header/content/sticky footer.
+- Side bar and topbar must be correct in RTL and must not require refresh after login.
 
 ## Scope rules
 
@@ -40,56 +71,33 @@ Allowed:
 - Backend source code
 - Frontend source code
 - Database schema/migrations/seeds
-- Scripts
-- Tests
-- Docs
-- Agent pack tracking files
+- Scripts/tests
+- Docs/agent pack tracking
 - Package scripts/config needed for the selected step
 
 Forbidden:
 - Executing future steps early
-- Rewriting unrelated areas
-- Deleting legacy UI before replacement is verified
-- Splitting production into separate frontend/backend deployments
-- Putting database or secrets inside `public/`
-
-## Project decisions
-
-- Fresh database is required now; legacy data preservation is not required. Reset must seed only permissions + one super admin user, with no demo business data.
-- Production deployment is one Node.js app.
-- Express serves `/api/*`.
-- React + Vite + Material UI builds into `public/`.
-- Backend target path is simplified `server/` directly; avoid long-term dependency on `server/src/`.
-- UI must remove old identity, use a premium Material UI visual system, and support light/dark mode.
-- Currency and time must be Egyptian-localized: EGP and Africa/Cairo display.
-- Legacy balance and notifications concepts must be restored as modern finance ledger + notification center.
-- Login/session hydration must never require manual refresh for menus/sidebar to appear.
-- Use RTL-first UI.
-- Use advanced RBAC and audit logging.
-- Outlet types are admin-defined.
-- Each book/product can have a separate price per outlet type.
-- Invoice item price must be snapshotted at invoice creation.
-- Payments/collections support only unpaid, partial collection, and full collection. Installments/payment plans are forbidden.
-- Inventory changes must go through receipts/ledger/transactions, not silent stock edits.
-- Finance must separate pending receivables, collected actual balance, supplied collected balance, and collected-not-supplied balance.
-- Every collected payment must be marked supplied/not supplied and can later be supplied by authorized users.
-- Excel/CSV import features are forbidden; exports remain and must be professional.
-- Partial shipping is allowed by selecting invoice item quantities; shipping must not break finance math.
-- Do not reduce old platform value; enhance legacy behavior and remove only explicitly unnecessary features.
+- Creating new agent pack version folders/labels
+- Reintroducing imports or installments
+- Splitting production frontend/backend into separate deploys
+- Putting DB/secrets inside `public/`
+- Claiming verification without commands/results
 
 ## Verification before closing the step
-Run what is available and relevant:
 
-- `node -v`
-- `npm -v`
-- `npm install` or `npm ci` if needed
-- `npm run lint` if available
-- `npm test` if available
-- `npm run build` if available
-- `npm run db:migrate` if available and relevant
-- `npm start` or API smoke test if practical
+Run what is relevant and available:
 
-If a command is unavailable, document that instead of inventing success.
+```bash
+node -v
+npm -v
+npm run style:gate
+npm run lint
+npm test
+npm run build
+npm run smoke
+```
+
+If a command fails, do not hide it. Record the failure and either fix it if in scope or mark the step `needs_review`/`blocked`.
 
 ## Status update rules
 
@@ -97,12 +105,15 @@ After execution:
 
 1. Mark selected step as `done`, `blocked`, or `needs_review`.
 2. If done, set the next pending step to `open`.
-3. Add report path and timestamps in `status.json`.
-4. Write a report in `agent_pack/reports/` using `templates/STEP_COMPLETION_REPORT.md`.
-5. Stop after one step.
+3. Update `current_step` if needed.
+4. Add report path and timestamps in `status.json`.
+5. Update `TASK_BOARD.md` if the status changed.
+6. Write a report in `agent_pack/reports/` using `templates/STEP_COMPLETION_REPORT.md`.
+7. Stop after one step.
 
 ## Completion response required
-Return a concise report with:
+
+Return:
 
 - Selected step
 - Files changed
@@ -113,30 +124,3 @@ Return a concise report with:
 - Risks/blocked items
 - Next step
 - Confirmation that only one step was executed
-
-## Mandatory Design-System Gate
-
-Before executing any new step from 061 onward, read these files in full:
-
-1. `agent_pack/docs/design.md`
-2. `agent_pack/docs/FRONTEND_STYLE_LOGIC_AUDIT.md`
-3. `agent_pack/checklists/FRONTEND_PERFECTION_CHECKLIST.md`
-
-Hard rules:
-
-- The product name is `مطبعة حمزة`.
-- The developer credit is `Ziad Elsayed CodzHub`.
-- Arabic-only UI.
-- Full RTL.
-- EGP currency only.
-- Egypt timezone only.
-- Do not create agent-pack version folders or version labels.
-- Do not add inline styles.
-- Do not add `style={{...}}`.
-- Do not add new `sx={{...}}` except with a written temporary-debt note and a later cleanup task.
-- Do not add new `!important`; fix cascade/theme/component structure instead.
-- Remove import UI/API/modules unless a step explicitly needs a temporary compatibility removal path.
-- Remove installment/payment-plan UI/API/schema references.
-- Prefer CSS files per page/component plus shared CSS variables.
-- Keep the server path flat as `server/`, not `server/src/`.
-- Execute exactly one open/pending step only, update tracking, run verification, write report, then stop.

@@ -5,7 +5,7 @@ const notificationsService = require('../notifications/notificationsService');
  * Recalculate invoice shipping status based on non-cancelled shipments.
  */
 async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
-  const invoice = await db.get('SELECT shipping_status FROM invoices WHERE id = ?', [invoiceId]);
+  const invoice = await db.get('SELECT shipping_status, invoice_number FROM invoices WHERE id = ?', [invoiceId]);
   if (!invoice) return;
 
   const items = await db.all(`
@@ -84,7 +84,7 @@ async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
         category: 'shipment_partial',
         severity: 'warning',
         title: 'شحنة جزئية للفاتورة',
-        message: `تم شحن الفاتورة رقم ${invoiceId} شحناً جزئياً.`,
+        message: `تم شحن الفاتورة رقم ${invoice.invoice_number} شحناً جزئياً.`,
         source_type: 'invoice',
         source_id: invoiceId,
         dedupe_key: `shipment_partial:${invoiceId}`,
@@ -338,10 +338,42 @@ async function getShipmentById(id) {
   return shipment;
 }
 
+/**
+ * Calculate remaining shippable quantities per invoice item.
+ */
+async function getRemainingShippableItems(invoiceId) {
+  const invoice = await db.get('SELECT id FROM invoices WHERE id = ?', [invoiceId]);
+  if (!invoice) {
+    throw new Error(`Invoice with ID ${invoiceId} does not exist`);
+  }
+
+  const items = await db.all(`
+    SELECT ii.id as invoice_item_id, ii.product_id, ii.quantity as ordered_quantity, p.title as product_title, p.code as product_code
+    FROM invoice_items ii
+    JOIN products p ON p.id = ii.product_id
+    WHERE ii.invoice_id = ?
+  `, [invoiceId]);
+
+  for (const item of items) {
+    const allocatedRow = await db.get(`
+      SELECT COALESCE(SUM(si.quantity), 0) as qty
+      FROM shipment_items si
+      JOIN shipments s ON s.id = si.shipment_id
+      WHERE si.invoice_item_id = ? AND s.status != 'cancelled'
+    `, [item.invoice_item_id]);
+
+    item.shipped_quantity = allocatedRow.qty;
+    item.remaining_quantity = Math.max(0, item.ordered_quantity - allocatedRow.qty);
+  }
+
+  return items;
+}
+
 module.exports = {
   createShipment,
   updateShipmentStatus,
   getShipments,
   getShipmentById,
-  recalculateInvoiceShippingStatus
+  recalculateInvoiceShippingStatus,
+  getRemainingShippableItems
 };

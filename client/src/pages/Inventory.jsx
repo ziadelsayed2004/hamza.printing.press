@@ -4,6 +4,7 @@ import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
+import EntityDrawer from '../components/EntityDrawer';
 import {
   Box,
   Typography,
@@ -165,12 +166,27 @@ export const Inventory = () => {
   const [rcItems, setRcItems] = useState([{ productId: '', quantity: '', unitCost: '' }]);
   const [rcSubmitting, setRcSubmitting] = useState(false);
 
+  const [allProducts, setAllProducts] = useState([]);
+  const fetchAllProducts = useCallback(async () => {
+    try {
+      const data = await apiClient.get('/inventory/stock-summary?limit=1000');
+      setAllProducts(data || []);
+    } catch (err) {
+      console.error('Error fetching products for dropdown:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllProducts();
+  }, [fetchAllProducts]);
+
   const handleOpenCreateReceipt = () => {
     setRcSupplier('');
     setRcDate(new Date().toISOString().split('T')[0]);
     setRcNotes('');
     setRcItems([{ productId: '', quantity: '', unitCost: '' }]);
     setOpenCreateReceipt(true);
+    fetchAllProducts();
   };
 
   const handleRcAddItem = () => {
@@ -230,6 +246,7 @@ export const Inventory = () => {
     setAdjNotes('');
     setAdjItems([{ productId: '', quantity: '' }]);
     setOpenAdjust(true);
+    fetchAllProducts();
   };
 
   const handleAdjAddItem = () => {
@@ -578,215 +595,213 @@ export const Inventory = () => {
       </TabPanel>
 
       {/* ══════ CREATE RECEIPT Drawer ══════ */}
-      <Drawer
-        anchor="left"
+      <EntityDrawer
         open={openCreateReceipt}
         onClose={() => !rcSubmitting && setOpenCreateReceipt(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 600 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تسجيل إذن وارد جديد</Typography>
-          <Button onClick={() => setOpenCreateReceipt(false)} variant="outlined" size="small" color="inherit" disabled={rcSubmitting}>إغلاق</Button>
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <form onSubmit={handleSubmitReceipt} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflowY: 'auto' }}>
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="اسم المورّد (اختياري)" size="small" value={rcSupplier} onChange={(e) => setRcSupplier(e.target.value)} />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth required label="تاريخ الاستلام" size="small" type="date" InputLabelProps={{ shrink: true }} value={rcDate} onChange={(e) => setRcDate(e.target.value)} />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={rcNotes} onChange={(e) => setRcNotes(e.target.value)} />
-              </Grid>
-
-              {/* Items */}
-              <Grid item xs={12}>
-                <Divider sx={{ my: 1 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>أصناف الوارد</Typography>
-                  <Button size="small" startIcon={<AddIcon />} onClick={handleRcAddItem}>إضافة صنف</Button>
-                </Box>
-
-                {rcItems.map((item, idx) => (
-                  <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
-                    <Grid item xs={4}>
-                      <TextField fullWidth required label="معرّف المنتج (Product ID)" size="small" type="number"
-                        value={item.productId} onChange={(e) => handleRcItemChange(idx, 'productId', e.target.value)} />
-                    </Grid>
-                    <Grid item xs={3}>
-                      <TextField fullWidth required label="الكمية" size="small" type="number" inputProps={{ min: 1 }}
-                        value={item.quantity} onChange={(e) => handleRcItemChange(idx, 'quantity', e.target.value)} />
-                    </Grid>
-                    <Grid item xs={3}>
-                      <TextField fullWidth required label="تكلفة الوحدة" size="small" type="number" inputProps={{ step: '0.01', min: 0 }}
-                        value={item.unitCost} onChange={(e) => handleRcItemChange(idx, 'unitCost', e.target.value)}
-                        InputProps={{ endAdornment: <InputAdornment position="end">ج.م</InputAdornment> }} />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <IconButton color="error" onClick={() => handleRcRemoveItem(idx)} disabled={rcItems.length <= 1}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Grid>
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-          </Box>
-          <Divider sx={{ my: 2 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        title="تسجيل إذن وارد جديد"
+        actions={
+          <>
             <Button variant="outlined" color="inherit" onClick={() => setOpenCreateReceipt(false)} disabled={rcSubmitting}>إلغاء</Button>
-            <Button variant="contained" color="primary" type="submit" disabled={rcSubmitting}>
+            <Button variant="contained" color="primary" type="submit" form="create-receipt-form" disabled={rcSubmitting}>
               {rcSubmitting ? 'جاري التسجيل...' : 'تأكيد وتسجيل الوارد'}
             </Button>
-          </Box>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmitReceipt} id="create-receipt-form">
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth label="اسم المورّد (اختياري)" size="small" value={rcSupplier} onChange={(e) => setRcSupplier(e.target.value)} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField fullWidth required label="تاريخ الاستلام" size="small" type="date" InputLabelProps={{ shrink: true }} value={rcDate} onChange={(e) => setRcDate(e.target.value)} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={rcNotes} onChange={(e) => setRcNotes(e.target.value)} />
+            </Grid>
+
+            {/* Items */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>أصناف الوارد</Typography>
+                <Button size="small" startIcon={<AddIcon />} onClick={handleRcAddItem}>إضافة صنف</Button>
+              </Box>
+
+              {rcItems.map((item, idx) => (
+                <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
+                  <Grid item xs={4}>
+                    <FormControl fullWidth size="small" required>
+                      <InputLabel>الكتاب</InputLabel>
+                      <Select
+                        value={item.productId}
+                        label="الكتاب"
+                        onChange={(e) => handleRcItemChange(idx, 'productId', e.target.value)}
+                      >
+                        <MenuItem value="" disabled>اختر كتاباً...</MenuItem>
+                        {allProducts.map(p => (
+                          <MenuItem key={p.id} value={p.id}>
+                            {p.title} ({p.code})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <TextField fullWidth required label="الكمية" size="small" type="number" inputProps={{ min: 1 }}
+                      value={item.quantity} onChange={(e) => handleRcItemChange(idx, 'quantity', e.target.value)} />
+                  </Grid>
+                  <Grid item xs={3}>
+                    <TextField fullWidth required label="تكلفة الوحدة" size="small" type="number" inputProps={{ step: '0.01', min: 0 }}
+                      value={item.unitCost} onChange={(e) => handleRcItemChange(idx, 'unitCost', e.target.value)}
+                      InputProps={{ endAdornment: <InputAdornment position="end">ج.م</InputAdornment> }} />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <IconButton color="error" onClick={() => handleRcRemoveItem(idx)} disabled={rcItems.length <= 1}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Grid>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
         </form>
-      </Drawer>
+      </EntityDrawer>
 
       {/* ══════ RECEIPT DETAIL Drawer ══════ */}
-      <Drawer
-        anchor="left"
+      <EntityDrawer
         open={openReceiptDetail}
         onClose={() => setOpenReceiptDetail(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 600 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
-        }}
+        title="تفاصيل إذن الوارد"
+        loading={receiptDetailLoading}
+        actions={<Button onClick={() => setOpenReceiptDetail(false)} variant="outlined">إغلاق</Button>}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تفاصيل إذن الوارد</Typography>
-          <Button onClick={() => setOpenReceiptDetail(false)} variant="outlined" size="small" color="inherit">إغلاق</Button>
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
-          {receiptDetailLoading ? (
-            <LoadingState message="جاري التحميل..." />
-          ) : receiptDetail ? (
-            <Box>
-              <Grid container spacing={2} sx={{ mb: 2 }}>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">رقم الإذن</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{receiptDetail.receipt_number}</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">المورّد</Typography>
-                  <Typography variant="body1">{receiptDetail.supplier_name || '—'}</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">تاريخ الاستلام</Typography>
-                  <Typography variant="body1">{receiptDetail.received_date ? formatEgyptDate(receiptDetail.received_date) : '—'}</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">بواسطة</Typography>
-                  <Typography variant="body1">{receiptDetail.user_full_name || '—'}</Typography>
-                </Grid>
+        {receiptDetail ? (
+          <Box>
+            <Grid container spacing={2} sx={{ mb: 2 }}>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">رقم الإذن</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{receiptDetail.receipt_number}</Typography>
               </Grid>
-              {receiptDetail.notes && (
-                <Alert severity="info" sx={{ mb: 2 }}>{receiptDetail.notes}</Alert>
-              )}
-              {receiptDetail.items && receiptDetail.items.length > 0 && (
-                <TableContainer component={Paper}>
-                  <Table size="small">
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>تكلفة الوحدة</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الإجمالي</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {receiptDetail.items.map((item, i) => (
-                        <TableRow key={i}>
-                          <TableCell sx={{ fontWeight: 500 }}>{item.product_title}</TableCell>
-                          <TableCell sx={{ fontFamily: 'monospace' }}>{item.product_code || '—'}</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>{item.quantity}</TableCell>
-                          <TableCell align="right">{formatCurrencyEGP(item.unit_cost)}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                            {formatCurrencyEGP(parseFloat(item.unit_cost) * item.quantity)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Box>
-          ) : (
-            <EmptyState title="لا توجد بيانات" />
-          )}
-        </Box>
-      </Drawer>
-
-      {/* ══════ ADJUSTMENT Drawer ══════ */}
-      <Drawer
-        anchor="left"
-        open={openAdjust}
-        onClose={() => !adjSubmitting && setOpenAdjust(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 600 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تسوية مخزون (زيادة / نقص)</Typography>
-          <Button onClick={() => setOpenAdjust(false)} variant="outlined" size="small" color="inherit" disabled={adjSubmitting}>إغلاق</Button>
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <form onSubmit={handleSubmitAdjustment} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflowY: 'auto' }}>
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              استخدم كمية موجبة لزيادة الرصيد وكمية سالبة لخصم الرصيد (مثلاً: تلف، فقدان).
-            </Alert>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField fullWidth required label="سبب التسوية" size="small" value={adjReason} onChange={(e) => setAdjReason(e.target.value)}
-                  placeholder="مثل: جرد فعلي، تلف بضاعة، تصحيح أخطاء..." />
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">المورّد</Typography>
+                <Typography variant="body1">{receiptDetail.supplier_name || '—'}</Typography>
               </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={adjNotes} onChange={(e) => setAdjNotes(e.target.value)} />
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">تاريخ الاستلام</Typography>
+                <Typography variant="body1">{receiptDetail.received_date ? formatEgyptDate(receiptDetail.received_date) : '—'}</Typography>
               </Grid>
-
-              {/* Items */}
-              <Grid item xs={12}>
-                <Divider sx={{ my: 1 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>الأصناف</Typography>
-                  <Button size="small" startIcon={<AddIcon />} onClick={handleAdjAddItem}>إضافة صنف</Button>
-                </Box>
-
-                {adjItems.map((item, idx) => (
-                  <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
-                    <Grid item xs={5}>
-                      <TextField fullWidth required label="معرّف المنتج (Product ID)" size="small" type="number"
-                        value={item.productId} onChange={(e) => handleAdjItemChange(idx, 'productId', e.target.value)} />
-                    </Grid>
-                    <Grid item xs={5}>
-                      <TextField fullWidth required label="الكمية (+/-)" size="small" type="number"
-                        value={item.quantity} onChange={(e) => handleAdjItemChange(idx, 'quantity', e.target.value)} />
-                    </Grid>
-                    <Grid item xs={2}>
-                      <IconButton color="error" onClick={() => handleAdjRemoveItem(idx)} disabled={adjItems.length <= 1}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Grid>
-                  </Grid>
-                ))}
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">بواسطة</Typography>
+                <Typography variant="body1">{receiptDetail.user_full_name || '—'}</Typography>
               </Grid>
             </Grid>
+            {receiptDetail.notes && (
+              <Alert severity="info" sx={{ mb: 2 }}>{receiptDetail.notes}</Alert>
+            )}
+            {receiptDetail.items && receiptDetail.items.length > 0 && (
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>تكلفة الوحدة</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>الإجمالي</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {receiptDetail.items.map((item, i) => (
+                      <TableRow key={i}>
+                        <TableCell sx={{ fontWeight: 500 }}>{item.product_title}</TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace' }}>{item.product_code || '—'}</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>{item.quantity}</TableCell>
+                        <TableCell align="right">{formatCurrencyEGP(item.unit_cost)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                          {formatCurrencyEGP(parseFloat(item.unit_cost) * item.quantity)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Box>
-          <Divider sx={{ my: 2 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        ) : (
+          !receiptDetailLoading && <EmptyState title="لا توجد بيانات" />
+        )}
+      </EntityDrawer>
+
+      {/* ══════ ADJUSTMENT Drawer ══════ */}
+      <EntityDrawer
+        open={openAdjust}
+        onClose={() => !adjSubmitting && setOpenAdjust(false)}
+        title="تسوية مخزون (زيادة / نقص)"
+        actions={
+          <>
             <Button variant="outlined" color="inherit" onClick={() => setOpenAdjust(false)} disabled={adjSubmitting}>إلغاء</Button>
-            <Button variant="contained" color="warning" type="submit" disabled={adjSubmitting}>
+            <Button variant="contained" color="warning" type="submit" form="adjustment-form" disabled={adjSubmitting}>
               {adjSubmitting ? 'جاري التسجيل...' : 'تأكيد وتسجيل التسوية'}
             </Button>
-          </Box>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmitAdjustment} id="adjustment-form">
+          <Alert severity="info" sx={{ mb: 2 }}>
+            استخدم كمية موجبة لزيادة الرصيد وكمية سالبة لخصم الرصيد (مثلاً: تلف، فقدان).
+          </Alert>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField fullWidth required label="سبب التسوية" size="small" value={adjReason} onChange={(e) => setAdjReason(e.target.value)}
+                placeholder="مثل: جرد فعلي، تلف بضاعة، تصحيح أخطاء..." />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={adjNotes} onChange={(e) => setAdjNotes(e.target.value)} />
+            </Grid>
+
+            {/* Items */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>الأصناف</Typography>
+                <Button size="small" startIcon={<AddIcon />} onClick={handleAdjAddItem}>إضافة صنف</Button>
+              </Box>
+
+              {adjItems.map((item, idx) => (
+                <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
+                  <Grid item xs={5}>
+                    <FormControl fullWidth size="small" required>
+                      <InputLabel>الكتاب</InputLabel>
+                      <Select
+                        value={item.productId}
+                        label="الكتاب"
+                        onChange={(e) => handleAdjItemChange(idx, 'productId', e.target.value)}
+                      >
+                        <MenuItem value="" disabled>اختر كتاباً...</MenuItem>
+                        {allProducts.map(p => (
+                          <MenuItem key={p.id} value={p.id}>
+                            {p.title} ({p.code})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={5}>
+                    <TextField fullWidth required label="الكمية (+/-)" size="small" type="number"
+                      value={item.quantity} onChange={(e) => handleAdjItemChange(idx, 'quantity', e.target.value)} />
+                  </Grid>
+                  <Grid item xs={2}>
+                    <IconButton color="error" onClick={() => handleAdjRemoveItem(idx)} disabled={adjItems.length <= 1}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Grid>
+                </Grid>
+              ))}
+            </Grid>
+          </Grid>
         </form>
-      </Drawer>
+      </EntityDrawer>
 
       {/* Snackbar Toast */}
       <Snackbar open={!!toastMsg} autoHideDuration={4000} onClose={() => setToastMsg('')} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>

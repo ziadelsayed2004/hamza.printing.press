@@ -638,7 +638,7 @@ export const MainLayout = () => {
         {/* Mobile Drawer */}
         <Drawer
           variant="temporary"
-          anchor="left"
+          anchor={muiTheme.direction === 'rtl' ? 'left' : 'right'}
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
@@ -658,7 +658,7 @@ export const MainLayout = () => {
         {/* Desktop Drawer */}
         <Drawer
           variant="permanent"
-          anchor="left"
+          anchor={muiTheme.direction === 'rtl' ? 'left' : 'right'}
           PaperProps={{
             style: {
               boxSizing: 'border-box',

@@ -30,20 +30,30 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isAuthor = userRoles.some(r => r.name === 'author');
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     let filterAuthorIds = null;
     let filterOutletIds = null;
 
     if (!isElevated) {
-      const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
-      if (linkedAuthors.length > 0) {
-        filterAuthorIds = linkedAuthors;
+      if (isAuthor) {
+        filterAuthorIds = await authorsService.getLinkedAuthorsForUser(userId);
+      } else {
+        const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
+        if (linkedAuthors.length > 0) {
+          filterAuthorIds = linkedAuthors;
+        }
       }
-      
-      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0) {
-        filterOutletIds = linkedOutlets;
+
+      if (isOutlet) {
+        filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
+      } else {
+        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+        if (linkedOutlets.length > 0) {
+          filterOutletIds = linkedOutlets;
+        }
       }
     }
 
@@ -84,39 +94,71 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
 
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isAuthor = userRoles.some(r => r.name === 'author');
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     if (!isElevated) {
-      // Check outlet permission first
-      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0 && !linkedOutlets.includes(invoice.outlet_id)) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Access denied. You do not have permission to view this invoice.'
-        });
-      }
-
-      // Check author permission
-      const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
-      if (linkedAuthors.length > 0) {
-        const db = require('../../db');
-        const rows = await db.all(`
-          SELECT DISTINCT product_id 
-          FROM product_authors 
-          WHERE author_id IN (${linkedAuthors.map(() => '?').join(',')})
-        `, linkedAuthors);
-        const authorProductIds = rows.map(r => r.product_id);
-        const hasOwnProduct = invoice.items.some(item => authorProductIds.includes(item.product_id));
-
-        if (!hasOwnProduct) {
+      if (isOutlet) {
+        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+        if (!linkedOutlets.includes(invoice.outlet_id)) {
           return res.status(403).json({
             error: 'Forbidden',
             message: 'Access denied. You do not have permission to view this invoice.'
           });
         }
+      } else {
+        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+        if (linkedOutlets.length > 0 && !linkedOutlets.includes(invoice.outlet_id)) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Access denied. You do not have permission to view this invoice.'
+          });
+        }
+      }
 
+      if (isAuthor) {
+        const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
+        if (linkedAuthors.length === 0) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Access denied. You do not have permission to view this invoice.'
+          });
+        }
+        const invoiceItems = invoice.items || [];
+        const db = require('../../db');
+        const authorBooks = await db.all(`
+          SELECT product_id FROM product_authors WHERE author_id IN (${linkedAuthors.map(() => '?').join(',')})
+        `, linkedAuthors);
+        const authorBookIds = authorBooks.map(b => b.product_id);
+        const hasAuthorBook = invoiceItems.some(item => authorBookIds.includes(item.product_id));
+        if (!hasAuthorBook) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Access denied. You do not have permission to view this invoice.'
+          });
+        }
         // Filter items containing own products
-        invoice.items = invoice.items.filter(item => authorProductIds.includes(item.product_id));
+        invoice.items = invoiceItems.filter(item => authorBookIds.includes(item.product_id));
+      } else {
+        const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
+        if (linkedAuthors.length > 0) {
+          const invoiceItems = invoice.items || [];
+          const db = require('../../db');
+          const authorBooks = await db.all(`
+            SELECT product_id FROM product_authors WHERE author_id IN (${linkedAuthors.map(() => '?').join(',')})
+          `, linkedAuthors);
+          const authorBookIds = authorBooks.map(b => b.product_id);
+          const hasAuthorBook = invoiceItems.some(item => authorBookIds.includes(item.product_id));
+          if (!hasAuthorBook) {
+            return res.status(403).json({
+              error: 'Forbidden',
+              message: 'Access denied. You do not have permission to view this invoice.'
+            });
+          }
+          // Filter items containing own products
+          invoice.items = invoiceItems.filter(item => authorBookIds.includes(item.product_id));
+        }
       }
     }
 
@@ -128,7 +170,17 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
 
 // 3. POST /api/invoices - Create a new invoice
 router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('create_invoice', 'invoices'), async (req, res) => {
-  const { outletId, discount = 0, shippingCost = 0, paymentType = 'cash', notes = '', items = [] } = req.body;
+  const {
+    outletId,
+    discount = 0,
+    shippingCost = 0,
+    paymentType = 'cash',
+    notes = '',
+    items = [],
+    paymentAmount = 0,
+    paymentSupplyStatus = 'not_supplied',
+    paymentNotes = ''
+  } = req.body;
 
   if (!outletId || !items || items.length === 0) {
     return res.status(400).json({ error: 'Bad Request', message: 'Outlet ID and items are required.' });
@@ -143,7 +195,10 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
       paymentType,
       notes,
       items,
-      userId
+      userId,
+      paymentAmount,
+      paymentSupplyStatus,
+      paymentNotes
     });
 
     res.status(201).json({
@@ -153,7 +208,7 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
     });
   } catch (err) {
     const msg = (err.message || '').toLowerCase();
-    if (msg.includes('required') || msg.includes('insufficient') || msg.includes('not exist') || msg.includes('not active') || msg.includes('negative') || msg.includes('no price')) {
+    if (msg.includes('required') || msg.includes('insufficient') || msg.includes('not exist') || msg.includes('not active') || msg.includes('negative') || msg.includes('no price') || msg.includes('exceeds')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

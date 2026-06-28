@@ -1,40 +1,32 @@
-# مطبعة حمزة — Bookstore Manager Agent Pack
+# مطبعة حمزة — Unified Agent Pack
 
-Agent Pack موحد لإكمال منصة إدارة الكتب، المنافذ، المخزون، الفواتير، المدفوعات، الأرصدة، الإشعارات، التقارير، وحسابات المؤلفين والمنافذ.
+هذا الـ Agent Pack يدير تحديث منصة مطبعة حمزة من خلال خطوات واحدة تلو الأخرى.
 
-**Developer:** Ziad Elsayed CodzHub
+## البرومبت الموحد
 
-## Current Open Step
+```text
+You are working on the Hamza Printing Press Bookstore Manager repo. Read `agent_pack/prompts/ONE_PROMPT_RUNNER.md` and follow it exactly. Execute exactly one open/pending step from `agent_pack/status.json`, update tracking, run verification, write the step report, then stop. Do not execute more than one step.
+```
 
-راجع `agent_pack/status.json`.
+## مصدر الحقيقة
 
-## Key Documents
+- `status.json`
+- `TASK_BOARD.md`
+- `prompts/ONE_PROMPT_RUNNER.md`
+- `docs/FINAL_BUSINESS_RULES_CURRENT.md`
+- `docs/FINAL_MATERIAL_RTL_DESIGN_SYSTEM.md`
 
-- `agent_pack/docs/design.md`
-- `agent_pack/docs/FRONTEND_STYLE_LOGIC_AUDIT.md`
-- `agent_pack/checklists/FRONTEND_PERFECTION_CHECKLIST.md`
-- `agent_pack/TASK_BOARD.md`
-- `agent_pack/prompts/ONE_PROMPT_RUNNER.md`
+## الحالي
 
-## Hard Rules
+الخطوات الجديدة من 096 إلى 120 تعالج:
 
-- Arabic-only UI.
-- RTL-first.
-- EGP only.
-- Africa/Cairo timezone.
-- No inline styles.
-- CSS files per component/page.
-- Single Arabic JSON dictionary.
-- One Node.js DirectAdmin deployment.
-
-## Active business correction
-
-The unified pack now follows these active rules:
-
-- No versions/folders like V2/V3; this is one unified agent pack with continuous numbered steps.
-- No installments.
-- No import pipeline.
-- Export-only reporting.
-- Supply-aware finance.
-- Partial invoice shipping by product quantities.
-- Material UI RTL design system without inline styles or `!important` abuse.
+- تنظيف الـ agent pack.
+- إصلاح التصميم وRTL وMUI.
+- توحيد side drawers.
+- إلغاء التقسيط والاستيراد.
+- الماليات: معلق، محصل، مورد، غير مورد، مسترجعات.
+- الشحن الجزئي حسب بنود الفاتورة.
+- الاسترجاع والرصيد والليميت.
+- الفواتير كـ مركز أكشنز.
+- تنظيف backend/tests/dead code.
+- final deploy/smoke gate.

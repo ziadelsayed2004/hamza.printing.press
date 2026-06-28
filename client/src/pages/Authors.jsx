@@ -323,69 +323,71 @@ export const Authors = () => {
         open={openModal}
         onClose={() => setOpenModal(false)}
         title={modalMode === 'create' ? 'إضافة سجل مؤلف' : 'تعديل سجل مؤلف'}
-      >
-        <form onSubmit={handleFormSubmit} className="entity-drawer__form">
-          <Box className="entity-drawer__content">
-            <FormSection title="تفاصيل سجل المؤلف">
-              <FieldGrid columns={1}>
-                <TextField
-                  required
-                  fullWidth
-                  size="small"
-                  label="اسم المؤلف"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="رقم الهاتف"
-                  value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="email"
-                  label="البريد الإلكتروني"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                />
-                <FormControl fullWidth size="small">
-                  <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
-                  <Select
-                    labelId="link-user-label"
-                    value={formUserId}
-                    label="ربط الحساب البرمجي (اختياري)"
-                    onChange={(e) => setFormUserId(e.target.value)}
-                  >
-                    <MenuItem value="">غير مرتبط</MenuItem>
-                    {usersList.map((u) => (
-                      <MenuItem key={u.id} value={u.id}>
-                        {u.full_name} ({u.username})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="status-label">الحالة</InputLabel>
-                  <Select
-                    labelId="status-label"
-                    value={formStatus}
-                    label="الحالة"
-                    onChange={(e) => setFormStatus(e.target.value)}
-                  >
-                    <MenuItem value="active">نشط</MenuItem>
-                    <MenuItem value="disabled">معطل</MenuItem>
-                  </Select>
-                </FormControl>
-              </FieldGrid>
-            </FormSection>
-          </Box>
-          <FormActions className="entity-drawer__actions">
+        actions={
+          <>
             <Button onClick={() => setOpenModal(false)}>إلغاء</Button>
-            <Button type="submit" variant="contained" color="secondary">حفظ</Button>
-          </FormActions>
+            <Button type="submit" form="author-editor-form" variant="contained" color="secondary">حفظ</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleFormSubmit} id="author-editor-form">
+          <FormSection title="تفاصيل سجل المؤلف">
+            <FieldGrid columns={1}>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="اسم المؤلف"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="رقم الهاتف"
+                value={formPhone}
+                onChange={(e) => setFormPhone(e.target.value)}
+                inputProps={{ className: 'ltr-value' }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                type="email"
+                label="البريد الإلكتروني"
+                value={formEmail}
+                onChange={(e) => setFormEmail(e.target.value)}
+                inputProps={{ className: 'ltr-value' }}
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
+                <Select
+                  labelId="link-user-label"
+                  value={formUserId}
+                  label="ربط الحساب البرمجي (اختياري)"
+                  onChange={(e) => setFormUserId(e.target.value)}
+                >
+                  <MenuItem value="">غير مرتبط</MenuItem>
+                  {usersList.map((u) => (
+                    <MenuItem key={u.id} value={u.id}>
+                      {u.full_name} ({u.username})
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel id="status-label">الحالة</InputLabel>
+                <Select
+                  labelId="status-label"
+                  value={formStatus}
+                  label="الحالة"
+                  onChange={(e) => setFormStatus(e.target.value)}
+                >
+                  <MenuItem value="active">نشط</MenuItem>
+                  <MenuItem value="disabled">معطل</MenuItem>
+                </Select>
+              </FormControl>
+            </FieldGrid>
+          </FormSection>
         </form>
       </EntityDrawer>
 

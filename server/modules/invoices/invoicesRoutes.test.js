@@ -38,7 +38,6 @@ describe('Invoices API Integration Tests', () => {
     }
 
     // 2. Clean test data
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
@@ -127,7 +126,6 @@ describe('Invoices API Integration Tests', () => {
 
   afterAll(async () => {
     // Clean test data
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Invoice Outlet"))');
@@ -416,6 +414,78 @@ describe('Invoices API Integration Tests', () => {
     });
   });
 
+  describe('Single-Transaction Initial Payment at Invoice Creation', () => {
+    let testInvoiceId;
+
+    afterEach(async () => {
+      if (testInvoiceId) {
+        await db.run('DELETE FROM invoice_payments WHERE invoice_id = ?', [testInvoiceId]);
+        await db.run('DELETE FROM invoice_status_history WHERE invoice_id = ?', [testInvoiceId]);
+        await db.run('DELETE FROM invoice_items WHERE invoice_id = ?', [testInvoiceId]);
+        await db.run('DELETE FROM invoices WHERE id = ?', [testInvoiceId]);
+        testInvoiceId = null;
+      }
+    });
+
+    it('should create an invoice and record a partial payment inside the same transaction', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_inv_api_admin', password: 'password123' });
+
+      const response = await agent.post('/api/invoices').send({
+        outletId: cairoOutlet.id,
+        items: [{ productId: activeBookIgnore.id, quantity: 3 }],
+        discount: 0,
+        shippingCost: 0,
+        paymentType: 'deferred',
+        notes: 'TEST single transaction partial payment',
+        paymentAmount: 100.0,
+        paymentSupplyStatus: 'not_supplied',
+        paymentNotes: 'Partial initial payment'
+      });
+
+      expect(response.status).toBe(201);
+      const invoice = response.body.invoice;
+      expect(invoice).toBeDefined();
+      testInvoiceId = invoice.id;
+
+      expect(invoice.payment_status).toBe('partially_paid');
+
+      const payments = await db.all('SELECT * FROM invoice_payments WHERE invoice_id = ?', [invoice.id]);
+      expect(payments.length).toBe(1);
+      expect(payments[0].amount).toBe(100.0);
+      expect(payments[0].supply_status).toBe('not_supplied');
+    });
+
+    it('should create an invoice and record a full payment and supply inside the same transaction', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_inv_api_admin', password: 'password123' });
+
+      const response = await agent.post('/api/invoices').send({
+        outletId: cairoOutlet.id,
+        items: [{ productId: activeBookIgnore.id, quantity: 2 }],
+        discount: 0,
+        shippingCost: 0,
+        paymentType: 'cash',
+        notes: 'TEST single transaction full payment',
+        paymentAmount: 160.0,
+        paymentSupplyStatus: 'supplied',
+        paymentNotes: 'Full initial payment supplied'
+      });
+
+      expect(response.status).toBe(201);
+      const invoice = response.body.invoice;
+      expect(invoice).toBeDefined();
+      testInvoiceId = invoice.id;
+
+      expect(invoice.payment_status).toBe('paid');
+
+      const payments = await db.all('SELECT * FROM invoice_payments WHERE invoice_id = ?', [invoice.id]);
+      expect(payments.length).toBe(1);
+      expect(payments[0].amount).toBe(160.0);
+      expect(payments[0].supply_status).toBe('supplied');
+    });
+  });
+
   describe('Restricted Author Invoice Scoping', () => {
     let authorUser;
     let authorA;
@@ -492,7 +562,6 @@ describe('Invoices API Integration Tests', () => {
 
     afterAll(async () => {
       // Cleanup
-      await db.run('DELETE FROM payment_installments WHERE invoice_id IN (?, ?)', [invoiceAId, invoiceBId]);
       await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (?, ?)', [invoiceAId, invoiceBId]);
       await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (?, ?)', [invoiceAId, invoiceBId]);
       await db.run('DELETE FROM invoice_items WHERE invoice_id IN (?, ?)', [invoiceAId, invoiceBId]);

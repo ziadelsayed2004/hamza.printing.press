@@ -15,6 +15,7 @@
     "backup": "node scripts/backup-db.js",
     "style:gate": "node scripts/style_quality_gate.js",
     "test": "node scripts/test_runner.js",
+    "test:e2e": "node scripts/e2e_business_chain_verification.js",
     "smoke": "node scripts/smoke_test.js",
     "lint": "eslint ."
   },

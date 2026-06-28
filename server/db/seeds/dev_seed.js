@@ -47,10 +47,13 @@ async function seed() {
         { name: 'sales_staff', desc: 'Sales Representative' },
         { name: 'shipping_user', desc: 'Shipping and Logistics User' },
         { name: 'readonly_viewer', desc: 'Read Only Auditor' },
-        { name: 'author', desc: 'Book Author View' }
+        { name: 'author', desc: 'Book Author View' },
+        { name: 'outlet', desc: 'Outlet Partner Account' }
       ]
     : [
-        { name: 'super_admin', desc: 'System Super Administrator' }
+        { name: 'super_admin', desc: 'System Super Administrator' },
+        { name: 'author', desc: 'Book Author View' },
+        { name: 'outlet', desc: 'Outlet Partner Account' }
       ];
 
   console.log('Seeding roles...');
@@ -120,6 +123,22 @@ async function seed() {
     ];
     for (const p of inventoryPerms) {
       await linkPerm('inventory_manager', p);
+    }
+
+    // Author permissions
+    const authorPerms = [
+      'products.view', 'invoices.view', 'finance.view'
+    ];
+    for (const p of authorPerms) {
+      await linkPerm('author', p);
+    }
+
+    // Outlet permissions
+    const outletPerms = [
+      'invoices.view', 'finance.view', 'finance.statement.view', 'shipments.view'
+    ];
+    for (const p of outletPerms) {
+      await linkPerm('outlet', p);
     }
   }
 

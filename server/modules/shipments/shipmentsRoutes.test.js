@@ -60,15 +60,6 @@ describe('Shipments API Integration Tests', () => {
 
     // 2. Delete invoice-related records
     await db.run(`
-      DELETE FROM payment_installments 
-      WHERE invoice_id IN (
-        SELECT id FROM invoices 
-        WHERE outlet_id IN (
-          SELECT id FROM outlets WHERE name = "Test Cairo Shipment Outlet"
-        )
-      )
-    `);
-    await db.run(`
       DELETE FROM invoice_payments 
       WHERE invoice_id IN (
         SELECT id FROM invoices 
@@ -397,5 +388,22 @@ describe('Shipments API Integration Tests', () => {
       expect(item.shipped_quantity).toBe(5); // fully shipped from the test scenarios before
       expect(item.remaining_quantity).toBe(0);
     });
+
+    it('should calculate remaining shippable quantities via shipments/invoice/:invoiceId/remaining', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_shp_api_staff', password: 'password123' });
+
+      const response = await agent.get(`/api/shipments/invoice/${invoice.id}/remaining`);
+      expect(response.status).toBe(200);
+      expect(response.body).toBeDefined();
+      expect(response.body.length).toBeGreaterThan(0);
+
+      const item = response.body.find(i => i.invoice_item_id === invoiceItemId);
+      expect(item).toBeDefined();
+      expect(item.ordered_quantity).toBe(5);
+      expect(item.shipped_quantity).toBe(5);
+      expect(item.remaining_quantity).toBe(0);
+    });
   });
 });
+

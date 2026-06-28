@@ -32,7 +32,6 @@ describe('Finance API Integration Tests', () => {
     guestRole = roles.find(r => r.name === 'readonly_viewer');
 
     // 2. Clean test data
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
@@ -112,7 +111,6 @@ describe('Finance API Integration Tests', () => {
 
   afterAll(async () => {
     // Clean test data
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Finance Outlet"))');
@@ -283,6 +281,30 @@ describe('Finance API Integration Tests', () => {
       expect(cancelEntry).toBeDefined();
       expect(cancelEntry.receivable_amount).toBe(-400);
       expect(cancelEntry.cash_amount).toBe(0);
+    });
+  });
+
+  describe('Outlet Statement API tests', () => {
+    it('should successfully retrieve the outlet statement with correct summary structure', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_fin_api_admin', password: 'password123' });
+
+      const res = await agent.get(`/api/finance/outlets/${cairoOutlet.id}/statement`);
+      expect(res.status).toBe(200);
+      expect(res.body.outlet).toBeDefined();
+      expect(res.body.outlet.id).toBe(cairoOutlet.id);
+      expect(res.body.summary).toBeDefined();
+      expect(res.body.summary.return_balance).toBeDefined();
+      expect(res.body.summary.net_exposure).toBeDefined();
+      expect(res.body.statement).toBeInstanceOf(Array);
+    });
+
+    it('should block non-elevated user with no linked outlets from viewing the statement', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_fin_api_guest', password: 'password123' });
+
+      const res = await agent.get(`/api/finance/outlets/${cairoOutlet.id}/statement`);
+      expect(res.status).toBe(403);
     });
   });
 

@@ -5,6 +5,7 @@ import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
+import EntityDrawer from '../components/EntityDrawer';
 import {
   Box,
   Autocomplete,
@@ -126,7 +127,19 @@ export const Shipments = () => {
       setLoadingInvoice(true);
       try {
         const inv = await apiClient.get(`/invoices/${csInvoiceId}`);
-        setLoadedInvoice(inv);
+        const remainingItems = await apiClient.get(`/shipments/invoice/${csInvoiceId}/remaining`);
+        
+        // Merge the actual remaining quantities into the invoice items
+        const updatedItems = inv.items.map(item => {
+          const remItem = remainingItems.find(r => r.invoice_item_id === item.id);
+          return {
+            ...item,
+            shipped_quantity: remItem ? remItem.shipped_quantity : item.shipped_quantity,
+            remaining_quantity: remItem ? remItem.remaining_quantity : item.remaining_quantity
+          };
+        });
+        
+        setLoadedInvoice({ ...inv, items: updatedItems });
       } catch (err) {
         setLoadedInvoice(null);
       } finally {
@@ -135,6 +148,7 @@ export const Shipments = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [csInvoiceId]);
+
 
   // Deep linking from Invoices
   useEffect(() => {
@@ -493,294 +507,276 @@ export const Shipments = () => {
       </Paper>
 
       {/* ══════ CREATE SHIPMENT Drawer ══════ */}
-      <Drawer
-        anchor="left"
+      <EntityDrawer
         open={openCreate}
         onClose={() => !csSubmitting && setOpenCreate(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 600 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>إنشاء شحنة جديدة</Typography>
-          <Button onClick={() => setOpenCreate(false)} variant="outlined" size="small" color="inherit" disabled={csSubmitting}>إغلاق</Button>
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <form onSubmit={handleSubmitCreate} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflowY: 'auto' }}>
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              يتم تحميل أصناف الفاتورة تلقائياً عند اختيار الفاتورة. يرجى تحديد الكتب والكميات المراد شحنها.
-            </Alert>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={4}>
-                <Autocomplete
-                  options={invoicesList}
-                  getOptionLabel={(option) => `${option.invoice_number} - ${option.outlet_name}`}
-                  size="small"
-                  value={invoicesList.find(inv => inv.id === parseInt(csInvoiceId, 10)) || null}
-                  onChange={(e, val) => {
-                    setCsInvoiceId(val ? val.id.toString() : '');
-                  }}
-                  renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      required
-                      label="اختر الفاتورة"
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {loadingInvoice ? <span style={{ fontSize: '11px', color: '#999', whiteSpace: 'nowrap' }}>جاري التحميل...</span> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        )
-                      }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="شركة الشحن" size="small"
-                  value={csCarrier} onChange={(e) => setCsCarrier(e.target.value)} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="رقم التتبع" size="small"
-                  value={csTracking} onChange={(e) => setCsTracking(e.target.value)} />
-              </Grid>
-
-              {/* Display loaded invoice summary */}
-              {loadedInvoice && (
-                <Grid item xs={12}>
-                  <Box sx={{ mt: 1, mb: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>تفاصيل الفاتورة: {loadedInvoice.invoice_number}</Typography>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold', p: 0.5 }}>اسم الكتاب</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المطلوب</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المشحون</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المتبقي للشحن</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {loadedInvoice.items.map(it => (
-                          <TableRow key={it.id}>
-                            <TableCell sx={{ p: 0.5 }}>{it.product_title}</TableCell>
-                            <TableCell align="center" sx={{ p: 0.5 }}>{it.quantity}</TableCell>
-                            <TableCell align="center" sx={{ p: 0.5 }}>{it.shipped_quantity}</TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5, color: it.remaining_quantity > 0 ? 'warning.main' : 'success.main' }}>
-                              {it.remaining_quantity}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-                </Grid>
-              )}
-
-              {/* Items */}
-              <Grid item xs={12}>
-                <Divider sx={{ my: 1 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>أصناف الشحنة</Typography>
-                  <Button size="small" startIcon={<AddIcon />} onClick={handleCsAddItem} disabled={!loadedInvoice}>إضافة صنف</Button>
-                </Box>
-
-                {csItems.map((item, idx) => {
-                  const selectedInvItem = loadedInvoice ? loadedInvoice.items.find(i => i.id === parseInt(item.invoiceItemId, 10)) : null;
-                  const maxQty = selectedInvItem ? selectedInvItem.remaining_quantity : 1;
-                  return (
-                    <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
-                      <Grid item xs={5}>
-                        <FormControl fullWidth size="small" required disabled={!loadedInvoice}>
-                          <InputLabel>اختر الكتاب</InputLabel>
-                          <Select
-                            label="اختر الكتاب"
-                            value={item.invoiceItemId}
-                            onChange={(e) => handleCsItemChange(idx, 'invoiceItemId', e.target.value)}
-                          >
-                            {loadedInvoice ? (
-                              loadedInvoice.items.map(it => (
-                                <MenuItem key={it.id} value={it.id} disabled={it.remaining_quantity <= 0}>
-                                  {it.product_title} (المتبقي: {it.remaining_quantity})
-                                </MenuItem>
-                              ))
-                            ) : (
-                              <MenuItem value="">يرجى إدخال رقم فاتورة صحيح</MenuItem>
-                            )}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={5}>
-                        <TextField fullWidth required label="الكمية" size="small" type="number"
-                          inputProps={{ min: 1, max: maxQty }}
-                          disabled={!item.invoiceItemId}
-                          value={item.quantity} onChange={(e) => handleCsItemChange(idx, 'quantity', e.target.value)}
-                          helperText={selectedInvItem ? `الحد الأقصى: ${maxQty}` : ''}
-                        />
-                      </Grid>
-                      <Grid item xs={2}>
-                        <IconButton color="error" onClick={() => handleCsRemoveItem(idx)} disabled={csItems.length <= 1}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Grid>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </Grid>
-          </Box>
-          <Divider sx={{ my: 2 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        title="إنشاء شحنة جديدة"
+        actions={
+          <>
             <Button variant="outlined" color="inherit" onClick={() => setOpenCreate(false)} disabled={csSubmitting}>إلغاء</Button>
-            <Button variant="contained" color="primary" type="submit" disabled={csSubmitting}>
+            <Button variant="contained" color="primary" type="submit" form="create-shipment-form" disabled={csSubmitting}>
               {csSubmitting ? 'جاري الإنشاء...' : 'تأكيد وإنشاء الشحنة'}
             </Button>
-          </Box>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmitCreate} id="create-shipment-form">
+          <Alert severity="info" sx={{ mb: 2 }}>
+            يتم تحميل أصناف الفاتورة تلقائياً عند اختيار الفاتورة. يرجى تحديد الكتب والكميات المراد شحنها.
+          </Alert>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={4}>
+              <Autocomplete
+                options={invoicesList}
+                getOptionLabel={(option) => `${option.invoice_number} - ${option.outlet_name}`}
+                size="small"
+                value={invoicesList.find(inv => inv.id === parseInt(csInvoiceId, 10)) || null}
+                onChange={(e, val) => {
+                  setCsInvoiceId(val ? val.id.toString() : '');
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    required
+                    label="اختر الفاتورة"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingInvoice ? <span style={{ fontSize: '11px', color: '#999', whiteSpace: 'nowrap' }}>جاري التحميل...</span> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      )
+                    }}
+                  />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label="شركة الشحن" size="small"
+                value={csCarrier} onChange={(e) => setCsCarrier(e.target.value)} />
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <TextField fullWidth label="رقم التتبع" size="small"
+                value={csTracking} onChange={(e) => setCsTracking(e.target.value)}
+                inputProps={{ className: 'ltr-value' }} />
+            </Grid>
+
+            {/* Display loaded invoice summary */}
+            {loadedInvoice && (
+              <Grid item xs={12}>
+                <Box sx={{ mt: 1, mb: 1, p: 1.5, bgcolor: 'action.hover', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>تفاصيل الفاتورة: {loadedInvoice.invoice_number}</Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold', p: 0.5 }}>اسم الكتاب</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المطلوب</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المشحون</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5 }}>المتبقي للشحن</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {loadedInvoice.items.map(it => (
+                        <TableRow key={it.id}>
+                          <TableCell sx={{ p: 0.5 }}>{it.product_title}</TableCell>
+                          <TableCell align="center" sx={{ p: 0.5 }}>{it.quantity}</TableCell>
+                          <TableCell align="center" sx={{ p: 0.5 }}>{it.shipped_quantity}</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold', p: 0.5, color: it.remaining_quantity > 0 ? 'warning.main' : 'success.main' }}>
+                            {it.remaining_quantity}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+              </Grid>
+            )}
+
+            {/* Items */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>أصناف الشحنة</Typography>
+                <Button size="small" startIcon={<AddIcon />} onClick={handleCsAddItem} disabled={!loadedInvoice}>إضافة صنف</Button>
+              </Box>
+
+              {csItems.map((item, idx) => {
+                const selectedInvItem = loadedInvoice ? loadedInvoice.items.find(i => i.id === parseInt(item.invoiceItemId, 10)) : null;
+                const maxQty = selectedInvItem ? selectedInvItem.remaining_quantity : 1;
+                return (
+                  <Grid container spacing={1} key={idx} sx={{ mb: 1 }} alignItems="center">
+                    <Grid item xs={5}>
+                      <FormControl fullWidth size="small" required disabled={!loadedInvoice}>
+                        <InputLabel>اختر الكتاب</InputLabel>
+                        <Select
+                          label="اختر الكتاب"
+                          value={item.invoiceItemId}
+                          onChange={(e) => handleCsItemChange(idx, 'invoiceItemId', e.target.value)}
+                        >
+                          {loadedInvoice ? (
+                            loadedInvoice.items.map(it => (
+                              <MenuItem key={it.id} value={it.id} disabled={it.remaining_quantity <= 0}>
+                                {it.product_title} (المتبقي: {it.remaining_quantity})
+                              </MenuItem>
+                            ))
+                          ) : (
+                            <MenuItem value="">يرجى إدخال رقم فاتورة صحيح</MenuItem>
+                          )}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={5}>
+                      <TextField fullWidth required label="الكمية" size="small" type="number"
+                        inputProps={{ min: 1, max: maxQty }}
+                        disabled={!item.invoiceItemId}
+                        value={item.quantity} onChange={(e) => handleCsItemChange(idx, 'quantity', e.target.value)}
+                        helperText={selectedInvItem ? `الحد الأقصى: ${maxQty}` : ''}
+                      />
+                    </Grid>
+                    <Grid item xs={2}>
+                      <IconButton color="error" onClick={() => handleCsRemoveItem(idx)} disabled={csItems.length <= 1}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Grid>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Grid>
         </form>
-      </Drawer>
+      </EntityDrawer>
 
       {/* ══════ SHIPMENT DETAIL Drawer ══════ */}
-      <Drawer
-        anchor="left"
+      <EntityDrawer
         open={openDetail}
         onClose={() => setOpenDetail(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 600 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
-        }}
+        title="تفاصيل الشحنة"
+        loading={detailLoading}
+        actions={
+          <>
+            <Button onClick={() => setOpenDetail(false)} variant="outlined">إغلاق</Button>
+            {hasPermission('shipments.update') && detailData && detailData.status !== 'delivered' && detailData.status !== 'cancelled' && (
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<ShipIcon />}
+                onClick={() => {
+                  setOpenDetail(false);
+                  handleOpenStatus(detailData);
+                }}
+              >
+                تحديث حالة الشحنة
+              </Button>
+            )}
+          </>
+        }
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تفاصيل الشحنة</Typography>
-          <Button onClick={() => setOpenDetail(false)} variant="outlined" size="small" color="inherit">إغلاق</Button>
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
-          {detailLoading ? (
-            <LoadingState message="جاري التحميل..." />
-          ) : detailData ? (
-            <Box>
-              {/* Shipment Info */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">رقم الشحنة</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{detailData.shipment_number}</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">رقم الفاتورة</Typography>
-                  <Chip label={detailData.invoice_number} size="small" color="primary" variant="outlined" sx={{ fontFamily: 'monospace', mt: 0.5 }} />
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">شركة الشحن</Typography>
-                  <Typography variant="body1">{detailData.shipping_carrier || '—'}</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">رقم التتبع</Typography>
-                  <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>{detailData.tracking_number || '—'}</Typography>
-                </Grid>
+        {detailData ? (
+          <Box>
+            {/* Shipment Info */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">رقم الشحنة</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{detailData.shipment_number}</Typography>
               </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">رقم الفاتورة</Typography>
+                <Chip label={detailData.invoice_number} size="small" color="primary" variant="outlined" sx={{ fontFamily: 'monospace', mt: 0.5 }} />
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">شركة الشحن</Typography>
+                <Typography variant="body1">{detailData.shipping_carrier || '—'}</Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">رقم التتبع</Typography>
+                <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>{detailData.tracking_number || '—'}</Typography>
+              </Grid>
+            </Grid>
 
-              {/* Status Stepper */}
-              {detailData.status !== 'cancelled' ? (
-                <Box sx={{ mb: 3 }}>
-                  <Stepper activeStep={getActiveStep(detailData.status)} alternativeLabel>
-                    {statusSteps.map((step) => (
-                      <Step key={step}>
-                        <StepLabel>{statusLabel(step)}</StepLabel>
-                      </Step>
-                    ))}
-                  </Stepper>
-                </Box>
-              ) : (
-                <Alert severity="error" sx={{ mb: 3 }}>هذه الشحنة ملغاة.</Alert>
-              )}
+            {/* Status Stepper */}
+            {detailData.status !== 'cancelled' ? (
+              <Box sx={{ mb: 3 }}>
+                <Stepper activeStep={getActiveStep(detailData.status)} alternativeLabel>
+                  {statusSteps.map((step) => (
+                    <Step key={step}>
+                      <StepLabel>{statusLabel(step)}</StepLabel>
+                    </Step>
+                  ))}
+                </Stepper>
+              </Box>
+            ) : (
+              <Alert severity="error" sx={{ mb: 3 }}>هذه الشحنة ملغاة.</Alert>
+            )}
 
-              {/* Items */}
-              {detailData.items && detailData.items.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    أصناف الشحنة ({detailData.items.length})
-                  </Typography>
-                  <TableContainer component={Paper}>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المشحونة</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>
+            {/* Items */}
+            {detailData.items && detailData.items.length > 0 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  أصناف الشحنة ({detailData.items.length})
+                </Typography>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المشحونة</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {detailData.items.map((item, i) => (
+                        <TableRow key={i}>
+                          <TableCell sx={{ fontWeight: 500 }}>{item.product_title}</TableCell>
+                          <TableCell sx={{ fontFamily: 'monospace' }}>{item.product_code || '—'}</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>{item.quantity}</TableCell>
+                          <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {detailData.items.map((item, i) => (
-                          <TableRow key={i}>
-                            <TableCell sx={{ fontWeight: 500 }}>{item.product_title}</TableCell>
-                            <TableCell sx={{ fontFamily: 'monospace' }}>{item.product_code || '—'}</TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>{item.quantity}</TableCell>
-                            <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-              )}
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )}
 
-              {/* Status History */}
-              {detailData.history && detailData.history.length > 0 && (
-                <Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
-                    سجل تغييرات الحالة
-                  </Typography>
-                  <TableContainer component={Paper}>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold' }}>من</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>إلى</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+            {/* Status History */}
+            {detailData.history && detailData.history.length > 0 && (
+              <Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  سجل تغييرات الحالة
+                </Typography>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 'bold' }}>من</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>إلى</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {detailData.history.map((h, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Chip label={statusLabel(h.old_status)} size="small" variant="outlined" /></TableCell>
+                          <TableCell><Chip label={statusLabel(h.new_status)} color={statusColor(h.new_status)} size="small" /></TableCell>
+                          <TableCell>{h.user_full_name || '—'}</TableCell>
+                          <TableCell>{h.notes || '—'}</TableCell>
+                          <TableCell>{h.created_at ? formatEgyptDateTime(h.created_at) : '—'}</TableCell>
                         </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {detailData.history.map((h, i) => (
-                          <TableRow key={i}>
-                            <TableCell><Chip label={statusLabel(h.old_status)} size="small" variant="outlined" /></TableCell>
-                            <TableCell><Chip label={statusLabel(h.new_status)} color={statusColor(h.new_status)} size="small" /></TableCell>
-                            <TableCell>{h.user_full_name || '—'}</TableCell>
-                            <TableCell>{h.notes || '—'}</TableCell>
-                            <TableCell>{h.created_at ? formatEgyptDateTime(h.created_at) : '—'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-              )}
-
-              {/* Update status CTA */}
-              {hasPermission('shipments.update') && detailData.status !== 'delivered' && detailData.status !== 'cancelled' && (
-                <Box sx={{ mt: 3, textAlign: 'center' }}>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<ShipIcon />}
-                    onClick={() => {
-                      setOpenDetail(false);
-                      handleOpenStatus(detailData);
-                    }}
-                  >
-                    تحديث حالة الشحنة
-                  </Button>
-                </Box>
-              )}
-            </Box>
-          ) : (
-            <EmptyState title="لا توجد بيانات" />
-          )}
-        </Box>
-      </Drawer>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          !detailLoading && <EmptyState title="لا توجد بيانات" />
+        )}
+      </EntityDrawer>
 
       {/* ══════ UPDATE STATUS DIALOG ══════ */}
       <Dialog open={openStatusDlg} onClose={() => !statusSubmitting && setOpenStatusDlg(false)} maxWidth="xs" fullWidth>

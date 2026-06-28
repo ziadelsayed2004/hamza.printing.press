@@ -24,7 +24,6 @@ describe('E2E Business Flow Integrity Tests', () => {
   async function cleanTestData() {
     await db.run('PRAGMA foreign_keys = OFF;');
     try {
-      await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
       await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
       await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
       await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');

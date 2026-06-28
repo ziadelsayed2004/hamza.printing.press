@@ -75,7 +75,8 @@ const entryTypeTranslations = {
   'payment_reversed': 'إلغاء تحصيل نقدي (عكس سداد)',
   'manual_adjustment': 'تسوية يدوية بالخزينة',
   'payment_supplied': 'توريد نقدية تحصيل لمقر الشركة',
-  'supply_reversed': 'إلغاء توريد نقدية تحصيل'
+  'supply_reversed': 'إلغاء توريد نقدية تحصيل',
+  'return_created': 'مرتجع مبيعات'
 };
 
 export const Finance = () => {
@@ -671,7 +672,7 @@ export const Finance = () => {
           {outletLoading ? (
             <LoadingState message="جاري تحميل أرصدة الفروع والمنافذ..." />
           ) : outletBalances.length > 0 ? (
-            <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
+             <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
               <Table sx={{ minWidth: 650 }}>
                 <TableHead sx={{ bgcolor: 'action.selected' }}>
                   <TableRow>
@@ -679,6 +680,7 @@ export const Finance = () => {
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>فئة المنفذ</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحافظة</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحد الائتماني</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المرتجع (قيمة -)</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحصل (نقداً)</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>المتبقي (ذمم مدينة)</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
@@ -693,6 +695,9 @@ export const Finance = () => {
                         <TableCell align="right">{bal.outlet_type_name}</TableCell>
                         <TableCell align="right">{bal.governorate}</TableCell>
                         <TableCell align="right">{formatCurrencyEGP(bal.credit_limit)}</TableCell>
+                        <TableCell align="right" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                          {formatCurrencyEGP(bal.return_balance || 0)}
+                        </TableCell>
                         <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
                           {formatCurrencyEGP(bal.collected_balance)}
                         </TableCell>
@@ -1012,39 +1017,65 @@ export const Finance = () => {
           ) : statementData ? (
             <Box>
               {/* Statement Summary Card */}
-              <Card variant="outlined" sx={{ mb: 3, backgroundColor: '#fafafa' }}>
+              <Card variant="outlined" sx={{ mb: 3, backgroundColor: '#fafafa', borderRadius: 3 }}>
                 <CardContent>
                   <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.dark' }}>
-                    ملخص كشف حساب العميل: {statementData.outlet.name} ({statementData.outlet.governorate})
+                    ملخص كشف حساب المنفذ: {statementData.outlet.name} ({statementData.outlet.governorate})
                   </Typography>
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={4}>
-                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="caption" color="text.secondary">إجمالي المبيعات الآجلة (المدين)</Typography>
-                        <Typography variant="h6" sx={{ color: 'warning.main', fontWeight: 'bold', mt: 0.5 }}>
-                          {formatCurrencyEGP(
-                            statementData.statement.reduce((sum, item) => sum + (item.receivable_amount > 0 ? item.receivable_amount : 0), 0)
-                          )}
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
-                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
-                        <Typography variant="caption" color="text.secondary">إجمالي المدفوعات المسددة (الدائن)</Typography>
-                        <Typography variant="h6" sx={{ color: 'success.main', fontWeight: 'bold', mt: 0.5 }}>
-                          {formatCurrencyEGP(
-                            Math.abs(statementData.statement.reduce((sum, item) => sum + (item.receivable_amount < 0 ? item.receivable_amount : 0), 0))
-                          )}
-                        </Typography>
-                      </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={4}>
-                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', backgroundColor: '#fffbe6' }}>
-                        <Typography variant="caption" color="text.secondary">الرصيد المتبقي المستحق (الذمم)</Typography>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'primary.light' }}>
+                        <Typography variant="caption" color="text.secondary">إجمالي الفواتير الصادرة</Typography>
                         <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 'bold', mt: 0.5 }}>
-                          {formatCurrencyEGP(
-                            statementData.statement.length > 0 ? statementData.statement[statementData.statement.length - 1].running_receivable : 0
-                          )}
+                          {formatCurrencyEGP(statementData.summary?.invoice_total || 0)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'error.light' }}>
+                        <Typography variant="caption" color="text.secondary">إجمالي المرتجعات (-)</Typography>
+                        <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(statementData.summary?.return_balance || 0)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'success.light' }}>
+                        <Typography variant="caption" color="text.secondary">إجمالي المقبوضات (المحصلة)</Typography>
+                        <Typography variant="h6" sx={{ color: 'success.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(statementData.summary?.collected_total || 0)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'info.light' }}>
+                        <Typography variant="caption" color="text.secondary">نقدية موردة للشركة</Typography>
+                        <Typography variant="h6" sx={{ color: 'info.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(statementData.summary?.supplied_balance || 0)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'warning.light' }}>
+                        <Typography variant="caption" color="text.secondary">نقدية معلقة بالفروع (غير موردة)</Typography>
+                        <Typography variant="h6" sx={{ color: 'warning.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(statementData.summary?.unsupplied_balance || 0)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'secondary.light', backgroundColor: '#fffbe6' }}>
+                        <Typography variant="caption" color="text.secondary">الرصيد المعلق (الذمم المستحقة)</Typography>
+                        <Typography variant="h6" sx={{ color: 'secondary.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(statementData.summary?.pending_balance || 0)}
+                        </Typography>
+                      </Paper>
+                    </Grid>
+                    <Grid item xs={12} sm={12} md={4}>
+                      <Paper variant="outlined" sx={{ p: 2, textAlign: 'center', borderColor: 'error.main', backgroundColor: '#fdf2f2' }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>صافي التعرض للمخاطر (Net Exposure)</Typography>
+                        <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 'bold', mt: 0.5 }}>
+                          {formatCurrencyEGP(statementData.summary?.net_exposure || 0)}
                         </Typography>
                       </Paper>
                     </Grid>

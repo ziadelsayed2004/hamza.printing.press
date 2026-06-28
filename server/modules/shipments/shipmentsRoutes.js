@@ -17,10 +17,13 @@ router.get('/', requireAuth, checkPermission('shipments.view'), async (req, res)
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     let filterOutletIds = null;
-    if (!isElevated) {
+    if (isOutlet && !isElevated) {
+      filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
+    } else if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
       if (linkedOutlets.length > 0) {
         filterOutletIds = linkedOutlets;
@@ -49,17 +52,29 @@ router.get('/:id', requireAuth, checkPermission('shipments.view'), async (req, r
 
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     if (!isElevated) {
-      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0) {
+      if (isOutlet) {
+        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
         const invoice = await invoicesService.getInvoiceById(shipment.invoice_id);
-        if (invoice && !linkedOutlets.includes(invoice.outlet_id)) {
+        if (!invoice || !linkedOutlets.includes(invoice.outlet_id)) {
           return res.status(403).json({
             error: 'Forbidden',
             message: 'Access denied. You do not have permission to view this shipment.'
           });
+        }
+      } else {
+        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+        if (linkedOutlets.length > 0) {
+          const invoice = await invoicesService.getInvoiceById(shipment.invoice_id);
+          if (invoice && !linkedOutlets.includes(invoice.outlet_id)) {
+            return res.status(403).json({
+              error: 'Forbidden',
+              message: 'Access denied. You do not have permission to view this shipment.'
+            });
+          }
         }
       }
     }
@@ -133,6 +148,39 @@ router.post('/:id/status', requireAuth, checkPermission('shipments.update'), aud
     }
     if (msg.includes('invalid status')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
+    }
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 5. GET /api/shipments/invoice/:invoiceId/remaining - Calculate remaining shippable quantities
+router.get('/invoice/:invoiceId/remaining', requireAuth, checkPermission('shipments.view'), async (req, res) => {
+  const invoiceId = parseInt(req.params.invoiceId, 10);
+  if (isNaN(invoiceId)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Valid Invoice ID is required.' });
+  }
+
+  try {
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user', 'readonly_viewer'].includes(r.name));
+
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      const invoice = await invoicesService.getInvoiceById(invoiceId);
+      if (invoice && !linkedOutlets.includes(invoice.outlet_id)) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Access denied. You do not have permission to view remaining shippable items for this invoice.'
+        });
+      }
+    }
+
+    const items = await shipmentsService.getRemainingShippableItems(invoiceId);
+    res.status(200).json(items);
+  } catch (err) {
+    if (err.message.includes('does not exist')) {
+      return res.status(404).json({ error: 'Not Found', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }

@@ -46,6 +46,8 @@ const categoryLabels = {
   'payment_received': 'دفعة مالية مستلمة',
   'shipment_partial': 'شحن جزئي',
   'shipment_delayed': 'شحنة متأخرة',
+  'finance_warning': 'تحذير مالي',
+  'price_missing': 'سعر منتج غير مهيأ',
   'system': 'تنبيه نظام'
 };
 

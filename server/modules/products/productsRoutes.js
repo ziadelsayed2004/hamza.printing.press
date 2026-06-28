@@ -35,10 +35,22 @@ router.get('/', requireAuth, checkPermission('products.view'), async (req, res) 
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const isAuthor = userRoles.some(r => r.name === 'author');
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     let filterAuthorIds = null;
-    if (!isElevated) {
+    if (isAuthor && !isElevated) {
+      const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
+      if (authorId !== null) {
+        if (linkedAuthors.includes(authorId)) {
+          filterAuthorIds = [authorId];
+        } else {
+          filterAuthorIds = [];
+        }
+      } else {
+        filterAuthorIds = linkedAuthors;
+      }
+    } else if (!isElevated) {
       const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
       if (linkedAuthors.length > 0) {
         if (authorId !== null) {
@@ -88,18 +100,31 @@ router.get('/:id', requireAuth, checkPermission('products.view'), async (req, re
 
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const isAuthor = userRoles.some(r => r.name === 'author');
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
 
     if (!isElevated) {
-      const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
-      if (linkedAuthors.length > 0) {
+      if (isAuthor) {
+        const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
         const productAuthorIds = product.authors.map(a => a.id);
         const hasOwnership = productAuthorIds.some(aid => linkedAuthors.includes(aid));
         if (!hasOwnership) {
           return res.status(403).json({
             error: 'Forbidden',
-            message: 'Access denied. You do not have permission to view other authors books.'
+            message: 'Access denied. You do not have permission to view this product.'
           });
+        }
+      } else {
+        const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
+        if (linkedAuthors.length > 0) {
+          const productAuthorIds = product.authors.map(a => a.id);
+          const hasOwnership = productAuthorIds.some(aid => linkedAuthors.includes(aid));
+          if (!hasOwnership) {
+            return res.status(403).json({
+              error: 'Forbidden',
+              message: 'Access denied. You do not have permission to view other authors books.'
+            });
+          }
         }
       }
     }

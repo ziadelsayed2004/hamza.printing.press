@@ -484,72 +484,72 @@ export const Users = () => {
         open={openUserModal}
         onClose={() => setOpenUserModal(false)}
         title={modalMode === 'create' ? 'إضافة مستخدم جديد' : 'تعديل بيانات المستخدم'}
-      >
-        <form onSubmit={handleUserSubmit} className="entity-drawer__form">
-          <Box className="entity-drawer__content">
-            <FormSection title="تفاصيل حساب المستخدم">
-              <FieldGrid columns={1}>
-                <TextField
-                  required
-                  fullWidth
-                  size="small"
-                  label="اسم المستخدم"
-                  value={formUsername}
-                  onChange={(e) => setFormUsername(e.target.value)}
-                  disabled={modalMode === 'edit'}
-                />
-                {modalMode === 'create' && (
-                  <TextField
-                    required
-                    fullWidth
-                    size="small"
-                    type="password"
-                    label="كلمة المرور"
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                  />
-                )}
-                <TextField
-                  required
-                  fullWidth
-                  size="small"
-                  label="الاسم الكامل"
-                  value={formFullName}
-                  onChange={(e) => setFormFullName(e.target.value)}
-                />
-
-                <FormControl fullWidth size="small">
-                  <InputLabel id="form-roles-label">الأدوار الممنوحة</InputLabel>
-                  <Select
-                    labelId="form-roles-label"
-                    multiple
-                    value={formRoles}
-                    label="الأدوار الممنوحة"
-                    onChange={(e) => setFormRoles(e.target.value)}
-                    renderValue={(selected) => (
-                      <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {selected.map((value) => (
-                          <Chip key={value} label={value} size="small" />
-                        ))}
-                      </Box>
-                    )}
-                  >
-                    {rolesList.map((r) => (
-                      <MenuItem key={r.id} value={r.name}>
-                        {r.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </FieldGrid>
-            </FormSection>
-          </Box>
-          <FormActions className="entity-drawer__actions">
+        actions={
+          <>
             <Button onClick={() => setOpenUserModal(false)}>إلغاء</Button>
-            <Button type="submit" variant="contained" color="secondary">
-              حفظ
-            </Button>
-          </FormActions>
+            <Button type="submit" form="user-editor-form" variant="contained" color="secondary">حفظ</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleUserSubmit} id="user-editor-form">
+          <FormSection title="تفاصيل حساب المستخدم">
+            <FieldGrid columns={1}>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="اسم المستخدم"
+                value={formUsername}
+                onChange={(e) => setFormUsername(e.target.value)}
+                disabled={modalMode === 'edit'}
+                inputProps={{ className: 'ltr-value' }}
+              />
+              {modalMode === 'create' && (
+                <TextField
+                  required
+                  fullWidth
+                  size="small"
+                  type="password"
+                  label="كلمة المرور"
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  inputProps={{ className: 'ltr-value' }}
+                />
+              )}
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="الاسم الكامل"
+                value={formFullName}
+                onChange={(e) => setFormFullName(e.target.value)}
+              />
+
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-roles-label">الأدوار الممنوحة</InputLabel>
+                <Select
+                  labelId="form-roles-label"
+                  multiple
+                  value={formRoles}
+                  label="الأدوار الممنوحة"
+                  onChange={(e) => setFormRoles(e.target.value)}
+                  renderValue={(selected) => (
+                    <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {selected.map((value) => (
+                        <Chip key={value} label={value} size="small" />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  {rolesList.map((r) => (
+                    <MenuItem key={r.id} value={r.name}>
+                      {r.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </FieldGrid>
+          </FormSection>
         </form>
       </EntityDrawer>
 

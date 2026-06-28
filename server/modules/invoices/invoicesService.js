@@ -6,7 +6,18 @@ const notificationsService = require('../notifications/notificationsService');
 /**
  * Create a new invoice.
  */
-async function createInvoice({ outletId, discount = 0, shippingCost = 0, paymentType = 'cash', notes = '', items = [], userId }) {
+async function createInvoice({
+  outletId,
+  discount = 0,
+  shippingCost = 0,
+  _paymentType = 'cash',
+  notes = '',
+  items = [],
+  userId,
+  paymentAmount = 0,
+  paymentSupplyStatus = 'not_supplied',
+  paymentNotes = ''
+}) {
   if (!outletId) {
     throw new Error('Outlet ID is required');
   }
@@ -96,6 +107,24 @@ async function createInvoice({ outletId, discount = 0, shippingCost = 0, payment
       throw new Error('Total invoice price cannot be negative');
     }
 
+    // Determine initial payment status and type
+    const parsedPaymentAmount = parseFloat(paymentAmount) || 0;
+    if (parsedPaymentAmount < 0) {
+      throw new Error('Payment amount cannot be negative');
+    }
+    if (parsedPaymentAmount > total) {
+      throw new Error(`Payment amount exceeds invoice total balance. Total: ${total}`);
+    }
+
+    let finalPaymentStatus = 'unpaid';
+    if (parsedPaymentAmount >= total && total > 0) {
+      finalPaymentStatus = 'paid';
+    } else if (parsedPaymentAmount > 0) {
+      finalPaymentStatus = 'partially_paid';
+    }
+
+    const finalPaymentType = parsedPaymentAmount >= total ? 'cash' : 'deferred';
+
     // Save invoice
     const invoiceSql = `
       INSERT INTO invoices (
@@ -110,9 +139,9 @@ async function createInvoice({ outletId, discount = 0, shippingCost = 0, payment
       disc,
       ship,
       total,
-      'unpaid',
+      finalPaymentStatus,
       'pending',
-      paymentType,
+      finalPaymentType,
       notes.trim(),
       userId
     ]);
@@ -138,21 +167,78 @@ async function createInvoice({ outletId, discount = 0, shippingCost = 0, payment
       }
     }
 
+    // Save initial payment collection if any
+    let paymentId = null;
+    if (parsedPaymentAmount > 0) {
+      const isSupplied = paymentSupplyStatus === 'supplied';
+      const suppliedAt = isSupplied ? new Date().toISOString() : null;
+      const suppliedBy = isSupplied ? userId : null;
+
+      const paymentSql = `
+        INSERT INTO invoice_payments (
+          invoice_id, amount, payment_method, payment_date,
+          reference_number, notes, recorded_by, supply_status,
+          supplied_at, supplied_by
+        ) VALUES (?, ?, 'cash', ?, NULL, ?, ?, ?, ?, ?)
+      `;
+      const paymentResult = await db.run(paymentSql, [
+        invoiceId,
+        parsedPaymentAmount,
+        new Date().toISOString().split('T')[0],
+        paymentNotes.trim() || 'تحصيل تلقائي عند إنشاء الفاتورة.',
+        userId,
+        paymentSupplyStatus,
+        suppliedAt,
+        suppliedBy
+      ]);
+      paymentId = paymentResult.lastID;
+    }
+
     // Log status history
     const historySql = `
       INSERT INTO invoice_status_history (invoice_id, status_type, old_status, new_status, changed_by, notes)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
-    await db.run(historySql, [invoiceId, 'payment', 'unpaid', 'unpaid', userId, 'Invoice created.']);
+    await db.run(historySql, [invoiceId, 'payment', 'unpaid', finalPaymentStatus, userId, 'Invoice created.']);
     await db.run(historySql, [invoiceId, 'shipping', 'pending', 'pending', userId, 'Invoice created.']);
 
-    // Record ledger entry
+    // Record ledger entries
     await db.run(`
       INSERT INTO finance_ledger_entries (
         outlet_id, entry_type, reference_type, reference_id,
         cash_amount, receivable_amount, notes, created_by
       ) VALUES (?, 'invoice_created', 'invoice', ?, 0, ?, ?, ?)
     `, [outletId, invoiceId, total, `Invoice ${invoiceNumber} created.`, userId]);
+
+    if (parsedPaymentAmount > 0 && paymentId) {
+      await db.run(`
+        INSERT INTO finance_ledger_entries (
+          outlet_id, entry_type, reference_type, reference_id,
+          cash_amount, receivable_amount, notes, created_by
+        ) VALUES (?, 'payment_recorded', 'payment', ?, ?, ?, ?, ?)
+      `, [
+        outletId,
+        paymentId,
+        parsedPaymentAmount,
+        -parsedPaymentAmount,
+        `Payment for invoice ${invoiceNumber} recorded.`,
+        userId
+      ]);
+
+      if (paymentSupplyStatus === 'supplied') {
+        await db.run(`
+          INSERT INTO finance_ledger_entries (
+            outlet_id, entry_type, reference_type, reference_id,
+            cash_amount, receivable_amount, notes, created_by
+          ) VALUES (?, 'payment_supplied', 'payment', ?, 0, 0, ?, ?)
+        `, [
+          outletId,
+          paymentId,
+          `Payment marked as supplied upon recording.`,
+          userId
+        ]);
+      }
+    }
 
     await db.exec('COMMIT;');
 
@@ -161,6 +247,20 @@ async function createInvoice({ outletId, discount = 0, shippingCost = 0, payment
       await notificationsService.checkOutletCreditLimitNotifications(outletId);
       for (const item of validatedItems) {
         await notificationsService.checkStockNotifications(item.productId);
+      }
+      
+      if (parsedPaymentAmount > 0 && paymentId) {
+        await notificationsService.createOrUpdateNotification({
+          category: 'payment_received',
+          severity: 'info',
+          title: 'تم استلام دفعة مالية',
+          message: `تم استلام دفعة بقيمة ${parsedPaymentAmount} EGP للفاتورة ${invoiceNumber}.`,
+          source_type: 'payment',
+          source_id: paymentId,
+          dedupe_key: `payment_received:${paymentId}`,
+          action_url: `/finance/invoices/${invoiceId}`
+        });
+        await notificationsService.checkOutletFinanceNotifications(outletId);
       }
     } catch (e) {
       console.error('Error running notification checks on invoice creation:', e);
@@ -342,6 +442,10 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
       ) VALUES (?, 'invoice_created', 'invoice', ?, 0, ?, ?, ?)
     `, [outletId, invoiceId, total, `Invoice ${existingInvoice.invoice_number} updated.`, userId]);
 
+    // Recalculate payment status/metrics if invoice total price has changed
+    const paymentsService = require('../payments/paymentsService');
+    await paymentsService.recalculatePaymentMetrics(invoiceId);
+
     await db.exec('COMMIT;');
 
     // Trigger notification checks after commit
@@ -391,7 +495,13 @@ async function getInvoiceById(id) {
         FROM shipment_items si
         JOIN shipments s ON s.id = si.shipment_id
         WHERE si.invoice_item_id = ii.id AND s.status IN ('shipped', 'delivered')
-      ), 0) as shipped_quantity
+      ), 0) as shipped_quantity,
+      COALESCE((
+        SELECT SUM(ri.quantity)
+        FROM return_items ri
+        JOIN returns r ON r.id = ri.return_id
+        WHERE ri.invoice_item_id = ii.id AND r.status != 'cancelled'
+      ), 0) as returned_quantity
     FROM invoice_items ii
     JOIN products p ON p.id = ii.product_id
     WHERE ii.invoice_id = ?
@@ -400,6 +510,7 @@ async function getInvoiceById(id) {
   items.forEach(item => {
     item.ordered_quantity = item.quantity;
     item.remaining_quantity = Math.max(0, item.quantity - item.shipped_quantity);
+    item.remaining_returnable_quantity = Math.max(0, item.quantity - item.returned_quantity);
   });
 
   const history = await db.all(`

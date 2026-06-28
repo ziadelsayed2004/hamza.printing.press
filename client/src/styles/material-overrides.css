@@ -1,25 +1,9 @@
 /* 
-  Material UI global class overrides to align with Bookstore Manager system design.
-  NOTE: Global '!important' rules here override dynamically injected MUI styles in index.html.
-  Future Cleanup Ticket: Move component overrides into ThemeConfig.jsx 'components' block.
+  Material UI CSS layout overrides & utility classes.
+  DEBT NOTE: Core component overrides (MuiInputBase, MuiOutlinedInput, MuiCard, MuiListItemButton) 
+  have been migrated into ThemeConfig.jsx 'components' block.
+  The remaining classes below act as utility classes for specific legacy layouts.
 */
-
-
-
-/* Align inputs to right in RTL */
-.MuiInputBase-input {
-  text-align: right !important;
-}
-
-/* LTR technical value fields (e.g. email, quantity/SKU, amount number inputs) */
-.MuiInputBase-input.ltr-value {
-  text-align: left !important;
-}
-
-/* Outlined Input overrides */
-.MuiOutlinedInput-root {
-  border-radius: var(--radius-xs) !important;
-}
 
 /* Active sidebar element rounding */
 .sidebar-active-item {

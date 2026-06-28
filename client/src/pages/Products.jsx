@@ -429,54 +429,50 @@ export const Products = () => {
         open={openDetailsModal}
         onClose={() => setOpenDetailsModal(false)}
         title="تفاصيل الكتاب والأسعار"
+        actions={<Button onClick={() => setOpenDetailsModal(false)} variant="outlined">إغلاق</Button>}
       >
-        <Box className="entity-drawer__content">
-          {detailsProduct && (
-            <FormSection title={detailsProduct.title} description={`رمز SKU: ${detailsProduct.code}`}>
-              <FieldGrid columns={1}>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  التصنيف: {detailsProduct.category || 'غير محدد'}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                  المؤلفين: {detailsProduct.authors?.map(a => a.name).join('، ') || 'غير محدد'}
-                </Typography>
-              </FieldGrid>
-              
-              <Divider sx={{ my: 3 }} />
-              
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1.5 }}>
-                أسعار البيع المعتمدة بحسب فئات المنافذ:
+        {detailsProduct && (
+          <FormSection title={detailsProduct.title} description={`رمز SKU: ${detailsProduct.code}`}>
+            <FieldGrid columns={1}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                التصنيف: {detailsProduct.category || 'غير محدد'}
               </Typography>
-              {detailsPrices.length === 0 ? (
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>لا توجد أسعار مدخلة بعد لهذا المنتج.</Typography>
-              ) : (
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell align="right">فئة المنفذ</TableCell>
-                        <TableCell align="right">السعر المعتمد</TableCell>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                المؤلفين: {detailsProduct.authors?.map(a => a.name).join('، ') || 'غير محدد'}
+              </Typography>
+            </FieldGrid>
+            
+            <Divider sx={{ my: 3 }} />
+            
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1.5 }}>
+              أسعار البيع المعتمدة بحسب فئات المنافذ:
+            </Typography>
+            {detailsPrices.length === 0 ? (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>لا توجد أسعار مدخلة بعد لهذا المنتج.</Typography>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell align="right">فئة المنفذ</TableCell>
+                      <TableCell align="right">السعر المعتمد</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {detailsPrices.map((pr) => (
+                      <TableRow key={pr.id}>
+                        <TableCell align="right">{pr.outlet_type_name}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                          {formatCurrencyEGP(pr.price)}
+                        </TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {detailsPrices.map((pr) => (
-                        <TableRow key={pr.id}>
-                          <TableCell align="right">{pr.outlet_type_name}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
-                            {formatCurrencyEGP(pr.price)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </FormSection>
-          )}
-        </Box>
-        <FormActions className="entity-drawer__actions">
-          <Button onClick={() => setOpenDetailsModal(false)} variant="outlined">إغلاق</Button>
-        </FormActions>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </FormSection>
+        )}
       </EntityDrawer>
 
       {/* Editor Drawer */}
@@ -484,109 +480,110 @@ export const Products = () => {
         open={openModal}
         onClose={() => setOpenModal(false)}
         title={modalMode === 'create' ? 'إضافة كتاب / منتج جديد' : 'تعديل بيانات المنتج'}
-      >
-        <form onSubmit={handleFormSubmit} className="entity-drawer__form">
-          <Box className="entity-drawer__content">
-            <FormSection title="البيانات الأساسية">
-              <FieldGrid columns={1}>
-                <TextField
-                  required
-                  fullWidth
-                  size="small"
-                  label="عنوان الكتاب / المنتج"
-                  value={formTitle}
-                  onChange={(e) => setFormTitle(e.target.value)}
-                />
-                <TextField
-                  required
-                  fullWidth
-                  size="small"
-                  label="رمز SKU / الرمز التعريفي"
-                  value={formCode}
-                  onChange={(e) => setFormCode(e.target.value)}
-                />
-                <TextField
-                  fullWidth
-                  size="small"
-                  label="التصنيف (مثال: رواية، أكاديمي، فلسفة)"
-                  value={formCategory}
-                  onChange={(e) => setFormCategory(e.target.value)}
-                />
-                <FormControl fullWidth size="small">
-                  <InputLabel id="form-stock-policy-label">سياسة المخزون والجرد</InputLabel>
-                  <Select
-                    labelId="form-stock-policy-label"
-                    value={formStockPolicy}
-                    label="سياسة المخزون والجرد"
-                    onChange={(e) => setFormStockPolicy(e.target.value)}
-                  >
-                    <MenuItem value="track">تتبع الجرد والكميات</MenuItem>
-                    <MenuItem value="ignore">تجاهل الجرد ومراقبة stock</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="form-authors-label">المؤلفين المشاركين</InputLabel>
-                  <Select
-                    labelId="form-authors-label"
-                    multiple
-                    value={formAuthorIds}
-                    label="المؤلفين المشاركين"
-                    onChange={(e) => setFormAuthorIds(e.target.value)}
-                    renderValue={(selected) => (
-                      <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {selected.map((val) => {
-                          const author = authorsList.find(a => a.id === val);
-                          return <Chip key={val} label={author ? author.name : val} size="small" />;
-                        })}
-                      </Box>
-                    )}
-                  >
-                    {authorsList.map((a) => (
-                      <MenuItem key={a.id} value={a.id}>
-                        {a.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="form-status-label">حالة المنتج</InputLabel>
-                  <Select
-                    labelId="form-status-label"
-                    value={formStatus}
-                    label="حالة المنتج"
-                    onChange={(e) => setFormStatus(e.target.value)}
-                  >
-                    <MenuItem value="active">نشط</MenuItem>
-                    <MenuItem value="disabled">معطل</MenuItem>
-                  </Select>
-                </FormControl>
-              </FieldGrid>
-            </FormSection>
-
-            <FormSection title="قائمة أسعار البيع المعتمدة بحسب فئات المنافذ">
-              <FieldGrid columns={2}>
-                {outletTypes.map((ot) => (
-                  <TextField
-                    key={ot.id}
-                    type="number"
-                    size="small"
-                    label={`السعر لـ (${ot.name})`}
-                    value={formPrices[ot.id] || ''}
-                    onChange={(e) => handlePriceChange(ot.id, e.target.value)}
-                    placeholder="0.00"
-                    fullWidth
-                    InputProps={{
-                      endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
-                    }}
-                  />
-                ))}
-              </FieldGrid>
-            </FormSection>
-          </Box>
-          <FormActions className="entity-drawer__actions">
+        actions={
+          <>
             <Button onClick={() => setOpenModal(false)}>إلغاء</Button>
-            <Button type="submit" variant="contained" color="secondary">حفظ التغييرات</Button>
-          </FormActions>
+            <Button type="submit" form="product-editor-form" variant="contained" color="secondary">حفظ التغييرات</Button>
+          </>
+        }
+      >
+        <form onSubmit={handleFormSubmit} id="product-editor-form">
+          <FormSection title="البيانات الأساسية">
+            <FieldGrid columns={1}>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="عنوان الكتاب / المنتج"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+              />
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="رمز SKU / الرمز التعريفي"
+                value={formCode}
+                onChange={(e) => setFormCode(e.target.value)}
+                inputProps={{ className: 'ltr-value' }}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="التصنيف (مثال: رواية، أكاديمي، فلسفة)"
+                value={formCategory}
+                onChange={(e) => setFormCategory(e.target.value)}
+              />
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-stock-policy-label">سياسة المخزون والجرد</InputLabel>
+                <Select
+                  labelId="form-stock-policy-label"
+                  value={formStockPolicy}
+                  label="سياسة المخزون والجرد"
+                  onChange={(e) => setFormStockPolicy(e.target.value)}
+                >
+                  <MenuItem value="track">تتبع الجرد والكميات</MenuItem>
+                  <MenuItem value="ignore">تجاهل الجرد ومراقبة stock</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-authors-label">المؤلفين المشاركين</InputLabel>
+                <Select
+                  labelId="form-authors-label"
+                  multiple
+                  value={formAuthorIds}
+                  label="المؤلفين المشاركين"
+                  onChange={(e) => setFormAuthorIds(e.target.value)}
+                  renderValue={(selected) => (
+                    <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {selected.map((val) => {
+                        const author = authorsList.find(a => a.id === val);
+                        return <Chip key={val} label={author ? author.name : val} size="small" />;
+                      })}
+                    </Box>
+                  )}
+                >
+                  {authorsList.map((a) => (
+                    <MenuItem key={a.id} value={a.id}>
+                      {a.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-status-label">حالة المنتج</InputLabel>
+                <Select
+                  labelId="form-status-label"
+                  value={formStatus}
+                  label="حالة المنتج"
+                  onChange={(e) => setFormStatus(e.target.value)}
+                >
+                  <MenuItem value="active">نشط</MenuItem>
+                  <MenuItem value="disabled">معطل</MenuItem>
+                </Select>
+              </FormControl>
+            </FieldGrid>
+          </FormSection>
+
+          <FormSection title="قائمة أسعار البيع المعتمدة بحسب فئات المنافذ">
+            <FieldGrid columns={2}>
+              {outletTypes.map((ot) => (
+                <TextField
+                  key={ot.id}
+                  type="number"
+                  size="small"
+                  label={`السعر لـ (${ot.name})`}
+                  value={formPrices[ot.id] || ''}
+                  onChange={(e) => handlePriceChange(ot.id, e.target.value)}
+                  placeholder="0.00"
+                  fullWidth
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
+                  }}
+                />
+              ))}
+            </FieldGrid>
+          </FormSection>
         </form>
       </EntityDrawer>
 

@@ -2,12 +2,6 @@ const db = require('../../db');
 const notificationsService = require('../notifications/notificationsService');
 const auditService = require('../audit/auditService');
 
-/**
- * Stub generateInstallmentSchedule to satisfy structural parity without legacy behavior.
- */
-async function generateInstallmentSchedule() {
-  return [];
-}
 
 /**
  * Recalculate invoice payment status.
@@ -316,7 +310,7 @@ async function reversePaymentSupply(paymentId, { notes = '', userId }) {
 /**
  * Retrieve payments list.
  */
-async function getPayments({ limit = 50, offset = 0, invoiceId = null, outletIds = null, supplyStatus = '' } = {}) {
+async function getPayments({ limit = 50, offset = 0, invoiceId = null, outletIds = null, supplyStatus = '', startDate = '', endDate = '' } = {}) {
   let sql = `
     SELECT p.*, i.invoice_number, u.full_name as user_full_name
     FROM invoice_payments p
@@ -336,6 +330,16 @@ async function getPayments({ limit = 50, offset = 0, invoiceId = null, outletIds
     params.push(supplyStatus);
   }
 
+  if (startDate) {
+    sql += ` AND p.payment_date >= ?`;
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    sql += ` AND p.payment_date <= ?`;
+    params.push(endDate);
+  }
+
   if (outletIds && outletIds.length > 0) {
     sql += ` AND i.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
     params.push(...outletIds);
@@ -349,12 +353,6 @@ async function getPayments({ limit = 50, offset = 0, invoiceId = null, outletIds
   return await db.all(sql, params);
 }
 
-/**
- * Stub checkOverdueInstallments.
- */
-async function checkOverdueInstallments() {
-  return 0;
-}
 
 /**
  * Fetch detailed metrics for an invoice.
@@ -385,13 +383,11 @@ async function getPaymentMetrics(invoiceId) {
 }
 
 module.exports = {
-  generateInstallmentSchedule,
   recordPayment,
   reversePayment,
   supplyPayments,
   reversePaymentSupply,
   getPayments,
   recalculatePaymentMetrics,
-  checkOverdueInstallments,
   getPaymentMetrics
 };

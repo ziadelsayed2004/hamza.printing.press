@@ -21,7 +21,9 @@ import {
   Receipt as InvoiceIcon,
   Payment as PaymentIcon,
   Inventory as LedgerIcon,
-  FileDownload as DownloadIcon
+  FileDownload as DownloadIcon,
+  Loop as ReturnIcon,
+  LocalShipping as ShippingIcon
 } from '@mui/icons-material';
 
 export const Exports = () => {
@@ -79,6 +81,20 @@ export const Exports = () => {
       icon: <LedgerIcon sx={{ fontSize: 40, color: '#1abc9c' }} />,
       endpoint: '/exports/inventory',
       filename: 'inventory_export.csv'
+    },
+    {
+      title: 'سجل المرتجعات والمسترجعات',
+      description: 'تصدير حركات مرتجعات مبيعات الكتب بالتفصيل مع قيمة المرتجع وسبب الارتجاع.',
+      icon: <ReturnIcon sx={{ fontSize: 40, color: '#e74c3c' }} />,
+      endpoint: '/exports/returns',
+      filename: 'returns_export.csv'
+    },
+    {
+      title: 'سجل الشحنات والطرود الصادرة',
+      description: 'تصدير كامل بيانات الطرود والشحنات المرسلة للمنافذ مع أرقام التتبع وتكلفة الشحن.',
+      icon: <ShippingIcon sx={{ fontSize: 40, color: '#34495e' }} />,
+      endpoint: '/exports/shipments',
+      filename: 'shipments_export.csv'
     }
   ];
 

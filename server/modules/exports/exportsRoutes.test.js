@@ -34,15 +34,6 @@ describe('Exports API Integration Tests', () => {
 
     // 2. Delete invoice records
     await db.run(`
-      DELETE FROM payment_installments 
-      WHERE invoice_id IN (
-        SELECT id FROM invoices 
-        WHERE outlet_id IN (
-          SELECT id FROM outlets WHERE name = "Test Cairo Export Outlet"
-        )
-      )
-    `);
-    await db.run(`
       DELETE FROM invoice_payments 
       WHERE invoice_id IN (
         SELECT id FROM invoices 
@@ -257,6 +248,16 @@ describe('Exports API Integration Tests', () => {
     it('should export dynamic report balance sheets as CSV', async () => {
       const response = await agent.get('/api/exports/reports').query({ type: 'balances' });
       verifyCsvHeadersAndContent(response, ['معرف المنفذ', 'اسم منفذ التوزيع', 'الفئة', 'المحافظة', 'الحد الائتماني (ج.م)', 'إجمالي المبيعات (ج.م)', 'إجمالي المدفوعات (ج.م)', 'الرصيد المتبقي المستحق (ج.م)'], ['Test Cairo Export Outlet', 'Cairo Export Wholesale', '240', '100', '140']);
+    });
+
+    it('should export returns history as CSV', async () => {
+      const response = await agent.get('/api/exports/returns');
+      verifyCsvHeadersAndContent(response, ['المعرف', 'رقم إذن المرتجع', 'رقم الفاتورة', 'اسم المنفذ', 'قيمة المرتجع (ج.م)', 'السبب', 'الحالة'], ['سجل مرتجعات مبيعات الفواتير']);
+    });
+
+    it('should export shipments log as CSV', async () => {
+      const response = await agent.get('/api/exports/shipments');
+      verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الشحنة', 'رقم الفاتورة', 'اسم المنفذ', 'شركة الشحن', 'رقم التتبع', 'تكلفة الشحن (ج.م)', 'حالة الشحنة'], ['سجل شحنات وطرود الكتب الصادرة للمنافذ']);
     });
 
     it('should fail with 400 for unsupported report types', async () => {

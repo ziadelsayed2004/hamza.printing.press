@@ -13,6 +13,7 @@ router.get('/', requireAuth, checkPermission('notifications.view'), async (req, 
   const severity = req.query.severity || null;
 
   try {
+    await notificationsService.checkOverdueInvoicesNotifications();
     const list = await notificationsService.getNotifications({
       limit,
       offset,
@@ -29,6 +30,7 @@ router.get('/', requireAuth, checkPermission('notifications.view'), async (req, 
 // 2. GET /api/notifications/counts - Get counts of unread/read/resolved notifications
 router.get('/counts', requireAuth, checkPermission('notifications.view'), async (req, res) => {
   try {
+    await notificationsService.checkOverdueInvoicesNotifications();
     const counts = await notificationsService.getNotificationCounts();
     res.status(200).json(counts);
   } catch (err) {

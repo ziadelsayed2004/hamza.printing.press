@@ -81,20 +81,21 @@
 }
 
 @media (max-width: 768px) {
+
   .app-shell__container--with-sidebar,
   .app-shell__container--with-sidebar-collapsed {
     padding-inline-start: 0;
   }
-  
+
   .topbar--with-sidebar,
   .topbar--with-sidebar-collapsed {
     right: 0;
   }
-  
+
   .sidebar {
     transform: translateX(100%);
   }
-  
+
   .sidebar--mobile-open {
     transform: translateX(0);
   }

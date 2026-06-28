@@ -399,6 +399,109 @@ async function exportReport(reportType, _query = {}, sessionUser = null) {
   }
 }
 
+/**
+ * Export returns history.
+ */
+async function exportReturns(query = {}) {
+  const params = [];
+  const filtersApplied = [];
+  let sql = `
+    SELECT 
+      r.id, r.return_number, i.invoice_number, o.name as outlet_name,
+      r.return_value, r.reason, r.status, r.created_at
+    FROM returns r
+    JOIN invoices i ON i.id = r.invoice_id
+    JOIN outlets o ON o.id = r.outlet_id
+    WHERE 1=1
+  `;
+  if (query.outletId) {
+    sql += ` AND r.outlet_id = ?`;
+    params.push(query.outletId);
+    const outlet = await db.get('SELECT name FROM outlets WHERE id = ?', [query.outletId]);
+    filtersApplied.push(`المنفذ: ${outlet ? outlet.name : query.outletId}`);
+  }
+  if (query.startDate) {
+    sql += ` AND r.created_at >= ?`;
+    params.push(query.startDate + 'T00:00:00');
+    filtersApplied.push(`من تاريخ: ${query.startDate}`);
+  }
+  if (query.endDate) {
+    sql += ` AND r.created_at <= ?`;
+    params.push(query.endDate + 'T23:59:59');
+    filtersApplied.push(`إلى تاريخ: ${query.endDate}`);
+  }
+  sql += ` ORDER BY r.created_at DESC`;
+
+  const rows = await db.all(sql, params);
+  const formattedRows = rows.map(r => ({
+    ...r,
+    created_at: formatEgyptDateTime(r.created_at)
+  }));
+
+  return jsonToCsvArabic({
+    title: 'سجل مرتجعات مبيعات الفواتير',
+    filters: filtersApplied,
+    arabicHeaders: ['المعرف', 'رقم إذن المرتجع', 'رقم الفاتورة', 'اسم المنفذ', 'قيمة المرتجع (ج.م)', 'السبب', 'الحالة', 'تاريخ التسجيل'],
+    englishKeys: ['id', 'return_number', 'invoice_number', 'outlet_name', 'return_value', 'reason', 'status', 'created_at'],
+    rows: formattedRows,
+    summaryKeys: ['return_value']
+  });
+}
+
+/**
+ * Export shipments log.
+ */
+async function exportShipments(query = {}) {
+  const params = [];
+  const filtersApplied = [];
+  let sql = `
+    SELECT 
+      s.id, s.shipment_number, i.invoice_number, o.name as outlet_name,
+      s.shipping_carrier, s.tracking_number, i.shipping_cost, s.status, s.created_at
+    FROM shipments s
+    JOIN invoices i ON i.id = s.invoice_id
+    JOIN outlets o ON o.id = i.outlet_id
+    WHERE 1=1
+  `;
+  if (query.outletId) {
+    sql += ` AND i.outlet_id = ?`;
+    params.push(query.outletId);
+    const outlet = await db.get('SELECT name FROM outlets WHERE id = ?', [query.outletId]);
+    filtersApplied.push(`المنفذ: ${outlet ? outlet.name : query.outletId}`);
+  }
+  if (query.status) {
+    sql += ` AND s.status = ?`;
+    params.push(query.status);
+    filtersApplied.push(`الحالة: ${query.status}`);
+  }
+  if (query.startDate) {
+    sql += ` AND s.created_at >= ?`;
+    params.push(query.startDate + 'T00:00:00');
+    filtersApplied.push(`من تاريخ: ${query.startDate}`);
+  }
+  if (query.endDate) {
+    sql += ` AND s.created_at <= ?`;
+    params.push(query.endDate + 'T23:59:59');
+    filtersApplied.push(`إلى تاريخ: ${query.endDate}`);
+  }
+  sql += ` ORDER BY s.created_at DESC`;
+
+  const rows = await db.all(sql, params);
+  const formattedRows = rows.map(r => ({
+    ...r,
+    created_at: formatEgyptDateTime(r.created_at)
+  }));
+
+  return jsonToCsvArabic({
+    title: 'سجل شحنات وطرود الكتب الصادرة للمنافذ',
+    filters: filtersApplied,
+    arabicHeaders: ['المعرف', 'رقم الشحنة', 'رقم الفاتورة', 'اسم المنفذ', 'شركة الشحن', 'رقم التتبع', 'تكلفة الشحن (ج.م)', 'حالة الشحنة', 'تاريخ الشحن'],
+    englishKeys: ['id', 'shipment_number', 'invoice_number', 'outlet_name', 'shipping_carrier', 'tracking_number', 'shipping_cost', 'status', 'created_at'],
+    rows: formattedRows,
+    summaryKeys: ['shipping_cost']
+  });
+}
+
 module.exports = {
   exportProducts,
   exportPrices,
@@ -407,5 +510,7 @@ module.exports = {
   exportInvoices,
   exportPayments,
   exportInventory,
+  exportReturns,
+  exportShipments,
   exportReport
 };

@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { formatCurrencyEGP, formatEgyptDate } from '../utils/formatters';
+import './Payments.css';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
+import EntityDrawer from '../components/EntityDrawer';
 import {
   Box,
   Typography,
@@ -36,7 +39,7 @@ import {
   Collapse,
   LinearProgress,
   Tooltip,
-  Drawer
+  Checkbox
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -56,6 +59,7 @@ import {
 
 export const Payments = () => {
   const { hasPermission } = useAuth();
+  const location = useLocation();
 
   // Data states
   const [payments, setPayments] = useState([]);
@@ -68,6 +72,17 @@ export const Payments = () => {
   // Filters
   const [showFilters, setShowFilters] = useState(false);
   const [filterInvoiceId, setFilterInvoiceId] = useState('');
+  const [filterOutletId, setFilterOutletId] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
+  const [filterSupplyStatus, setFilterSupplyStatus] = useState('');
+
+  // Dropdown list
+  const [outlets, setOutlets] = useState([]);
+
+  // Selections
+  const [selectedPaymentIds, setSelectedPaymentIds] = useState([]);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
 
   // Toast
   const [toastMsg, setToastMsg] = useState('');
@@ -96,9 +111,6 @@ export const Payments = () => {
   const [reverseNotes, setReverseNotes] = useState('');
   const [reverseSubmitting, setReverseSubmitting] = useState(false);
 
-  // Overdue check
-  const [overdueChecking, setOverdueChecking] = useState(false);
-
   const showToast = (msg, severity = 'success') => {
     setToastMsg(msg);
     setToastSeverity(severity);
@@ -111,19 +123,47 @@ export const Payments = () => {
     try {
       let query = `/payments?limit=${limit}&offset=${offset}`;
       if (filterInvoiceId) query += `&invoiceId=${filterInvoiceId}`;
+      if (filterOutletId) query += `&outletId=${filterOutletId}`;
+      if (filterStartDate) query += `&startDate=${filterStartDate}`;
+      if (filterEndDate) query += `&endDate=${filterEndDate}`;
+      if (filterSupplyStatus) query += `&supplyStatus=${filterSupplyStatus}`;
+
       const data = await apiClient.get(query);
       setPayments(data);
+      setSelectedPaymentIds([]); // Clear selection when criteria changes
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تحميل سجل المدفوعات.', 'error');
     } finally {
       setLoading(false);
     }
-  }, [limit, offset, filterInvoiceId]);
+  }, [limit, offset, filterInvoiceId, filterOutletId, filterStartDate, filterEndDate, filterSupplyStatus]);
 
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
+
+  useEffect(() => {
+    const fetchOutlets = async () => {
+      try {
+        const data = await apiClient.get('/outlets');
+        setOutlets(data);
+      } catch (err) {
+        console.error('Failed to load outlets:', err);
+      }
+    };
+    fetchOutlets();
+  }, []);
+
+  // Deep linking from Invoices
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const invId = params.get('invoiceId');
+    const act = params.get('action');
+    if (invId && act === 'create') {
+      handleOpenAddPayment(invId);
+    }
+  }, [location.search]);
 
   // ---- Pagination ----
 
@@ -144,7 +184,23 @@ export const Payments = () => {
 
   const handleResetFilters = () => {
     setFilterInvoiceId('');
+    setFilterOutletId('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setFilterSupplyStatus('');
     setOffset(0);
+
+    setLoading(true);
+    apiClient.get(`/payments?limit=${limit}&offset=0`)
+      .then(data => {
+        setPayments(data);
+        setSelectedPaymentIds([]);
+      })
+      .catch(err => {
+        console.error(err);
+        showToast(err.message || 'فشل تحميل سجل المدفوعات.', 'error');
+      })
+      .finally(() => setLoading(false));
   };
 
   // ---- Helpers ----
@@ -159,7 +215,68 @@ export const Payments = () => {
     }
   };
 
+  // ---- Selection ----
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedPaymentIds(payments.map(p => p.id));
+    } else {
+      setSelectedPaymentIds([]);
+    }
+  };
+
+  const handleSelectRow = (id) => {
+    setSelectedPaymentIds(prev => {
+      const copy = [...prev];
+      const idx = copy.indexOf(id);
+      if (idx > -1) {
+        copy.splice(idx, 1);
+      } else {
+        copy.push(id);
+      }
+      return copy;
+    });
+  };
+
+  // ---- Actions ----
+
+  const handleSupplyPayment = async (paymentId) => {
+    try {
+      await apiClient.post(`/payments/${paymentId}/supply`);
+      showToast('تم تأكيد توريد الدفعة للشركة بنجاح.');
+      fetchPayments();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تأكيد توريد الدفعة.', 'error');
+    }
+  };
+
+  const handleReverseSupply = async (paymentId) => {
+    try {
+      await apiClient.post(`/payments/${paymentId}/reverse-supply`, { notes: 'إلغاء التوريد المالي من شاشة المقبوضات' });
+      showToast('تم إلغاء توريد الدفعة وإعادتها للعهد المالية.');
+      fetchPayments();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل إلغاء توريد الدفعة.', 'error');
+    }
+  };
+
+  const handleBatchSupply = async () => {
+    if (selectedPaymentIds.length === 0) return;
+    setBatchSubmitting(true);
+    try {
+      await apiClient.post('/payments/supply-batch', { paymentIds: selectedPaymentIds });
+      showToast(`تم تأكيد توريد عدد ${selectedPaymentIds.length} دفعة مالية بنجاح.`);
+      setSelectedPaymentIds([]);
+      fetchPayments();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل توريد الدفعات المحددة.', 'error');
+    } finally {
+      setBatchSubmitting(false);
+    }
+  };
 
   // ---- Add Payment ----
 
@@ -254,21 +371,6 @@ export const Payments = () => {
     }
   };
 
-  // ---- Overdue Check ----
-
-  const handleCheckOverdue = async () => {
-    setOverdueChecking(true);
-    try {
-      const res = await apiClient.post('/payments/check-overdue', {});
-      showToast(`تم التحقق من الأقساط المتأخرة بنجاح. تم تحديث ${res.updatedCount || 0} قسط.`);
-    } catch (err) {
-      console.error(err);
-      showToast(err.message || 'فشل التحقق من الأقساط المتأخرة.', 'error');
-    } finally {
-      setOverdueChecking(false);
-    }
-  };
-
   // ---- Invoice Metrics Viewer ----
 
   const handleOpenMetrics = async (invoiceId) => {
@@ -287,8 +389,6 @@ export const Payments = () => {
     }
   };
 
-  // ---- Render ----
-
   return (
     <Box sx={{ p: 1 }}>
       {/* Title & Top Action Bar */}
@@ -298,17 +398,6 @@ export const Payments = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          {hasPermission('payments.supply_batch') && payments.filter(p => p.supply_status !== 'supplied').length > 0 && (
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<CheckCircleIcon />}
-              onClick={handleBatchSupply}
-            >
-              توريد الدفعات المعلقة ({payments.filter(p => p.supply_status !== 'supplied').length})
-            </Button>
-          )}
-
           {hasPermission('payments.create') && (
             <Button
               variant="contained"
@@ -346,7 +435,7 @@ export const Payments = () => {
               <Grid item xs={12} sm={4} md={3}>
                 <TextField
                   fullWidth
-                  label="رقم معرّف الفاتورة (Invoice ID)"
+                  label="رقم الفاتورة (Invoice ID)"
                   size="small"
                   type="number"
                   value={filterInvoiceId}
@@ -360,20 +449,95 @@ export const Payments = () => {
                   }}
                 />
               </Grid>
-              <Grid item>
-                <Button variant="contained" color="secondary" startIcon={<FilterIcon />} onClick={handleApplyFilters}>
-                  تطبيق
-                </Button>
+              <Grid item xs={12} sm={4} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>منفذ البيع (Outlet)</InputLabel>
+                  <Select
+                    value={filterOutletId}
+                    onChange={(e) => setFilterOutletId(e.target.value)}
+                    label="منفذ البيع (Outlet)"
+                  >
+                    <MenuItem value="">الكل (All Outlets)</MenuItem>
+                    {outlets.map(o => (
+                      <MenuItem key={o.id} value={o.id}>{o.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
-              <Grid item>
+              <Grid item xs={12} sm={4} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>حالة التوريد</InputLabel>
+                  <Select
+                    value={filterSupplyStatus}
+                    onChange={(e) => setFilterSupplyStatus(e.target.value)}
+                    label="حالة التوريد"
+                  >
+                    <MenuItem value="">الكل</MenuItem>
+                    <MenuItem value="supplied">موردة للشركة</MenuItem>
+                    <MenuItem value="not_supplied">غير موردة (مع المندوب)</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6} sm={3} md={2}>
+                <TextField
+                  fullWidth
+                  label="من تاريخ"
+                  size="small"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={6} sm={3} md={2}>
+                <TextField
+                  fullWidth
+                  label="إلى تاريخ"
+                  size="small"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={filterEndDate}
+                  onChange={(e) => setFilterEndDate(e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={12} sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                <Button variant="contained" color="secondary" startIcon={<FilterIcon />} onClick={handleApplyFilters}>
+                  تطبيق التصفية
+                </Button>
                 <Button variant="outlined" color="inherit" startIcon={<ClearIcon />} onClick={handleResetFilters}>
-                  إلغاء التصفية
+                  إعادة تعيين
                 </Button>
               </Grid>
             </Grid>
           </Collapse>
         </CardContent>
       </Card>
+
+      {/* Bulk Action Header Banner */}
+      {selectedPaymentIds.length > 0 && (
+        <Box sx={{ mb: 2, p: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'action.hover', borderRadius: 1 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            تم تحديد {selectedPaymentIds.length} دفعة مالية
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {hasPermission('payments.supply_batch') && (
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={<CheckCircleIcon />}
+                onClick={handleBatchSupply}
+                disabled={batchSubmitting}
+              >
+                تأكيد توريد الدفعات المحددة ({selectedPaymentIds.length})
+              </Button>
+            )}
+            <Button variant="outlined" color="inherit" size="small" onClick={() => setSelectedPaymentIds([])}>
+              إلغاء التحديد
+            </Button>
+          </Box>
+        </Box>
+      )}
 
       {/* Summary Stats Row */}
       {!loading && payments.length > 0 && (
@@ -434,6 +598,14 @@ export const Payments = () => {
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      color="primary"
+                      indeterminate={selectedPaymentIds.length > 0 && selectedPaymentIds.length < payments.length}
+                      checked={payments.length > 0 && selectedPaymentIds.length === payments.length}
+                      onChange={handleSelectAll}
+                    />
+                  </TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>رقم الفاتورة</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الدفع</TableCell>
@@ -449,6 +621,13 @@ export const Payments = () => {
               <TableBody>
                 {payments.map((row) => (
                   <TableRow key={row.id} hover>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        color="primary"
+                        checked={selectedPaymentIds.includes(row.id)}
+                        onChange={() => handleSelectRow(row.id)}
+                      />
+                    </TableCell>
                     <TableCell sx={{ fontFamily: 'monospace' }}>{row.id}</TableCell>
                     <TableCell>
                       <Chip
@@ -473,7 +652,7 @@ export const Payments = () => {
                       {row.reference_number || '-'}
                     </TableCell>
                     <TableCell>{row.user_full_name || 'غير معروف'}</TableCell>
-                     <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.notes || '-'}
                     </TableCell>
                     <TableCell>
@@ -506,14 +685,6 @@ export const Payments = () => {
                         </Tooltip>
                       )}
 
-                      {hasPermission('payments.create') && (
-                        <Tooltip title="تسجيل دفعة إضافية لنفس الفاتورة">
-                          <IconButton color="secondary" onClick={() => handleOpenAddPayment(row.invoice_id)}>
-                            <AddIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-
                       {hasPermission('payments.reverse') && (
                         <Tooltip title="إلغاء / عكس هذه الدفعة">
                           <IconButton color="error" onClick={() => handleOpenReverse(row)}>
@@ -529,16 +700,7 @@ export const Payments = () => {
           </TableContainer>
         )}
 
-        {/* Pagination */}
-        <Box
-          sx={{
-            p: 2,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderTop: '1px solid rgba(224, 224, 224, 1)'
-          }}
-        >
+        <Box className="payments-pagination-container">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" color="textSecondary">عدد السجلات بالصفحة:</Typography>
             <Select
@@ -564,182 +726,165 @@ export const Payments = () => {
       </Paper>
 
       {/* ================ ADD PAYMENT Drawer ================ */}
-      <Drawer
-        anchor="left"
+      <EntityDrawer
         open={openAddPayment}
         onClose={() => !payFormSubmitting && setOpenAddPayment(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 450 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تسجيل دفعة جديدة</Typography>
-          <Button onClick={() => setOpenAddPayment(false)} variant="outlined" size="small" color="inherit" disabled={payFormSubmitting}>إغلاق</Button>
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <form onSubmit={handleSubmitPayment} style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, overflowY: 'auto' }}>
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
-            <Grid container spacing={2}>
-              {/* Invoice ID */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  required
-                  label="رقم معرّف الفاتورة (Invoice ID)"
-                  size="small"
-                  type="number"
-                  value={payFormInvoiceId}
-                  onChange={(e) => setPayFormInvoiceId(e.target.value)}
-                  onBlur={handlePayFormInvoiceBlur}
-                />
-              </Grid>
-
-              {/* Live invoice metrics preview */}
-              {payFormMetricsLoading && <Grid item xs={12}><LinearProgress color="secondary" /></Grid>}
-              {payFormMetrics && (
-                <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 2, backgroundColor: '#f8fafc' }}>
-                    <Grid container spacing={1}>
-                      <Grid item xs={6} sm={3}>
-                        <Typography variant="caption" color="textSecondary">رقم الفاتورة</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
-                          {payFormMetrics.invoiceNumber}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6} sm={3}>
-                        <Typography variant="caption" color="textSecondary">نوع الدفع</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {translateMethod(payFormMetrics.paymentType)}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6} sm={3}>
-                        <Typography variant="caption" color="textSecondary">إجمالي الفاتورة</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {formatCurrencyEGP(payFormMetrics.totalPrice)}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={6} sm={3}>
-                        <Typography variant="caption" color="textSecondary">المسدد حتى الآن</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                          {formatCurrencyEGP(payFormMetrics.paidAmount)}
-                        </Typography>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                            المتبقي: {formatCurrencyEGP(payFormMetrics.remainingAmount)}
-                          </Typography>
-                          {payFormMetrics.overdueCount > 0 && (
-                            <Chip
-                              icon={<WarningIcon />}
-                              label={`${payFormMetrics.overdueCount} أقساط متأخرة`}
-                              color="error"
-                              size="small"
-                            />
-                          )}
-                        </Box>
-                        {/* Progress bar */}
-                        <LinearProgress
-                          variant="determinate"
-                          value={payFormMetrics.totalPrice > 0
-                            ? Math.min(100, (payFormMetrics.paidAmount / payFormMetrics.totalPrice) * 100)
-                            : 0}
-                          sx={{ mt: 1, height: 8, borderRadius: 4 }}
-                          color={payFormMetrics.remainingAmount <= 0 ? 'success' : 'warning'}
-                        />
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                </Grid>
-              )}
-
-              {/* Amount */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  required
-                  label="مبلغ الدفعة"
-                  size="small"
-                  type="number"
-                  inputProps={{ step: '0.01', min: '0.01' }}
-                  value={payFormAmount}
-                  onChange={(e) => setPayFormAmount(e.target.value)}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
-                  }}
-                  helperText={
-                    payFormMetrics
-                      ? `الحد الأقصى المسموح: ${formatCurrencyEGP(payFormMetrics.remainingAmount)}`
-                      : ''
-                  }
-                />
-              </Grid>
-
-              {/* Payment Method */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small" required>
-                  <InputLabel>طريقة الدفع</InputLabel>
-                  <Select
-                    value={payFormMethod}
-                    onChange={(e) => setPayFormMethod(e.target.value)}
-                    label="طريقة الدفع"
-                  >
-                    <MenuItem value="cash">نقدي (Cash)</MenuItem>
-                    <MenuItem value="check">شيك (Check)</MenuItem>
-                    <MenuItem value="bank_transfer">تحويل بنكي (Bank Transfer)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Payment Date */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="تاريخ الدفع"
-                  size="small"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={payFormDate}
-                  onChange={(e) => setPayFormDate(e.target.value)}
-                />
-              </Grid>
-
-              {/* Reference Number */}
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="رقم مرجعي / رقم الإيصال"
-                  size="small"
-                  value={payFormReference}
-                  onChange={(e) => setPayFormReference(e.target.value)}
-                />
-              </Grid>
-
-              {/* Notes */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="ملاحظات"
-                  size="small"
-                  multiline
-                  rows={2}
-                  value={payFormNotes}
-                  onChange={(e) => setPayFormNotes(e.target.value)}
-                />
-              </Grid>
-            </Grid>
-          </Box>
-          <Divider sx={{ my: 2 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+        title="تسجيل دفعة جديدة"
+        actions={
+          <>
             <Button variant="outlined" color="inherit" onClick={() => setOpenAddPayment(false)} disabled={payFormSubmitting}>
               إلغاء
             </Button>
-            <Button variant="contained" color="primary" type="submit" disabled={payFormSubmitting}>
+            <Button variant="contained" color="primary" type="submit" form="add-payment-form" disabled={payFormSubmitting}>
               {payFormSubmitting ? 'جاري التسجيل...' : 'تأكيد وتسجيل الدفعة'}
             </Button>
-          </Box>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmitPayment} id="add-payment-form">
+          <Grid container spacing={2}>
+            {/* Invoice ID */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                required
+                label="رقم الفاتورة (Invoice ID)"
+                size="small"
+                type="number"
+                value={payFormInvoiceId}
+                onChange={(e) => setPayFormInvoiceId(e.target.value)}
+                onBlur={handlePayFormInvoiceBlur}
+              />
+            </Grid>
+
+            {/* Live invoice metrics preview */}
+            {payFormMetricsLoading && <Grid item xs={12}><LinearProgress color="secondary" /></Grid>}
+            {payFormMetrics && (
+              <Grid item xs={12}>
+                <Paper variant="outlined" sx={{ p: 2, backgroundColor: '#f8fafc' }}>
+                  <Grid container spacing={1}>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="textSecondary">رقم الفاتورة</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
+                        {payFormMetrics.invoiceNumber}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="textSecondary">نوع الدفع</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {translateMethod(payFormMetrics.paymentType)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="textSecondary">إجمالي الفاتورة</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {formatCurrencyEGP(payFormMetrics.totalPrice)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} sm={3}>
+                      <Typography variant="caption" color="textSecondary">المسدد حتى الآن</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                        {formatCurrencyEGP(payFormMetrics.paidAmount)}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'error.main' }}>
+                          المتبقي: {formatCurrencyEGP(payFormMetrics.remainingAmount)}
+                        </Typography>
+                      </Box>
+                      {/* Progress bar */}
+                      <LinearProgress
+                        variant="determinate"
+                        value={payFormMetrics.totalPrice > 0
+                          ? Math.min(100, (payFormMetrics.paidAmount / payFormMetrics.totalPrice) * 100)
+                          : 0}
+                        sx={{ mt: 1, height: 8, borderRadius: 4 }}
+                        color={payFormMetrics.remainingAmount <= 0 ? 'success' : 'warning'}
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+              </Grid>
+            )}
+
+            {/* Amount */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                required
+                label="مبلغ الدفعة"
+                size="small"
+                type="number"
+                inputProps={{ step: '0.01', min: '0.01' }}
+                value={payFormAmount}
+                onChange={(e) => setPayFormAmount(e.target.value)}
+                InputProps={{
+                  endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
+                }}
+                helperText={
+                  payFormMetrics
+                    ? `الحد الأقصى المسموح: ${formatCurrencyEGP(payFormMetrics.remainingAmount)}`
+                    : ''
+                }
+              />
+            </Grid>
+
+            {/* Payment Method */}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small" required>
+                <InputLabel>طريقة الدفع</InputLabel>
+                <Select
+                  value={payFormMethod}
+                  onChange={(e) => setPayFormMethod(e.target.value)}
+                  label="طريقة الدفع"
+                >
+                  <MenuItem value="cash">نقدي (Cash)</MenuItem>
+                  <MenuItem value="check">شيك (Check)</MenuItem>
+                  <MenuItem value="bank_transfer">تحويل بنكي (Bank Transfer)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Payment Date */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="تاريخ الدفع"
+                size="small"
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                value={payFormDate}
+                onChange={(e) => setPayFormDate(e.target.value)}
+              />
+            </Grid>
+
+            {/* Reference Number */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="رقم مرجعي / رقم الإيصال"
+                size="small"
+                value={payFormReference}
+                onChange={(e) => setPayFormReference(e.target.value)}
+              />
+            </Grid>
+
+            {/* Notes */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="ملاحظات"
+                size="small"
+                multiline
+                rows={2}
+                value={payFormNotes}
+                onChange={(e) => setPayFormNotes(e.target.value)}
+              />
+            </Grid>
+          </Grid>
         </form>
-      </Drawer>
+      </EntityDrawer>
 
       {/* ================ REVERSE PAYMENT DIALOG ================ */}
       <Dialog
@@ -755,7 +900,7 @@ export const Payments = () => {
           {reversePaymentTarget && (
             <Box sx={{ mb: 2 }}>
               <Alert severity="warning" sx={{ mb: 2 }}>
-                سيتم حذف سجل الدفعة وإعادة حساب رصيد الفاتورة والأقساط تلقائياً. لا يمكن التراجع عن هذه العملية.
+                سيتم حذف سجل الدفعة وإعادة حساب رصيد الفاتورة تلقائياً. لا يمكن التراجع عن هذه العملية.
               </Alert>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 <strong>رقم الدفعة:</strong> {reversePaymentTarget.id}
@@ -765,9 +910,9 @@ export const Payments = () => {
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 <strong>المبلغ:</strong>{' '}
-                <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                <Box component="span" sx={{ color: 'error.main', fontWeight: 'bold' }}>
                   {formatCurrencyEGP(reversePaymentTarget.amount)}
-                </span>
+                </Box>
               </Typography>
             </Box>
           )}
@@ -791,111 +936,93 @@ export const Payments = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ================ INVOICE METRICS & INSTALLMENTS Drawer ================ */}
-      <Drawer
-        anchor="left"
+      {/* ================ INVOICE METRICS Drawer ================ */}
+      <EntityDrawer
         open={openMetrics}
         onClose={() => setOpenMetrics(false)}
-        PaperProps={{
-          sx: { width: { xs: '100%', sm: 650 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
-        }}
+        title="تفاصيل تحصيلات الفاتورة"
+        loading={metricsLoading}
+        actions={
+          <>
+            <Button onClick={() => setOpenMetrics(false)} variant="outlined">إغلاق</Button>
+            {hasPermission('payments.create') && metricsData && metricsData.remainingAmount > 0 && (
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setOpenMetrics(false);
+                  handleOpenAddPayment(metricsData.invoiceId);
+                }}
+              >
+                تسجيل دفعة لهذه الفاتورة
+              </Button>
+            )}
+          </>
+        }
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            تفاصيل تحصيلات الفاتورة
-          </Typography>
-          <Button onClick={() => setOpenMetrics(false)} variant="outlined" size="small" color="inherit">إغلاق</Button>
-        </Box>
-        <Divider sx={{ mb: 3 }} />
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1, pl: 1 }}>
-          {metricsLoading ? (
-            <LoadingState message="جاري تحميل بيانات التحصيلات..." />
-          ) : metricsData ? (
-            <Box>
-              {/* Metrics Summary */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">رقم الفاتورة</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
-                    {metricsData.invoiceNumber}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">نوع الدفع</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                    {translateMethod(metricsData.paymentType)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">إجمالي الفاتورة</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {formatCurrencyEGP(metricsData.totalPrice)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary">حالة الدفع</Typography>
-                  <Box sx={{ mt: 0.5 }}>
-                    {metricsData.paymentStatus === 'paid' && <Chip label="مسددة بالكامل" color="success" size="small" />}
-                    {metricsData.paymentStatus === 'unpaid' && <Chip label="غير مسددة" color="error" size="small" />}
-                    {metricsData.paymentStatus === 'partially_paid' && <Chip label="مسددة جزئياً" color="warning" size="small" />}
-                    {metricsData.paymentStatus === 'overdue' && <Chip label="متأخرة" color="error" size="small" />}
-                  </Box>
-                </Grid>
+        {metricsData ? (
+          <Box>
+            {/* Metrics Summary */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">رقم الفاتورة</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
+                  {metricsData.invoiceNumber}
+                </Typography>
               </Grid>
-
-              {/* Progress bar */}
-              <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                  <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                    المسدد: {formatCurrencyEGP(metricsData.paidAmount)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
-                    المتبقي: {formatCurrencyEGP(metricsData.remainingAmount)}
-                  </Typography>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">نوع الدفع</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {translateMethod(metricsData.paymentType)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">إجمالي الفاتورة</Typography>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                  {formatCurrencyEGP(metricsData.totalPrice)}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Typography variant="caption" color="textSecondary">حالة الدفع</Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  {metricsData.paymentStatus === 'paid' && <Chip label="مسددة بالكامل" color="success" size="small" />}
+                  {metricsData.paymentStatus === 'unpaid' && <Chip label="غير مسددة" color="error" size="small" />}
+                  {metricsData.paymentStatus === 'partially_paid' && <Chip label="مسددة جزئياً" color="warning" size="small" />}
+                  {metricsData.paymentStatus === 'overdue' && <Chip label="متأخرة" color="error" size="small" />}
                 </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={metricsData.totalPrice > 0
-                    ? Math.min(100, (metricsData.paidAmount / metricsData.totalPrice) * 100)
-                    : 0}
-                  sx={{ height: 10, borderRadius: 5 }}
-                  color={metricsData.remainingAmount <= 0 ? 'success' : 'warning'}
-                />
-                <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block', textAlign: 'center' }}>
-                  {metricsData.totalPrice > 0
-                    ? `${((metricsData.paidAmount / metricsData.totalPrice) * 100).toFixed(1)}% مسددة`
-                    : '0%'}
+              </Grid>
+            </Grid>
+
+            {/* Progress bar */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                  المسدد: {formatCurrencyEGP(metricsData.paidAmount)}
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                  المتبقي: {formatCurrencyEGP(metricsData.remainingAmount)}
                 </Typography>
               </Box>
-
-
-
-              {/* Quick-add payment button */}
-              {hasPermission('payments.create') && metricsData.remainingAmount > 0 && (
-                <Box sx={{ mt: 3, textAlign: 'center' }}>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<AddIcon />}
-                    onClick={() => {
-                      setOpenMetrics(false);
-                      handleOpenAddPayment(metricsData.invoiceId);
-                    }}
-                  >
-                    تسجيل دفعة لهذه الفاتورة
-                  </Button>
-                </Box>
-              )}
+              <LinearProgress
+                variant="determinate"
+                value={metricsData.totalPrice > 0
+                  ? Math.min(100, (metricsData.paidAmount / metricsData.totalPrice) * 100)
+                  : 0}
+                sx={{ height: 10, borderRadius: 5 }}
+                color={metricsData.remainingAmount <= 0 ? 'success' : 'warning'}
+              />
+              <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block', textAlign: 'center' }}>
+                {metricsData.totalPrice > 0
+                  ? `${((metricsData.paidAmount / metricsData.totalPrice) * 100).toFixed(1)}% مسددة`
+                  : '0%'}
+              </Typography>
             </Box>
-          ) : (
-            <EmptyState title="لا يوجد بيانات" description="تعذر تحميل بيانات التحصيلات." />
-          )}
-        </Box>
-        <Divider sx={{ my: 2 }} />
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-          <Button onClick={() => setOpenMetrics(false)} variant="contained" color="inherit">إغلاق</Button>
-        </Box>
-      </Drawer>
+          </Box>
+        ) : (
+          !metricsLoading && <EmptyState title="لا يوجد بيانات" description="تعذر تحميل بيانات التحصيلات." />
+        )}
+      </EntityDrawer>
 
       {/* Snackbar Toast */}
       <Snackbar

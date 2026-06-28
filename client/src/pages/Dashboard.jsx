@@ -87,7 +87,7 @@ export const Dashboard = () => {
       setLoading(true);
       const promises = [];
 
-      if (hasPermission('finance.view')) {
+      if (hasPermission('invoices.view')) {
         promises.push(
           apiClient.get('/finance/summary')
             .then(data => setFinanceSummary(data))
@@ -219,6 +219,17 @@ export const Dashboard = () => {
     return tx.transaction_type === 'receipt' && txDateStr.startsWith(todayStr);
   }).length;
 
+  // 8 Core Command Center metrics
+  const pendingMetric = financeSummary ? (financeSummary.pending || 0) : totalRemaining;
+  const collectedMetric = financeSummary ? (financeSummary.collected || 0) : totalPaid;
+  const suppliedMetric = financeSummary ? (financeSummary.supplied || 0) : 0;
+  const unsuppliedMetric = financeSummary ? (financeSummary.unsupplied || 0) : 0;
+  const returnsMetric = financeSummary ? (financeSummary.returns || 0) : 0;
+  const invoicesCountVal = financeSummary ? (financeSummary.totalInvoicesCount || 0) : recentInvoices.length;
+  const invoicesAmountVal = totalSales;
+  const partialShipmentsVal = financeSummary ? (financeSummary.partialShipmentsCount || 0) : shipments.filter(s => s.status === 'pending').length;
+  const stockAlertsVal = financeSummary ? (financeSummary.stockAlertsCount || 0) : (lowStockItemsCount + negativeStockItemsCount);
+
   return (
     <Box className="dashboard-container">
       {/* 1. Welcome Hero Header */}
@@ -310,13 +321,17 @@ export const Dashboard = () => {
         </Box>
       )}
 
-      {/* 4. KPI Cards Strip */}
+      {/* 4. KPI Cards Strip (8-Card Grid) */}
       <Box className="kpi-grid">
         {[
-          { title: t('dashboard.todaySales'), value: formatCurrencyEGP(salesTodayVal), sub: `فواتير اليوم: ${invoicesTodayCount}`, icon: <TrendingUpIcon />, theme: 'primary' },
-          { title: 'التحصيل الفعلي (كاش)', value: formatCurrencyEGP(totalPaid), sub: `نسبة التحصيل: ${collectionRate.toFixed(1)}%`, icon: <PaymentIcon />, theme: 'success' },
-          { title: 'الذمم المدينة (المعلقة)', value: formatCurrencyEGP(totalRemaining), sub: `المتأخرات: ${formatCurrencyEGP(totalOverdue)}`, icon: <WalletIcon />, theme: 'warning' },
-          { title: 'المستودع والتشغيل', value: `${activeBooksCount} كتاب نشط`, sub: `${activeOutletsCount} منفذ توزيع`, icon: <BookIcon />, theme: 'info' }
+          { title: 'الذمم المعلقة', value: formatCurrencyEGP(pendingMetric), sub: 'الذمم المدينة المتبقية المستحقة من العملاء', icon: <WalletIcon />, theme: 'warning' },
+          { title: 'التحصيل الفعلي كاش', value: formatCurrencyEGP(collectedMetric), sub: 'إجمالي النقدية المحصلة فعلياً في الخزينة', icon: <PaymentIcon />, theme: 'success' },
+          { title: 'التوريدات المسلمة', value: formatCurrencyEGP(suppliedMetric), sub: 'المبالغ الموردة والمسلمة للمقر الرئيسي', icon: <CheckCircleIcon />, theme: 'primary' },
+          { title: 'التوريدات المعلقة', value: formatCurrencyEGP(unsuppliedMetric), sub: 'مبالغ محصلة جاري تسليمها للمقر الرئيسي', icon: <AccessTimeIcon />, theme: 'info' },
+          { title: 'المرتجعات المعتمدة', value: formatCurrencyEGP(returnsMetric), sub: 'إجمالي قيمة المرتجعات المعتمدة بالكامل', icon: <HistoryIcon />, theme: 'danger' },
+          { title: 'المبيعات والفواتير', value: formatCurrencyEGP(invoicesAmountVal), sub: `عدد الفواتير المصدرة: ${invoicesCountVal}`, icon: <ReceiptIcon />, theme: 'primary' },
+          { title: 'شحنات جزئية معلقة', value: `${partialShipmentsVal} شحنة`, sub: 'شحنات جزئية معلقة للمنافذ والفروع', icon: <ShippingIcon />, theme: 'warning' },
+          { title: 'تنبيهات المخزون', value: `${stockAlertsVal} كتاب`, sub: 'كتب تخطت حد الأمان أو ذات رصيد سالب', icon: <AlertIcon />, theme: 'danger' }
         ].map((card, i) => (
           <Card className={`kpi-card kpi-card--${card.theme}`} key={i}>
             <CardContent className="kpi-card__body">

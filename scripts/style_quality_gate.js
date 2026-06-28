@@ -39,7 +39,8 @@ function addViolation(file, line, checkType, message, snippet) {
 // Every .jsx component/page must have a matching .css file in the same folder.
 sourceFiles.forEach(file => {
   if (file.endsWith('.jsx')) {
-    const isComponentOrPage = file.includes('/components/') || file.includes('/pages/');
+    const normalizedPath = file.replace(/\\/g, '/');
+    const isComponentOrPage = normalizedPath.includes('/components/') || normalizedPath.includes('/pages/');
     if (isComponentOrPage) {
       const cssPath = file.slice(0, -4) + '.css';
       if (!fs.existsSync(cssPath)) {
@@ -181,7 +182,27 @@ sourceFiles.forEach(file => {
   });
 });
 
-// Check 3: CSS Files check (omitted as per scope to focus on JSX/JS files)
+// Check 3: CSS Files check
+let totalImportantCount = 0;
+const CSS_BASELINE_LIMIT = 184; // Current exact baseline count of !important rules
+
+allFiles.filter(f => f.endsWith('.css')).forEach(file => {
+  const content = fs.readFileSync(file, 'utf8');
+  const importantMatches = content.match(/!important/g);
+  if (importantMatches) {
+    totalImportantCount += importantMatches.length;
+  }
+});
+
+if (totalImportantCount > CSS_BASELINE_LIMIT) {
+  violations.push({
+    file: 'Global CSS Check',
+    line: 0,
+    checkType: 'CSS Quality Gate',
+    message: `Total !important count exceeded the baseline limit of ${CSS_BASELINE_LIMIT} (found ${totalImportantCount}). Do not add new !important rules.`,
+    snippet: ''
+  });
+}
 
 // Output Results
 console.log('--- Style & Layout Quality Gate ---');

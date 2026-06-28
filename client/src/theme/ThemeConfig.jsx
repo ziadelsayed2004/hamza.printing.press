@@ -14,7 +14,7 @@ const cacheRtl = createCache({
 });
 
 export const ColorModeContext = createContext({
-  toggleColorMode: () => {},
+  toggleColorMode: () => { },
   mode: 'light'
 });
 
@@ -52,53 +52,53 @@ export const ThemeConfig = ({ children }) => {
           mode,
           ...(mode === 'light'
             ? {
-                // ── Light Mode: Google Workspace / Cloud Console Palette ──
-                primary: {
-                  main: '#1a73e8',     // Google Blue
-                  light: '#4285f4',
-                  dark: '#0d56b3',
-                  contrastText: '#ffffff',
-                },
-                secondary: {
-                  main: '#5f6368',     // Google Grey
-                  light: '#70757a',
-                  dark: '#3c4043',
-                  contrastText: '#ffffff',
-                },
-                background: {
-                  default: '#f8f9fa',  // Google Background Grey
-                  paper: '#ffffff',
-                },
-                text: {
-                  primary: '#202124',  // Google Dark Grey Text
-                  secondary: '#5f6368', // Google Secondary Grey Text
-                },
-                divider: '#dadce0',    // Google Standard Divider
-              }
+              // ── Light Mode: Google Workspace / Cloud Console Palette ──
+              primary: {
+                main: '#1a73e8',     // Google Blue
+                light: '#4285f4',
+                dark: '#0d56b3',
+                contrastText: '#ffffff',
+              },
+              secondary: {
+                main: '#5f6368',     // Google Grey
+                light: '#70757a',
+                dark: '#3c4043',
+                contrastText: '#ffffff',
+              },
+              background: {
+                default: '#f8f9fa',  // Google Background Grey
+                paper: '#ffffff',
+              },
+              text: {
+                primary: '#202124',  // Google Dark Grey Text
+                secondary: '#5f6368', // Google Secondary Grey Text
+              },
+              divider: '#dadce0',    // Google Standard Divider
+            }
             : {
-                // ── Dark Mode: Google Cloud Dark Console ──
-                primary: {
-                  main: '#8ab4f8',     // Google Light Blue
-                  light: '#aecbfa',
-                  dark: '#669df6',
-                  contrastText: '#202124',
-                },
-                secondary: {
-                  main: '#9aa0a6',     // Google Light Grey
-                  light: '#bdc1c6',
-                  dark: '#70757a',
-                  contrastText: '#202124',
-                },
-                background: {
-                  default: '#121212',  // Google Dark Background
-                  paper: '#202124',    // Google Dark Surface/Paper
-                },
-                text: {
-                  primary: '#e8eaed',  // Google Light Text
-                  secondary: '#9aa0a6', // Google Light Secondary Text
-                },
-                divider: '#3c4043',    // Google Dark Divider
-              }),
+              // ── Dark Mode: Google Cloud Dark Console ──
+              primary: {
+                main: '#8ab4f8',     // Google Light Blue
+                light: '#aecbfa',
+                dark: '#669df6',
+                contrastText: '#202124',
+              },
+              secondary: {
+                main: '#9aa0a6',     // Google Light Grey
+                light: '#bdc1c6',
+                dark: '#70757a',
+                contrastText: '#202124',
+              },
+              background: {
+                default: '#121212',  // Google Dark Background
+                paper: '#202124',    // Google Dark Surface/Paper
+              },
+              text: {
+                primary: '#e8eaed',  // Google Light Text
+                secondary: '#9aa0a6', // Google Light Secondary Text
+              },
+              divider: '#3c4043',    // Google Dark Divider
+            }),
         },
         typography: {
           fontFamily: [
@@ -130,6 +130,23 @@ export const ThemeConfig = ({ children }) => {
               },
             },
           },
+          MuiInputBase: {
+            styleOverrides: {
+              input: {
+                textAlign: 'right',
+                '&.ltr-value': {
+                  textAlign: 'left', // ltr-value
+                },
+              },
+            },
+          },
+          MuiOutlinedInput: {
+            styleOverrides: {
+              root: {
+                borderRadius: 4,
+              },
+            },
+          },
           MuiFormLabel: {
             styleOverrides: {
               root: {
@@ -137,20 +154,7 @@ export const ThemeConfig = ({ children }) => {
               },
             },
           },
-          MuiInputLabel: {
-            styleOverrides: {
-              root: {
-                right: 14,
-                left: 'auto',
-                transformOrigin: 'top right',
-              },
-              shrink: {
-                transformOrigin: 'top right',
-                right: 14,
-                left: 'auto',
-              },
-            },
-          },
+
           MuiMenuItem: {
             styleOverrides: {
               root: {

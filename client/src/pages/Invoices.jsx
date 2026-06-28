@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrencyEGP, formatEgyptDate, formatEgyptDateTime } from '../utils/formatters';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -52,7 +53,10 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   Payments as PaymentsIcon,
-  EventNote as EventNoteIcon
+  EventNote as EventNoteIcon,
+  LocalShipping as LocalShippingIcon,
+  SettingsBackupRestore as SettingsBackupRestoreIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
 const jordanGovernorates = [
@@ -72,6 +76,8 @@ const jordanGovernorates = [
 
 export const Invoices = () => {
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Primary Data States
   const [invoices, setInvoices] = useState([]);
@@ -117,13 +123,7 @@ export const Invoices = () => {
   const [detailsInvoice, setDetailsInvoice] = useState(null);
   const [detailsTabValue, setDetailsTabValue] = useState(0);
 
-  // Installment Schedule form state in details modal
-  const [installmentsCount, setInstallmentsCount] = useState(3);
-  const [installmentsInterval, setInstallmentsInterval] = useState(30);
-  const [installmentsStartDate, setInstallmentsStartDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
-  const [installmentsNotes, setInstallmentsNotes] = useState('');
+  // Form state loading
   const [scheduleLoading, setScheduleLoading] = useState(false);
 
   // Create/Edit Wizard Modal Controller
@@ -145,6 +145,29 @@ export const Invoices = () => {
   const [formSupplyStatus, setFormSupplyStatus] = useState('not_supplied'); // 'not_supplied', 'supplied'
   const [formCollectionNotes, setFormCollectionNotes] = useState('');
   const [outletBalances, setOutletBalances] = useState([]);
+
+  // Operational Drawers Controller States
+  const [openPayDrawer, setOpenPayDrawer] = useState(false);
+  const [payInvoice, setPayInvoice] = useState(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState('cash');
+  const [payDate, setPayDate] = useState(new Date().toISOString().split('T')[0]);
+  const [payReference, setPayReference] = useState('');
+  const [payNotes, setPayNotes] = useState('');
+  const [paySupplyStatus, setPaySupplyStatus] = useState('not_supplied');
+  const [paySubmitting, setPaySubmitting] = useState(false);
+
+  const [openMarkPaidDrawer, setOpenMarkPaidDrawer] = useState(false);
+  const [markPaidInvoice, setMarkPaidInvoice] = useState(null);
+  const [markPaidMethod, setMarkPaidMethod] = useState('cash');
+  const [markPaidNotes, setMarkPaidNotes] = useState('تسوية كامل القيمة المتبقية');
+  const [markPaidSubmitting, setMarkPaidSubmitting] = useState(false);
+
+  const [openReturnDrawer, setOpenReturnDrawer] = useState(false);
+  const [returnInvoice, setReturnInvoice] = useState(null);
+  const [returnQuantities, setReturnQuantities] = useState({});
+  const [returnReason, setReturnReason] = useState('');
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
 
   // Toast trigger
   const showToast = (msg, severity = 'success') => {
@@ -367,27 +390,181 @@ export const Invoices = () => {
     }
   };
 
-  // Generate / Regenerate Installment Schedule
-  const handleGenerateSchedule = async () => {
-    if (!detailsInvoice) return;
-    setScheduleLoading(true);
+  // Operational drawer handlers
+  const handleOpenPayDrawer = (invoice) => {
+    setPayInvoice(invoice);
+    setPayAmount(invoice.remaining_amount ? String(invoice.remaining_amount) : '');
+    setPayMethod('cash');
+    setPayDate(new Date().toISOString().split('T')[0]);
+    setPayReference('');
+    setPayNotes('');
+    setPaySupplyStatus('not_supplied');
+    setOpenPayDrawer(true);
+  };
+
+  const handleSubmitPayDrawer = async (e) => {
+    e.preventDefault();
+    if (!payInvoice || !payAmount) return;
+    const amountVal = parseFloat(payAmount);
+    if (isNaN(amountVal) || amountVal <= 0) {
+      showToast('يرجى إدخال قيمة صحيحة وموجبة.', 'error');
+      return;
+    }
+    if (amountVal > payInvoice.remaining_amount) {
+      showToast('القيمة المدخلة تتجاوز المبلغ المتبقي للفاتورة.', 'error');
+      return;
+    }
+    setPaySubmitting(true);
     try {
-      await apiClient.post(`/invoices/${detailsInvoice.id}/installment-schedule`, {
-        installmentsCount: parseInt(installmentsCount, 10),
-        intervalDays: parseInt(installmentsInterval, 10),
-        startDate: installmentsStartDate,
-        notes: installmentsNotes
+      await apiClient.post('/payments', {
+        invoiceId: payInvoice.id,
+        amount: amountVal,
+        paymentMethod: payMethod,
+        paymentDate: payDate,
+        referenceNumber: payReference,
+        notes: payNotes,
+        supplyStatus: paySupplyStatus
       });
-      showToast('تم توليد خطة الأقساط بنجاح.');
-      
-      // Refresh details
-      const refreshed = await apiClient.get(`/invoices/${detailsInvoice.id}`);
-      setDetailsInvoice(refreshed);
+      showToast('تم تسجيل الدفعة بنجاح وتحديث حالة الفاتورة.');
+      setOpenPayDrawer(false);
+      fetchInvoices();
     } catch (err) {
       console.error(err);
-      showToast(err.message || 'فشل توليد خطة الأقساط.', 'error');
+      showToast(err.message || 'فشل تسجيل الدفعة.', 'error');
     } finally {
-      setScheduleLoading(false);
+      setPaySubmitting(false);
+    }
+  };
+
+  const handleOpenMarkPaidDrawer = (invoice) => {
+    setMarkPaidInvoice(invoice);
+    setMarkPaidMethod('cash');
+    setMarkPaidNotes('تسوية كامل القيمة المتبقية');
+    setOpenMarkPaidDrawer(true);
+  };
+
+  const handleSubmitMarkPaid = async (e) => {
+    e.preventDefault();
+    if (!markPaidInvoice) return;
+    const amountVal = markPaidInvoice.remaining_amount;
+    if (amountVal <= 0) {
+      showToast('الفاتورة مسددة بالكامل بالفعل.', 'warning');
+      return;
+    }
+    setMarkPaidSubmitting(true);
+    try {
+      await apiClient.post('/payments', {
+        invoiceId: markPaidInvoice.id,
+        amount: amountVal,
+        paymentMethod: markPaidMethod,
+        paymentDate: new Date().toISOString().split('T')[0],
+        referenceNumber: 'تسوية تلقائية',
+        notes: markPaidNotes,
+        supplyStatus: 'supplied'
+      });
+      showToast('تم تسوية الفاتورة كمدفوعة كلياً بنجاح.');
+      setOpenMarkPaidDrawer(false);
+      fetchInvoices();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تسوية الفاتورة.', 'error');
+    } finally {
+      setMarkPaidSubmitting(false);
+    }
+  };
+
+  const handleOpenReturnDrawer = async (invoice) => {
+    try {
+      const fullInvoice = await apiClient.get(`/invoices/${invoice.id}`);
+      setReturnInvoice(fullInvoice);
+      // Initialize return quantities with 0 for all items
+      const initialQtys = {};
+      fullInvoice.items?.forEach(item => {
+        initialQtys[item.id] = 0;
+      });
+      setReturnQuantities(initialQtys);
+      setReturnReason('');
+      setOpenReturnDrawer(true);
+    } catch (err) {
+      console.error(err);
+      showToast('فشل تحميل تفاصيل الفاتورة لإنشاء المرتجع.', 'error');
+    }
+  };
+
+  const handleReturnQtyChange = (itemId, val) => {
+    const qty = parseInt(val, 10) || 0;
+    setReturnQuantities(prev => ({
+      ...prev,
+      [itemId]: qty
+    }));
+  };
+
+  const handleSubmitReturn = async (e) => {
+    e.preventDefault();
+    if (!returnInvoice) return;
+
+    const itemsToReturn = [];
+    let hasExceeded = false;
+    let exceedsMessage = '';
+
+    for (const item of returnInvoice.items) {
+      const qty = returnQuantities[item.id] || 0;
+      if (qty > 0) {
+        if (qty > item.remaining_returnable_quantity) {
+          hasExceeded = true;
+          exceedsMessage = `الكمية المدخلة للكتاب "${item.product_title}" (${qty}) تتجاوز الكمية المتاحة للإرجاع وهي ${item.remaining_returnable_quantity}.`;
+          break;
+        }
+        itemsToReturn.push({
+          invoiceItemId: item.id,
+          quantity: qty
+        });
+      }
+    }
+
+    if (hasExceeded) {
+      showToast(exceedsMessage, 'error');
+      return;
+    }
+
+    if (itemsToReturn.length === 0) {
+      showToast('يرجى تحديد كمية إرجاع واحدة على الأقل أكبر من الصفر.', 'warning');
+      return;
+    }
+
+    setReturnSubmitting(true);
+    try {
+      await apiClient.post('/returns', {
+        invoiceId: returnInvoice.id,
+        reason: returnReason,
+        items: itemsToReturn
+      });
+      showToast('تم تسجيل مرتجع المبيعات بنجاح وتحديث المخزون والماليات.');
+      setOpenReturnDrawer(false);
+      fetchInvoices();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تسجيل مرتجع المبيعات.', 'error');
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
+
+  const handleMarkPaymentSupplied = async (paymentId) => {
+    if (!window.confirm('هل أنت متأكد من تأكيد توريد هذه الدفعة للخزينة؟')) return;
+    try {
+      await apiClient.post(`/payments/${paymentId}/supply`);
+      showToast('تم تأكيد توريد الدفعة بنجاح.');
+      
+      // Refresh current details invoice to update the list of payments
+      if (detailsInvoice) {
+        const refreshed = await apiClient.get(`/invoices/${detailsInvoice.id}`);
+        setDetailsInvoice(refreshed);
+      }
+      fetchInvoices();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تأكيد توريد الدفعة.', 'error');
     }
   };
 
@@ -619,7 +796,7 @@ export const Invoices = () => {
         outletId: parseInt(formOutletId, 10),
         discount: discountVal,
         shippingCost: parseFloat(formShippingCost) || 0,
-        paymentType: formPaymentType,
+        paymentType: formMode === 'create' ? (formCollectionType === 'full' ? 'cash' : 'deferred') : formPaymentType,
         notes: formNotes,
         items: formItems.map((item) => ({
           productId: item.productId,
@@ -628,17 +805,11 @@ export const Invoices = () => {
       };
 
       if (formMode === 'create') {
-        const createdInvoice = await apiClient.post('/invoices', payload);
-        if (collectedVal > 0) {
-          await apiClient.post('/payments', {
-            invoiceId: createdInvoice.id,
-            amount: collectedVal,
-            paymentMethod: 'cash',
-            paymentDate: new Date().toISOString().split('T')[0],
-            supplyStatus: formSupplyStatus,
-            notes: formCollectionNotes || 'تحصيل تلقائي عند إنشاء الفاتورة.'
-          });
-        }
+        payload.paymentAmount = collectedVal;
+        payload.paymentSupplyStatus = formSupplyStatus;
+        payload.paymentNotes = formCollectionNotes || 'تحصيل تلقائي عند إنشاء الفاتورة.';
+
+        await apiClient.post('/invoices', payload);
         showToast('تم إنشاء الفاتورة وحسم الكميات وتسجيل التحصيل بنجاح.');
       } else {
         await apiClient.put(`/invoices/${selectedFormInvoice.id}`, payload);
@@ -1080,6 +1251,46 @@ export const Invoices = () => {
                           <VisibilityIcon size="small" />
                         </IconButton>
 
+                        {hasPermission('payments.create') && row.remaining_amount > 0 && (
+                          <IconButton
+                            color="success"
+                            title="تسجيل دفع (Pay)"
+                            onClick={() => handleOpenPayDrawer(row)}
+                          >
+                            <PaymentsIcon size="small" />
+                          </IconButton>
+                        )}
+
+                        {hasPermission('payments.create') && row.remaining_amount > 0 && (
+                          <IconButton
+                            color="success"
+                            title="تعليم كمدفوعة كلياً"
+                            onClick={() => handleOpenMarkPaidDrawer(row)}
+                          >
+                            <CheckCircleIcon size="small" />
+                          </IconButton>
+                        )}
+
+                        {hasPermission('shipments.create') && (row.shipping_status === 'pending' || row.shipping_status === 'partially_shipped') && (
+                          <IconButton
+                            color="warning"
+                            title="تسجيل شحنة (Ship)"
+                            onClick={() => navigate(`/shipments?invoiceId=${row.id}&action=create`)}
+                          >
+                            <LocalShippingIcon size="small" />
+                          </IconButton>
+                        )}
+
+                        {hasPermission('invoices.update') && (
+                          <IconButton
+                            color="secondary"
+                            title="إنشاء مرتجع (Return)"
+                            onClick={() => handleOpenReturnDrawer(row)}
+                          >
+                            <SettingsBackupRestoreIcon size="small" />
+                          </IconButton>
+                        )}
+
                         {hasPermission('invoices.update') && (
                           <IconButton
                             color="info"
@@ -1092,7 +1303,7 @@ export const Invoices = () => {
 
                         {hasPermission('invoices.export') && (
                           <IconButton
-                            color="secondary"
+                            color="inherit"
                             title="تحميل فاتورة PDF"
                             onClick={() => handleSinglePdfExport(row.id)}
                           >
@@ -1298,8 +1509,10 @@ export const Invoices = () => {
                             <TableCell sx={{ fontWeight: 'bold' }}>تاريخ السداد</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>طريقة السداد</TableCell>
                             <TableCell align="right" sx={{ fontWeight: 'bold' }}>القيمة</TableCell>
+                            <TableCell sx={{ fontWeight: 'bold' }}>حالة التوريد</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>سجلت بواسطة</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>إجراءات</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -1311,8 +1524,27 @@ export const Invoices = () => {
                               <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                                 {formatCurrencyEGP(p.amount)}
                               </TableCell>
+                              <TableCell>
+                                {p.supply_status === 'supplied' ? (
+                                  <Chip label="مورد" color="success" size="small" variant="outlined" />
+                                ) : (
+                                  <Chip label="غير مورد" color="warning" size="small" variant="outlined" />
+                                )}
+                              </TableCell>
                               <TableCell>{p.user_full_name || 'غير معروف'}</TableCell>
                               <TableCell>{p.notes}</TableCell>
+                              <TableCell align="center">
+                                {p.supply_status === 'not_supplied' && hasPermission('payments.mark_supplied') && (
+                                  <Button
+                                    variant="contained"
+                                    color="success"
+                                    size="small"
+                                    onClick={() => handleMarkPaymentSupplied(p.id)}
+                                  >
+                                    تأكيد التوريد
+                                  </Button>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1326,120 +1558,7 @@ export const Invoices = () => {
                 </Box>
               )}
 
-              {/* TAB 1: Installments */}
-              {detailsTabValue === 999 && (
-                <Box>
-                  {/* Show current installment schedule */}
-                  {detailsInvoice.installments && detailsInvoice.installments.length > 0 && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                        الأقساط المجدولة الحالية
-                      </Typography>
-                      <TableContainer component={Paper}>
-                        <Table size="small">
-                          <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                            <TableRow>
-                              <TableCell sx={{ fontWeight: 'bold' }}>رقم القسط</TableCell>
-                              <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الاستحقاق</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>القيمة المطلوبة</TableCell>
-                              <TableCell sx={{ fontWeight: 'bold' }}>حالة القسط</TableCell>
-                              <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الدفع</TableCell>
-                              <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {detailsInvoice.installments.map((inst) => (
-                              <TableRow key={inst.id}>
-                                <TableCell>{inst.installment_number}</TableCell>
-                                <TableCell>{formatEgyptDate(inst.due_date)}</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                                  {formatCurrencyEGP(inst.amount)}
-                                </TableCell>
-                                <TableCell>
-                                  {inst.status === 'paid' ? (
-                                    <Chip label="مدفوع" color="success" size="small" />
-                                  ) : inst.status === 'overdue' ? (
-                                    <Chip label="متأخر استحقاقه" color="error" size="small" />
-                                  ) : (
-                                    <Chip label="غير مدفوع" color="warning" size="small" />
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {inst.paid_date ? formatEgyptDate(inst.paid_date) : '-'}
-                                </TableCell>
-                                <TableCell>{inst.notes}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Box>
-                  )}
 
-                  {/* Regenerate Installment Schedule tool (Only visible if remaining amount exists and user has update permissions) */}
-                  {parseFloat(detailsInvoice.remaining_amount) > 0 && hasPermission('invoices.update') && (
-                    <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: '#fdfefe' }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: 'secondary.dark' }}>
-                        أداة جدولة الأقساط (توليد خطة سداد)
-                      </Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={3}>
-                          <TextField
-                            fullWidth
-                            label="عدد الأقساط"
-                            size="small"
-                            type="number"
-                            value={installmentsCount}
-                            onChange={(e) => setInstallmentsCount(Math.max(1, e.target.value))}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={3}>
-                          <TextField
-                            fullWidth
-                            label="الفترة بين الأقساط (بالأيام)"
-                            size="small"
-                            type="number"
-                            value={installmentsInterval}
-                            onChange={(e) => setInstallmentsInterval(Math.max(1, e.target.value))}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={3}>
-                          <TextField
-                            fullWidth
-                            label="تاريخ أول قسط"
-                            size="small"
-                            type="date"
-                            InputLabelProps={{ shrink: true }}
-                            value={installmentsStartDate}
-                            onChange={(e) => setInstallmentsStartDate(e.target.value)}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={3}>
-                          <Button
-                            fullWidth
-                            variant="contained"
-                            color="secondary"
-                            disabled={scheduleLoading}
-                            onClick={handleGenerateSchedule}
-                            sx={{ height: 40 }}
-                          >
-                            {scheduleLoading ? 'جاري التوليد...' : 'توليد/تحديث الجدول'}
-                          </Button>
-                        </Grid>
-                        <Grid item xs={12}>
-                          <TextField
-                            fullWidth
-                            label="ملاحظات الجدولة"
-                            size="small"
-                            value={installmentsNotes}
-                            onChange={(e) => setInstallmentsNotes(e.target.value)}
-                          />
-                        </Grid>
-                      </Grid>
-                    </Paper>
-                  )}
-                </Box>
-              )}
 
               {/* TAB 2: Status History */}
               {detailsTabValue === 1 && (
@@ -1477,6 +1596,63 @@ export const Invoices = () => {
             </Box>
             <Divider sx={{ my: 2 }} />
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              {hasPermission('payments.create') && detailsInvoice.remaining_amount > 0 && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<PaymentsIcon />}
+                  onClick={() => {
+                    setOpenDetailsModal(false);
+                    handleOpenPayDrawer(detailsInvoice);
+                  }}
+                >
+                  تسجيل دفع
+                </Button>
+              )}
+
+              {hasPermission('payments.create') && detailsInvoice.remaining_amount > 0 && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<CheckCircleIcon />}
+                  onClick={() => {
+                    setOpenDetailsModal(false);
+                    handleOpenMarkPaidDrawer(detailsInvoice);
+                  }}
+                >
+                  إغلاق كمدفوع كلياً
+                </Button>
+              )}
+
+              {hasPermission('shipments.create') && 
+               (detailsInvoice.shipping_status === 'pending' || detailsInvoice.shipping_status === 'partially_shipped') && (
+                <Button
+                  variant="contained"
+                  color="warning"
+                  startIcon={<LocalShippingIcon />}
+                  onClick={() => {
+                    setOpenDetailsModal(false);
+                    navigate(`/shipments?invoiceId=${detailsInvoice.id}&action=create`);
+                  }}
+                >
+                  تسجيل شحنة (Ship)
+                </Button>
+              )}
+
+              {hasPermission('invoices.update') && (
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<SettingsBackupRestoreIcon />}
+                  onClick={() => {
+                    setOpenDetailsModal(false);
+                    handleOpenReturnDrawer(detailsInvoice);
+                  }}
+                >
+                  إنشاء مرتجع (Return)
+                </Button>
+              )}
+
               {hasPermission('invoices.export') && (
                 <Button
                   variant="outlined"
@@ -1487,19 +1663,7 @@ export const Invoices = () => {
                   تنزيل PDF
                 </Button>
               )}
-              {hasPermission('shipments.create') && 
-               (detailsInvoice.shipping_status === 'pending' || detailsInvoice.shipping_status === 'partially_shipped') && (
-                <Button
-                  variant="contained"
-                  color="warning"
-                  onClick={() => {
-                    setOpenDetailsModal(false);
-                    navigate(`/shipments?invoiceId=${detailsInvoice.id}&action=create`);
-                  }}
-                >
-                  تسجيل شحنة (Ship)
-                </Button>
-              )}
+
               <Button onClick={() => setOpenDetailsModal(false)} variant="contained" color="inherit">
                 إغلاق
               </Button>
@@ -1590,20 +1754,41 @@ export const Invoices = () => {
                 </Grid>
               )}
 
-              {/* Payment Type */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth size="small" required>
-                  <InputLabel>نوع الدفع</InputLabel>
-                  <Select
-                    value={formPaymentType}
-                    onChange={(e) => setFormPaymentType(e.target.value)}
+              {/* Payment Status (Only on creation) */}
+              {formMode === 'create' ? (
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth size="small" required>
+                    <InputLabel>حالة الدفع عند الإنشاء</InputLabel>
+                    <Select
+                      value={formCollectionType}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFormCollectionType(val);
+                        if (val === 'none') {
+                          setFormCollectedAmount(0);
+                        } else if (val === 'full') {
+                          setFormCollectedAmount(parseFloat(formTotals.total) || 0);
+                        }
+                      }}
+                      label="حالة الدفع عند الإنشاء"
+                    >
+                      <MenuItem value="none">مؤجل كلياً (Fully Deferred)</MenuItem>
+                      <MenuItem value="partial">مدفوع جزئياً (Partially Paid)</MenuItem>
+                      <MenuItem value="full">مدفوع كلياً (Fully Paid)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              ) : (
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
                     label="نوع الدفع"
-                  >
-                    <MenuItem value="cash">نقدي (Cash)</MenuItem>
-                    <MenuItem value="deferred">آجل ذمم (Deferred)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
+                    size="small"
+                    disabled
+                    value={translatePaymentType(formPaymentType)}
+                  />
+                </Grid>
+              )}
 
               {/* Discount */}
               <Grid item xs={12} sm={6}>
@@ -1650,86 +1835,54 @@ export const Invoices = () => {
                 />
               </Grid>
 
-              {/* Payment Collection Section (Only on creation) */}
-              {formMode === 'create' && (
+              {/* Payment Details Section (Only on creation if payment is chosen) */}
+              {formMode === 'create' && formCollectionType !== 'none' && (
                 <Grid item xs={12}>
-                  <Paper variant="outlined" sx={{ p: 2, mt: 1, backgroundColor: '#fcfcfc', border: '1px dashed #ccc' }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.dark' }}>
-                      تحصيل دفعة مالية عند الإنشاء
+                  <Paper variant="outlined" sx={{ p: 2, mt: 1, backgroundColor: '#f8fafc', borderColor: 'secondary.light' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: 'secondary.dark' }}>
+                      تفاصيل تحصيل النقدية عند الإنشاء
                     </Typography>
                     <Grid container spacing={2}>
-                      {/* Collection Type Select */}
-                      <Grid item xs={12} sm={4}>
-                        <FormControl fullWidth size="small">
-                          <InputLabel>خيار تحصيل الدفعة</InputLabel>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          required
+                          label="المبلغ المحصل"
+                          size="small"
+                          type="number"
+                          disabled={formCollectionType === 'full'}
+                          inputProps={{ step: '0.01', min: '0.01' }}
+                          value={formCollectionType === 'full' ? formTotals.total : formCollectedAmount}
+                          onChange={(e) => setFormCollectedAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                          InputProps={{
+                            endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
+                          }}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth size="small" required>
+                          <InputLabel>حالة توريد النقدية</InputLabel>
                           <Select
-                            value={formCollectionType}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setFormCollectionType(val);
-                              if (val === 'none') {
-                                setFormCollectedAmount(0);
-                              } else if (val === 'full') {
-                                setFormCollectedAmount(parseFloat(formTotals.total) || 0);
-                              }
-                            }}
-                            label="خيار تحصيل الدفعة"
+                            value={formSupplyStatus}
+                            onChange={(e) => setFormSupplyStatus(e.target.value)}
+                            label="حالة توريد النقدية"
                           >
-                            <MenuItem value="none">لا يوجد تحصيل الآن</MenuItem>
-                            <MenuItem value="partial">تحصيل دفعة جزئية</MenuItem>
-                            <MenuItem value="full">تحصيل القيمة كاملة</MenuItem>
+                            <MenuItem value="not_supplied">مدفوع فقط (في الخزينة الفرعية)</MenuItem>
+                            <MenuItem value="supplied">مدفوع وتم توريده (إلى خزينة الشركة)</MenuItem>
                           </Select>
                         </FormControl>
                       </Grid>
 
-                      {/* Collected Amount Input */}
-                      {formCollectionType !== 'none' && (
-                        <Grid item xs={12} sm={4}>
-                          <TextField
-                            fullWidth
-                            label="المبلغ المحصل"
-                            size="small"
-                            type="number"
-                            disabled={formCollectionType === 'full'}
-                            inputProps={{ step: '0.01', min: '0' }}
-                            value={formCollectionType === 'full' ? formTotals.total : formCollectedAmount}
-                            onChange={(e) => setFormCollectedAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                            InputProps={{
-                              endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
-                            }}
-                          />
-                        </Grid>
-                      )}
-
-                      {/* Supply Status */}
-                      {formCollectionType !== 'none' && (
-                        <Grid item xs={12} sm={4}>
-                          <FormControl fullWidth size="small">
-                            <InputLabel>حالة توريد النقدية</InputLabel>
-                            <Select
-                              value={formSupplyStatus}
-                              onChange={(e) => setFormSupplyStatus(e.target.value)}
-                              label="حالة توريد النقدية"
-                            >
-                              <MenuItem value="not_supplied">لم يتم التوريد (في الخزينة الفرعية)</MenuItem>
-                              <MenuItem value="supplied">تم التوريد (إلى خزينة الشركة)</MenuItem>
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                      )}
-
-                      {/* Collection Notes */}
-                      {formCollectionType !== 'none' && (
-                        <Grid item xs={12}>
-                          <TextField
-                            fullWidth
-                            label="ملاحظات عملية السداد/التحصيل"
-                            size="small"
-                            value={formCollectionNotes}
-                            onChange={(e) => setFormCollectionNotes(e.target.value)}
-                          />
-                        </Grid>
-                      )}
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="ملاحظات عملية التحصيل"
+                          size="small"
+                          value={formCollectionNotes}
+                          onChange={(e) => setFormCollectionNotes(e.target.value)}
+                        />
+                      </Grid>
                     </Grid>
                   </Paper>
                 </Grid>
@@ -1886,6 +2039,315 @@ export const Invoices = () => {
             </Button>
           </Box>
         </form>
+      </Drawer>
+
+      {/* --- تسجيل دفعة Drawer (Pay) --- */}
+      <Drawer
+        anchor="left"
+        open={openPayDrawer}
+        onClose={() => !paySubmitting && setOpenPayDrawer(false)}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 600 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
+        }}
+      >
+        {payInvoice && (
+          <Box component="form" onSubmit={handleSubmitPayDrawer} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                تسجيل دفعة جديدة للفاتورة: {payInvoice.invoice_number}
+              </Typography>
+              <Button onClick={() => setOpenPayDrawer(false)} variant="outlined" size="small" color="inherit" disabled={paySubmitting}>إغلاق</Button>
+            </Box>
+            <Divider sx={{ mb: 3 }} />
+
+            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                المنفذ: {payInvoice.outlet_name} <br />
+                إجمالي الفاتورة: {formatCurrencyEGP(payInvoice.total_price)} | المسدد سابقاً: {formatCurrencyEGP(payInvoice.paid_amount || 0)} | المتبقي: {formatCurrencyEGP(payInvoice.remaining_amount)}
+              </Alert>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="المبلغ المحصل (ج.م)"
+                    type="number"
+                    required
+                    inputProps={{ min: 0.01, step: 0.01, max: payInvoice.remaining_amount }}
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">ج.م</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel>طريقة الدفع</InputLabel>
+                    <Select
+                      value={payMethod}
+                      onChange={(e) => setPayMethod(e.target.value)}
+                      label="طريقة الدفع"
+                    >
+                      <MenuItem value="cash">نقدي</MenuItem>
+                      <MenuItem value="check">شيك</MenuItem>
+                      <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="تاريخ الدفع"
+                    type="date"
+                    required
+                    value={payDate}
+                    onChange={(e) => setPayDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth required>
+                    <InputLabel>حالة التوريد للخزينة</InputLabel>
+                    <Select
+                      value={paySupplyStatus}
+                      onChange={(e) => setPaySupplyStatus(e.target.value)}
+                      label="حالة التوريد للخزينة"
+                    >
+                      <MenuItem value="not_supplied">مدفوع فقط (غير مورد بعد)</MenuItem>
+                      <MenuItem value="supplied">مدفوع وتم توريده للخزينة</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="رقم الإسناد / الشيك / الحوالة"
+                    value={payReference}
+                    onChange={(e) => setPayReference(e.target.value)}
+                  />
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    label="ملاحظات وتفاصيل السداد"
+                    value={payNotes}
+                    onChange={(e) => setPayNotes(e.target.value)}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={() => setOpenPayDrawer(false)}
+                disabled={paySubmitting}
+              >
+                إلغاء
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                type="submit"
+                disabled={paySubmitting}
+              >
+                {paySubmitting ? 'جاري تسجيل الدفعة...' : 'تسجيل الدفعة وتحديث المالية'}
+              </Button>
+            </Box>
+          </Box>
+        )}
+      </Drawer>
+
+      {/* --- تأكيد تسوية الفاتورة كمدفوعة كلياً --- */}
+      <Drawer
+        anchor="left"
+        open={openMarkPaidDrawer}
+        onClose={() => !markPaidSubmitting && setOpenMarkPaidDrawer(false)}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 500 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
+        }}
+      >
+        {markPaidInvoice && (
+          <Box component="form" onSubmit={handleSubmitMarkPaid} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                تعليم الفاتورة كمدفوعة كلياً
+              </Typography>
+              <Button onClick={() => setOpenMarkPaidDrawer(false)} variant="outlined" size="small" color="inherit" disabled={markPaidSubmitting}>إغلاق</Button>
+            </Box>
+            <Divider sx={{ mb: 3 }} />
+
+            <Box sx={{ flexGrow: 1 }}>
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                رقم الفاتورة: {markPaidInvoice.invoice_number} <br />
+                المنفذ: {markPaidInvoice.outlet_name} <br />
+                القيمة المتبقية المستحقة: <strong>{formatCurrencyEGP(markPaidInvoice.remaining_amount)}</strong>
+              </Alert>
+
+              <Typography variant="body1" sx={{ mb: 3 }}>
+                سيتم تسجيل سداد فوري بقيمة كامل المتبقي (<strong>{formatCurrencyEGP(markPaidInvoice.remaining_amount)}</strong>) كدفعة <strong>نقدية موردة</strong> لإغلاق الحساب المالي للفاتورة وتحويل حالتها إلى "مسددة بالكامل".
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <FormControl fullWidth required>
+                    <InputLabel>طريقة سداد التسوية</InputLabel>
+                    <Select
+                      value={markPaidMethod}
+                      onChange={(e) => setMarkPaidMethod(e.target.value)}
+                      label="طريقة سداد التسوية"
+                    >
+                      <MenuItem value="cash">نقدي</MenuItem>
+                      <MenuItem value="check">شيك</MenuItem>
+                      <MenuItem value="bank_transfer">تحويل بنكي</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="ملاحظات التسوية"
+                    value={markPaidNotes}
+                    onChange={(e) => setMarkPaidNotes(e.target.value)}
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={() => setOpenMarkPaidDrawer(false)}
+                disabled={markPaidSubmitting}
+              >
+                إلغاء
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                type="submit"
+                disabled={markPaidSubmitting}
+              >
+                {markPaidSubmitting ? 'جاري التسوية...' : 'تأكيد التسوية وسداد المتبقي'}
+              </Button>
+            </Box>
+          </Box>
+        )}
+      </Drawer>
+
+      {/* --- إنشاء مرتجع Drawer --- */}
+      <Drawer
+        anchor="left"
+        open={openReturnDrawer}
+        onClose={() => !returnSubmitting && setOpenReturnDrawer(false)}
+        PaperProps={{
+          sx: { width: { xs: '100%', sm: 600 }, p: 3, display: 'flex', flexDirection: 'column', height: '100vh' }
+        }}
+      >
+        {returnInvoice && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                إنشاء مرتجع مبيعات جديد
+              </Typography>
+              <Button onClick={() => setOpenReturnDrawer(false)} variant="outlined" size="small" color="inherit" disabled={returnSubmitting}>إغلاق</Button>
+            </Box>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              للفاتورة رقم: {returnInvoice.invoice_number}
+            </Typography>
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Scrollable Content */}
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', pr: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2 }}>أصناف وكميات الفاتورة القابلة للإرجاع:</Typography>
+              <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>اسم الكتاب</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>المباع</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>المسترجع سابقاً</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المتاحة للاسترجاع</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 100 }}>كمية المرتجع الحالية</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {returnInvoice.items?.map((item) => {
+                      const maxQty = item.remaining_returnable_quantity;
+                      const currentVal = returnQuantities[item.id] || 0;
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.product_title}</TableCell>
+                          <TableCell align="center">{item.quantity}</TableCell>
+                          <TableCell align="center">{item.quantity - maxQty}</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold', color: maxQty > 0 ? 'warning.main' : 'success.main' }}>{maxQty}</TableCell>
+                          <TableCell align="center">
+                            <TextField
+                              size="small"
+                              type="number"
+                              value={currentVal}
+                              onChange={(e) => handleReturnQtyChange(item.id, e.target.value)}
+                              inputProps={{ min: 0, max: maxQty }}
+                              disabled={maxQty <= 0 || returnSubmitting}
+                              sx={{ width: 80 }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TextField
+                fullWidth
+                label="سبب المرتجع / ملاحظات"
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                placeholder="يرجى كتابة سبب المرتجع هنا..."
+                multiline
+                rows={3}
+                disabled={returnSubmitting}
+                sx={{ mt: 2 }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+
+            {/* Footer */}
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="inherit"
+                onClick={() => setOpenReturnDrawer(false)}
+                disabled={returnSubmitting}
+              >
+                إلغاء
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleSubmitReturn}
+                disabled={returnSubmitting}
+              >
+                {returnSubmitting ? 'جاري الحفظ...' : 'تأكيد وإرجاع للمخزن'}
+              </Button>
+            </Box>
+          </Box>
+        )}
       </Drawer>
 
       {/* Snackbar Alert Toast */}

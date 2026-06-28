@@ -3,8 +3,8 @@
 CREATE TABLE IF NOT EXISTS finance_ledger_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   outlet_id INTEGER NOT NULL,
-  entry_type TEXT NOT NULL CHECK (entry_type IN ('invoice_created', 'invoice_cancelled', 'invoice_updated', 'payment_recorded', 'payment_reversed', 'manual_adjustment')),
-  reference_type TEXT NOT NULL CHECK (reference_type IN ('invoice', 'payment', 'manual')),
+  entry_type TEXT NOT NULL CHECK (entry_type IN ('invoice_created', 'invoice_cancelled', 'invoice_updated', 'payment_recorded', 'payment_supplied', 'payment_reversed', 'return_created', 'manual_adjustment')),
+  reference_type TEXT NOT NULL CHECK (reference_type IN ('invoice', 'payment', 'manual', 'return')),
   reference_id INTEGER,
   cash_amount REAL NOT NULL DEFAULT 0,
   receivable_amount REAL NOT NULL DEFAULT 0,

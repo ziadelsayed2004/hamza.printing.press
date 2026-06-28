@@ -12,6 +12,8 @@ router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) 
   const offset = parseInt(req.query.offset || '0', 10);
   const invoiceId = req.query.invoiceId ? parseInt(req.query.invoiceId, 10) : null;
   const supplyStatus = req.query.supplyStatus || '';
+  const startDate = req.query.startDate || '';
+  const endDate = req.query.endDate || '';
 
   try {
     const userId = req.session.user.id;
@@ -31,7 +33,7 @@ router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) 
       filterOutletIds = [queryOutletId];
     }
 
-    const list = await paymentsService.getPayments({ limit, offset, invoiceId, outletIds: filterOutletIds, supplyStatus });
+    const list = await paymentsService.getPayments({ limit, offset, invoiceId, outletIds: filterOutletIds, supplyStatus, startDate, endDate });
     res.status(200).json(list);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

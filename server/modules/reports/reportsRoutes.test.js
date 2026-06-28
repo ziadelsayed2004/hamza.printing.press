@@ -35,15 +35,6 @@ describe('Reports API Integration Tests', () => {
 
     // 2. Delete payment installments, payments, status history, and items for the test invoice
     await db.run(`
-      DELETE FROM payment_installments 
-      WHERE invoice_id IN (
-        SELECT id FROM invoices 
-        WHERE outlet_id IN (
-          SELECT id FROM outlets WHERE name = "Test Cairo Report Outlet"
-        )
-      )
-    `);
-    await db.run(`
       DELETE FROM invoice_payments 
       WHERE invoice_id IN (
         SELECT id FROM invoices 

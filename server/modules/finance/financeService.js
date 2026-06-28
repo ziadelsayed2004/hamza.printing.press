@@ -77,29 +77,55 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
 /**
  * Fetch overview finance metrics in Egypt timezone and EGP.
  */
-async function getFinanceSummary(outletIds = null) {
+async function getFinanceSummary(outletIds = null, authorIds = null) {
   let totalInvoicesSql = `
-    SELECT COALESCE(SUM(total_price), 0) as total 
-    FROM invoices 
-    WHERE payment_status != 'cancelled'
+    SELECT COALESCE(SUM(total_price), 0) as total, COUNT(*) as count
+    FROM invoices i
+    WHERE i.payment_status != 'cancelled'
   `;
   let ledgerSql = `
     SELECT 
       COALESCE(SUM(cash_amount), 0) as totalCollected,
       COALESCE(SUM(receivable_amount), 0) as totalReceivables
-    FROM finance_ledger_entries
+    FROM finance_ledger_entries fle
     WHERE 1=1
+  `;
+  let partialShipmentsSql = `
+    SELECT COUNT(*) as count
+    FROM invoices i
+    WHERE i.shipping_status = 'partial' AND i.payment_status != 'cancelled'
   `;
 
   const params = [];
+  const ledgerParams = [];
+
   if (outletIds && outletIds.length > 0) {
     const placeholders = outletIds.map(() => '?').join(',');
-    totalInvoicesSql += ` AND outlet_id IN (${placeholders})`;
-    ledgerSql += ` AND outlet_id IN (${placeholders})`;
+    totalInvoicesSql += ` AND i.outlet_id IN (${placeholders})`;
+    ledgerSql += ` AND fle.outlet_id IN (${placeholders})`;
+    partialShipmentsSql += ` AND i.outlet_id IN (${placeholders})`;
     params.push(...outletIds);
+    ledgerParams.push(...outletIds);
   } else if (outletIds) {
     totalInvoicesSql += ` AND 0=1`;
     ledgerSql += ` AND 0=1`;
+    partialShipmentsSql += ` AND 0=1`;
+  }
+
+  if (authorIds && authorIds.length > 0) {
+    const placeholders = authorIds.map(() => '?').join(',');
+    const authorFilter = ` AND i.id IN (
+      SELECT ii.invoice_id
+      FROM invoice_items ii
+      JOIN product_authors pa ON pa.product_id = ii.product_id
+      WHERE pa.author_id IN (${placeholders})
+    )`;
+    totalInvoicesSql += authorFilter;
+    partialShipmentsSql += authorFilter;
+    params.push(...authorIds);
+  } else if (authorIds) {
+    totalInvoicesSql += ` AND 0=1`;
+    partialShipmentsSql += ` AND 0=1`;
   }
 
   let suppliedSql = `
@@ -114,29 +140,87 @@ async function getFinanceSummary(outletIds = null) {
     JOIN invoices i ON i.id = p.invoice_id
     WHERE i.payment_status != 'cancelled' AND p.supply_status = 'not_supplied'
   `;
-  const filterParams = [...params];
+  let returnsSql = `
+    SELECT COALESCE(SUM(return_value), 0) as total
+    FROM returns r
+    WHERE r.status = 'approved'
+  `;
+
+  const subParams = [];
   if (outletIds && outletIds.length > 0) {
     const placeholders = outletIds.map(() => '?').join(',');
     suppliedSql += ` AND i.outlet_id IN (${placeholders})`;
     unsuppliedSql += ` AND i.outlet_id IN (${placeholders})`;
+    returnsSql += ` AND r.outlet_id IN (${placeholders})`;
+    subParams.push(...outletIds);
   } else if (outletIds) {
     suppliedSql += ` AND 0=1`;
     unsuppliedSql += ` AND 0=1`;
+    returnsSql += ` AND 0=1`;
   }
 
+  if (authorIds && authorIds.length > 0) {
+    const placeholders = authorIds.map(() => '?').join(',');
+    const authorFilter = ` AND i.id IN (
+      SELECT ii.invoice_id
+      FROM invoice_items ii
+      JOIN product_authors pa ON pa.product_id = ii.product_id
+      WHERE pa.author_id IN (${placeholders})
+    )`;
+    suppliedSql += authorFilter;
+    unsuppliedSql += authorFilter;
+    subParams.push(...authorIds);
+
+    returnsSql += ` AND r.invoice_id IN (
+      SELECT ii.invoice_id
+      FROM invoice_items ii
+      JOIN product_authors pa ON pa.product_id = ii.product_id
+      WHERE pa.author_id IN (${placeholders})
+    )`;
+    subParams.push(...authorIds);
+  } else if (authorIds) {
+    suppliedSql += ` AND 0=1`;
+    unsuppliedSql += ` AND 0=1`;
+    returnsSql += ` AND 0=1`;
+  }
+
+  let stockAlertsSql = `
+    SELECT COUNT(*) as count FROM (
+      SELECT p.id, COALESCE(SUM(t.quantity), 0) as stock
+      FROM products p
+      LEFT JOIN inventory_transactions t ON t.product_id = p.id
+      LEFT JOIN product_authors pa ON pa.product_id = p.id
+      WHERE p.status = 'active' AND p.stock_policy != 'ignore'
+  `;
+  const stockParams = [];
+  if (authorIds && authorIds.length > 0) {
+    const placeholders = authorIds.map(() => '?').join(',');
+    stockAlertsSql += ` AND pa.author_id IN (${placeholders})`;
+    stockParams.push(...authorIds);
+  }
+  stockAlertsSql += ` GROUP BY p.id HAVING stock <= 10 )`;
+
   const invoiceRow = await db.get(totalInvoicesSql, params);
-  const ledgerRow = await db.get(ledgerSql, params);
-  const suppliedRow = await db.get(suppliedSql, filterParams);
-  const unsuppliedRow = await db.get(unsuppliedSql, filterParams);
+  const ledgerRow = await db.get(ledgerSql, ledgerParams);
+  const suppliedRow = await db.get(suppliedSql, subParams);
+  const unsuppliedRow = await db.get(unsuppliedSql, subParams);
+  const returnsRow = await db.get(returnsSql, subParams);
+  const partialShipmentsRow = await db.get(partialShipmentsSql, params);
+  const stockAlertsRow = await db.get(stockAlertsSql, stockParams);
 
   const totalInvoices = invoiceRow.total;
+  const totalInvoicesCount = invoiceRow.count;
   const totalCollected = ledgerRow.totalCollected;
   const totalReceivables = ledgerRow.totalReceivables;
   const suppliedBalance = suppliedRow.total;
   const unsuppliedBalance = unsuppliedRow.total;
+  const returnBalance = returnsRow.total;
+  const partialShipmentsCount = partialShipmentsRow ? partialShipmentsRow.count : 0;
+  const stockAlertsCount = stockAlertsRow ? stockAlertsRow.count : 0;
 
   return {
     totalInvoices,
+    totalInvoicesCount,
     totalCollected,
     totalReceivables,
     totalOverdue: 0,
@@ -149,7 +233,15 @@ async function getFinanceSummary(outletIds = null) {
     suppliedBalance,
     unsuppliedBalance,
     supplied_balance: suppliedBalance,
-    unsupplied_balance: unsuppliedBalance
+    unsupplied_balance: unsuppliedBalance,
+
+    pending: totalReceivables,
+    collected: totalCollected,
+    supplied: suppliedBalance,
+    unsupplied: unsuppliedBalance,
+    returns: returnBalance,
+    partialShipmentsCount,
+    stockAlertsCount
   };
 }
 
@@ -236,7 +328,8 @@ async function getBalancesByOutlet(outletIds = null) {
       supplied_balance: summary.suppliedBalance,
       unsupplied_balance: summary.unsuppliedBalance,
       collected_balance: summary.totalCollected,
-      receivable_balance: summary.totalReceivables
+      receivable_balance: summary.totalReceivables,
+      return_balance: summary.returns
     });
   }
   return results;
@@ -317,11 +410,23 @@ async function getOutletStatement(outletId) {
     };
   });
 
+  const summary = await getFinanceSummary([outletId]);
+
   return {
     outlet: {
       id: outlet.id,
       name: outlet.name,
-      governorate: outlet.governorate
+      governorate: outlet.governorate,
+      credit_limit: outlet.credit_limit
+    },
+    summary: {
+      invoice_total: summary.invoice_total,
+      collected_total: summary.collected_total,
+      supplied_balance: summary.supplied_balance,
+      unsupplied_balance: summary.unsupplied_balance,
+      return_balance: summary.returns,
+      pending_balance: summary.pending_balance,
+      net_exposure: summary.pending_balance
     },
     statement
   };

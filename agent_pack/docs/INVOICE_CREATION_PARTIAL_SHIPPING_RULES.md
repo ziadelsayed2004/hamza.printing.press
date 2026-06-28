@@ -1,83 +1,179 @@
-# Invoice Creation & Partial Shipping Rules — مطبعة حمزة
+# Final Business Rules — Finance, Shipping, Returns, Inventory
 
-## Goal
-The invoice creation flow must be professional, owned, complete, dynamic, and connected to outlet type pricing, inventory, finance, and shipping.
+هذا الملف هو العقد النهائي للبيزنس. أي كود أو شاشة أو اختبار يخالفه يعتبر خطأ ويجب إصلاحه.
 
-## Invoice creation flow
-The invoice builder must not feel like a generic table. It must be an operational business screen.
+## 1. قرارات ملغاة نهائيًا
 
-Required flow:
+### ممنوع التقسيط
+- لا يوجد installments.
+- لا يوجد payment plans.
+- لا يوجد جدول أقساط في UI.
+- لا يوجد إنشاء خطة أقساط.
+- لا يوجد حالات overdue الخاصة بالأقساط.
+- أي بقايا `payment_installments` أو `installment` يجب حذفها أو تحويلها migration-safe إذا كانت موجودة في fresh schema.
 
-1. Select outlet.
-2. System resolves outlet type.
-3. Show outlet metadata: governorate, address, phone, credit limit, pending balance.
-4. Add books/products using search/autocomplete.
-5. For every product, auto-resolve price from outlet type.
-6. Allow quantity edit with stock validation.
-7. Show line totals, subtotal, shipping cost, discount if supported, and invoice total.
-8. Choose collection state at creation:
-   - no payment
-   - partial payment
-   - full payment
-9. If payment is entered, choose supplied/not supplied.
-10. Save invoice with immutable snapshots.
-11. Create inventory transactions.
-12. Create finance ledger entries.
-13. Create notifications when needed.
+### ممنوع Import
+- لا يوجد Import Excel.
+- لا يوجد Import CSV.
+- لا يوجد templates upload.
+- لا يوجد preview import.
+- التصدير فقط مسموح.
 
-## Partial payment, not installments
-Partial payment is allowed. Installments are forbidden.
+## 2. حالات الدفع النهائية
 
-There is no schedule, no due dates, and no payment plan UI.
+الفاتورة لها 3 حالات دفع أساسية فقط:
 
-## Partial shipping
-The system must allow shipping part of an invoice by choosing exact invoice items and quantities.
+1. `deferred_full` — مؤجل كليًا: لم يتم تحصيل أي مبلغ.
+2. `partially_paid` — مدفوع جزئيًا: تم تحصيل جزء من إجمالي الفاتورة.
+3. `fully_paid` — مدفوع كليًا: تم تحصيل إجمالي الفاتورة.
 
-Rules:
+يمكن في قاعدة البيانات استخدام أسماء ثابتة أخرى لو موجودة بالفعل، لكن يجب أن يعرض UI هذه المعاني فقط ولا يظهر تقسيط.
 
-- Invoice contains items and quantities.
-- Shipment can include a subset of invoice items.
-- Shipment item quantity cannot exceed remaining unshipped quantity.
-- Invoice shipping status is calculated:
-  - `not_shipped`: no shipped quantity.
-  - `partially_shipped`: some quantity shipped, not all.
-  - `shipped`: all quantities shipped.
-  - `partially_returned`: some shipped quantities returned.
-  - `returned`: all shipped quantities returned.
-- Partial shipping must not change payment math.
-- Payment and supply are invoice-level finance concepts.
-- Shipment has its own status/history.
+## 3. التوريد والتحصيل
 
-## Stock behavior
-- Creating invoice reserves or decrements stock according to current implemented policy.
-- Creating shipment must not double-deduct stock if stock was already deducted on invoice creation.
-- If the code uses reservation-first logic, shipment consumes reserved stock.
-- The agent must choose one policy and document it; no hidden double deduction.
+التحصيل غير التوريد:
 
-## UI requirements
-Invoice builder must include:
+- **تم الدفع/التحصيل**: المنفذ دفع أو تم استلام مبلغ منه.
+- **تم التوريد**: المبلغ المحصل دخل خزينة/إدارة المطبعة وتم تأكيده.
 
-- full RTL layout.
-- Stepper or structured sections.
-- Sticky totals summary.
-- Clear product rows.
-- natural form field widths.
-- no cramped labels.
-- drawer or full page flow, not random modal stack.
-- confirmation screen before save.
+كل payment له:
 
-Partial shipping UI must include:
+- amount
+- method
+- collected_at/payment_date
+- supply_status: `supplied` أو `not_supplied`
+- supplied_at
+- supplied_by
+- reference_number
+- notes
+- audit log
 
-- invoice item list with ordered/shipped/remaining quantities.
-- quantity selector for shipment.
-- shipment notes and shipping status.
-- status timeline.
+## 4. الأرصدة المالية
 
-## Reports/export impact
-Exports must include:
+### رصيد معلق
+هو كل المبلغ المستحق على المنافذ ولم يتم تحصيله بعد.
 
-- invoice payment status.
-- invoice supply status.
-- shipped/remaining quantities.
-- pending balance.
-- supplied/unsupplied collected amounts.
+```text
+pending_receivable = invoice_total - collected_total - approved_return_credit_adjustments
+```
+
+### رصيد فعلي / محصل
+هو كل المبلغ الذي تم تحصيله من المنافذ.
+
+```text
+actual_collected = sum(payments.amount)
+```
+
+### محصل ومورد
+```text
+supplied_balance = sum(payments.amount where supply_status = supplied)
+```
+
+### محصل ولم يورد
+```text
+unsupplied_collected_balance = sum(payments.amount where supply_status = not_supplied)
+```
+
+### رصيد مسترجعات
+قيمة المسترجعات المعتمدة للمنفذ، ويجب أن تظهر في كشف حساب المنفذ وتدخل في حساب limit.
+
+```text
+return_balance = sum(approved_returns.value)
+```
+
+## 5. حد المنفذ / الليميت
+
+يتم قياسه على صافي المديونية الفعلية، وليس على الإجمالي الخام فقط.
+
+```text
+net_outlet_exposure = pending_receivable - return_balance + manual_debit_adjustments - manual_credit_adjustments
+```
+
+إذا تعدى `net_outlet_exposure` حد المنفذ `credit_limit` يتم إنشاء إشعار.
+
+## 6. الاسترجاع
+
+الاسترجاع له سجل واضح وليس تعديل صامت:
+
+- return record
+- return items
+- linked invoice
+- linked outlet
+- returned quantities
+- reason
+- status
+- inventory effect
+- return credit value
+- audit log
+
+أنواع الاسترجاع:
+
+- استرجاع جزئي من فاتورة.
+- استرجاع كامل من فاتورة.
+- استرجاع منتج/كمية محددة.
+
+قواعد الاسترجاع:
+
+- لا يمكن إرجاع كمية أكبر من الكمية الأصلية ناقص المرتجع سابقًا.
+- الاسترجاع يزيد المخزون إذا المنتج stock_policy = track.
+- الاسترجاع يضيف قيمة إلى return balance للمنفذ.
+- الاسترجاع يؤثر على كشف الحساب والليميت.
+- الاسترجاع لا يحذف الفاتورة ولا الدفعات القديمة؛ يضاف كسجل مستقل.
+
+## 7. الشحن الجزئي
+
+الشحن يتم على مستوى منتجات الفاتورة وكمياتها:
+
+- يختار المستخدم فاتورة.
+- تظهر بنود الفاتورة.
+- لكل بند يظهر: الكمية الأصلية، المشحون سابقًا، المتبقي للشحن.
+- يحدد المستخدم كمية للشحن لكل منتج.
+- لا يمكن شحن كمية أكبر من المتبقي.
+- إذا كل البنود اتشحنت بالكامل تصبح الفاتورة `shipped`.
+- إذا جزء فقط اتشحن تصبح `partially_shipped`.
+- إذا لم يتم شحن شيء تبقى `pending/not_shipped`.
+
+الشحن لا يغير الماليات إلا إذا تم إضافة قواعد مالية صريحة لاحقًا.
+
+## 8. إنشاء الفاتورة النهائي
+
+إنشاء الفاتورة يجب أن يكون flow احترافي:
+
+1. اختيار المنفذ.
+2. تحميل نوع المنفذ والمحافظة والرصيد/الليميت.
+3. اختيار الكتب.
+4. السعر يأتي تلقائيًا حسب نوع المنفذ.
+5. عرض المخزون المتاح.
+6. تحديد الكميات.
+7. عرض الإجمالي والخصم والشحن وصافي المطلوب.
+8. تحديد الدفع: مؤجل كليًا / مدفوع جزئيًا / مدفوع كليًا.
+9. إذا فيه دفع: تحديد هل مدفوع ومورد أو مدفوع فقط.
+10. حفظ الفاتورة + item snapshots + stock ledger + finance ledger + notifications + audit.
+
+## 9. Actions من الفواتير
+
+من شاشة الفواتير أو تفاصيل الفاتورة يجب توفر Actions حسب الصلاحية:
+
+- عرض التفاصيل.
+- تسجيل دفع.
+- تعليم كمدفوع كليًا.
+- توريد دفعة/دفعات.
+- شحن الفاتورة جزئيًا أو كليًا.
+- إنشاء استرجاع.
+- تصدير/طباعة.
+- إلغاء/أرشفة حسب قواعد محددة.
+
+## 10. الإشعارات
+
+يجب إنشاء إشعارات للأحداث المهمة:
+
+- مخزون منخفض/سالب.
+- تجاوز ليميت منفذ.
+- رصيد محصل غير مورد لفترة.
+- فاتورة مؤجلة بالكامل.
+- فاتورة مدفوعة جزئيًا.
+- شحن جزئي معلّق.
+- مسترجعات جديدة.
+- أخطاء أو تسويات مالية يدوية.
+
+كل إشعار له action_url يفتح الشاشة الصحيحة.

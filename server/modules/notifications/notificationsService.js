@@ -21,7 +21,7 @@ async function createOrUpdateNotification({
 
   const allowedCategories = [
     'stock_negative', 'stock_low', 'outlet_credit_limit_exceeded',
-    'invoice_overdue', 'installment_due', 'payment_received',
+    'invoice_overdue', 'payment_received',
     'shipment_partial', 'shipment_delayed', 'system', 'finance_warning', 'price_missing'
   ];
   if (!allowedCategories.includes(category)) {
@@ -237,13 +237,6 @@ async function checkOutletCreditLimitNotifications(outletId) {
   }
 }
 
-/**
- * Check overdue installment alerts.
- */
-async function checkOverdueInstallmentsNotifications() {
-  // Deactivated - installments are disabled.
-  return 0;
-}
 
 /**
  * Check overdue deferred invoice alerts.
@@ -389,7 +382,6 @@ module.exports = {
   getNotificationCounts,
   checkStockNotifications,
   checkOutletCreditLimitNotifications,
-  checkOverdueInstallmentsNotifications,
   checkOverdueInvoicesNotifications,
   checkProductPriceNotifications,
   checkOutletFinanceNotifications

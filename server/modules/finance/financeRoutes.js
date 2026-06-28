@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const financeService = require('./financeService');
 const outletsService = require('../outlets/outletsService');
+const authorsService = require('../authors/authorsService');
 const usersService = require('../users/usersService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
@@ -11,17 +12,29 @@ router.get('/summary', requireAuth, checkPermission('finance.view'), async (req,
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
+    const isAuthor = userRoles.some(r => r.name === 'author');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
 
     let filterOutletIds = null;
-    if (!isElevated) {
+    let filterAuthorIds = null;
+
+    if (isOutlet && !isElevated) {
+      filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
+    } else if (isAuthor && !isElevated) {
+      filterAuthorIds = await authorsService.getLinkedAuthorsForUser(userId);
+    } else if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
       if (linkedOutlets.length > 0) {
         filterOutletIds = linkedOutlets;
       }
+      const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
+      if (linkedAuthors.length > 0) {
+        filterAuthorIds = linkedAuthors;
+      }
     }
 
-    const summary = await financeService.getFinanceSummary(filterOutletIds);
+    const summary = await financeService.getFinanceSummary(filterOutletIds, filterAuthorIds);
     res.status(200).json(summary);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -40,10 +53,13 @@ router.get('/balances/history', requireAuth, checkPermission('finance.view'), as
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
 
     let filterOutletIds = null;
-    if (!isElevated) {
+    if (isOutlet && !isElevated) {
+      filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
+    } else if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
       if (linkedOutlets.length > 0) {
         filterOutletIds = linkedOutlets;
@@ -102,10 +118,13 @@ router.get('/outlets', requireAuth, checkPermission('finance.view'), async (req,
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
 
     let filterOutletIds = null;
-    if (!isElevated) {
+    if (isOutlet && !isElevated) {
+      filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
+    } else if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
       if (linkedOutlets.length > 0) {
         filterOutletIds = linkedOutlets;
@@ -125,15 +144,26 @@ router.get('/outlets/:id/statement', requireAuth, checkPermission('finance.state
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
 
     if (!isElevated) {
-      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0 && !linkedOutlets.includes(outletId)) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Access denied. You do not have permission to view this statement.'
-        });
+      if (isOutlet) {
+        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+        if (!linkedOutlets.includes(outletId)) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Access denied. You do not have permission to view this statement.'
+          });
+        }
+      } else {
+        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+        if (linkedOutlets.length > 0 && !linkedOutlets.includes(outletId)) {
+          return res.status(403).json({
+            error: 'Forbidden',
+            message: 'Access denied. You do not have permission to view this statement.'
+          });
+        }
       }
     }
 

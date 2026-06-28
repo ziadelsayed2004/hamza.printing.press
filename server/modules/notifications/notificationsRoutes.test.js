@@ -29,7 +29,6 @@ describe('Notifications API Integration Tests', () => {
 
     // 2. Clean up table data
     await db.run('DELETE FROM notifications');
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
@@ -93,7 +92,6 @@ describe('Notifications API Integration Tests', () => {
   afterAll(async () => {
     // Clean test data
     await db.run('DELETE FROM notifications');
-    await db.run('DELETE FROM payment_installments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
@@ -357,6 +355,41 @@ describe('Notifications API Integration Tests', () => {
       res = await agent.get('/api/notifications');
       let activeFinanceAlerts = res.body.filter(n => n.dedupe_key === `outlet_unsupplied_cash:${testOutlet.id}` && n.status !== 'resolved');
       expect(activeFinanceAlerts.length).toBe(0);
+    });
+
+    it('should trigger invoice_overdue notifications for deferred invoices older than 30 days and resolve them when invoice is cancelled', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_notif_api_admin', password: 'password123' });
+
+      // 1. Create a deferred invoice
+      const invRes = await agent
+        .post('/api/invoices')
+        .send({
+          outletId: testOutlet.id,
+          discount: 0,
+          shippingCost: 0,
+          paymentType: 'deferred',
+          items: [{ productId: testProduct.id, quantity: 2 }]
+        });
+      expect(invRes.status).toBe(201);
+      const invoiceId = invRes.body.invoice.id;
+
+      // 2. Set the invoice date back by 40 days
+      await db.run("UPDATE invoices SET created_at = datetime('now', '-40 days') WHERE id = ?", [invoiceId]);
+
+      // 3. Fetch notifications (should trigger the overdue scan)
+      let res = await agent.get('/api/notifications?status=unread');
+      let overdueAlert = res.body.find(n => n.category === 'invoice_overdue' && n.source_id === invoiceId);
+      expect(overdueAlert).toBeDefined();
+
+      // 4. Cancel the invoice (this should mark the invoice as cancelled)
+      const cancelRes = await agent.post(`/api/invoices/${invoiceId}/cancel`);
+      expect(cancelRes.status).toBe(200);
+
+      // 5. Fetch notifications again and verify alert is resolved
+      res = await agent.get('/api/notifications?status=unread');
+      let resolvedAlert = res.body.find(n => n.category === 'invoice_overdue' && n.source_id === invoiceId);
+      expect(resolvedAlert).toBeUndefined();
     });
   });
 });

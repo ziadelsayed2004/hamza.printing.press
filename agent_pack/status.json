@@ -1,10 +1,10 @@
 {
-  "project": "مطبعة حمزة — Bookstore Manager Unified Agent Pack",
+  "project": "مطبعة حمزة — Unified Bookstore Manager Agent Pack",
   "created_at": "2026-06-26 12:20",
-  "mode": "fresh_start_allowed_unified_pack",
+  "mode": "unified_current_pack_no_versions",
   "deployment_strategy": "single_node_monolith_directadmin",
-  "total_steps": 95,
-  "current_step": "095",
+  "total_steps": 120,
+  "current_step": "117",
   "steps": [
     {
       "id": "001",
@@ -247,7 +247,8 @@
       "status": "done",
       "report": "agent_pack/reports/027_excel_import_templates_REPORT.md",
       "started_at": "2026-06-26T19:16:00+03:00",
-      "completed_at": "2026-06-26T19:23:00+03:00"
+      "completed_at": "2026-06-26T19:23:00+03:00",
+      "note": "cancelled_obsolete_import_removed"
     },
     {
       "id": "028",
@@ -319,7 +320,8 @@
       "status": "done",
       "report": "agent_pack/reports/035_payments_installments_ui_REPORT.md",
       "started_at": "2026-06-26T20:13:00+03:00",
-      "completed_at": "2026-06-26T20:30:00+03:00"
+      "completed_at": "2026-06-26T20:30:00+03:00",
+      "note": "cancelled_obsolete_installments_removed"
     },
     {
       "id": "036",
@@ -365,7 +367,8 @@
       "report": null,
       "started_at": null,
       "completed_at": null,
-      "blocked_reason": "Superseded by new client change request. Final DirectAdmin verification moved to 049 after DB reset, server flattening, and UI redesign."
+      "blocked_reason": "Superseded by new client change request. Final DirectAdmin verification moved to 049 after DB reset, server flattening, and UI redesign.",
+      "note": "blocked_superseded_by_current_final"
     },
     {
       "id": "041",
@@ -446,7 +449,8 @@
       "status": "done",
       "report": "agent_pack/reports/049_directadmin_deploy_docs_final_verify_REPORT.md",
       "started_at": "2026-06-26T22:01:00+03:00",
-      "completed_at": "2026-06-26T22:11:00+03:00"
+      "completed_at": "2026-06-26T22:11:00+03:00",
+      "note": "superseded_by_current_final"
     },
     {
       "id": "050",
@@ -545,7 +549,8 @@
       "status": "done",
       "report": "agent_pack/reports/060_final_visual_quality_deploy_gate_REPORT.md",
       "started_at": "2026-06-27T02:19:00+03:00",
-      "completed_at": "2026-06-27T02:25:00+03:00"
+      "completed_at": "2026-06-27T02:25:00+03:00",
+      "note": "superseded_by_current_final"
     },
     {
       "id": "061",
@@ -724,7 +729,8 @@
       "title": "Former Final Business Design Deploy Gate — Held Until Step 095",
       "status": "blocked",
       "report": null,
-      "blocked_reason": "Final gate moved to 095 after new finance/import/style corrections."
+      "blocked_reason": "Final gate moved to 095 after new finance/import/style corrections.",
+      "note": "blocked_superseded_by_current_final"
     },
     {
       "id": "081",
@@ -859,14 +865,259 @@
       "status": "done",
       "report": "agent_pack/reports/095_final_unified_quality_gate_REPORT.md",
       "started_at": "2026-06-28T00:04:00+03:00",
-      "completed_at": "2026-06-28T00:07:00+03:00"
+      "completed_at": "2026-06-28T00:07:00+03:00",
+      "note": "superseded_by_current_final"
+    },
+    {
+      "id": "096",
+      "slug": "agent_pack_unified_cleanup_and_obsolete_purge",
+      "title": "Agent Pack Unified Cleanup + Obsolete Purge",
+      "status": "done",
+      "report": "agent_pack/reports/096_agent_pack_unified_cleanup_and_obsolete_purge_REPORT.md",
+      "started_at": "2026-06-28T00:32:00+03:00",
+      "completed_at": "2026-06-28T00:36:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "097",
+      "slug": "latest_repo_deep_style_logic_audit",
+      "title": "Latest Repo Deep Style + Logic Audit",
+      "status": "done",
+      "report": "agent_pack/reports/097_latest_repo_deep_style_logic_audit_REPORT.md",
+      "started_at": "2026-06-28T00:37:00+03:00",
+      "completed_at": "2026-06-28T00:40:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "098",
+      "slug": "material_css_architecture_no_important_rebuild",
+      "title": "Material CSS Architecture No-Important Rebuild",
+      "status": "done",
+      "report": "agent_pack/reports/098_material_css_architecture_no_important_rebuild_REPORT.md",
+      "started_at": "2026-06-28T00:41:00+03:00",
+      "completed_at": "2026-06-28T00:50:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "099",
+      "slug": "rtl_fields_labels_alignment_global_fix",
+      "title": "RTL Fields Labels Alignment Global Fix",
+      "status": "done",
+      "report": "agent_pack/reports/099_rtl_fields_labels_alignment_global_fix_REPORT.md",
+      "started_at": "2026-06-28T00:54:00+03:00",
+      "completed_at": "2026-06-28T01:05:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "100",
+      "slug": "sidebar_topbar_layout_final_fix",
+      "title": "Sidebar + Topbar Layout Final Fix",
+      "status": "done",
+      "report": "agent_pack/reports/100_sidebar_topbar_layout_final_fix_REPORT.md",
+      "started_at": "2026-06-28T01:38:00+03:00",
+      "completed_at": "2026-06-28T01:42:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "101",
+      "slug": "side_drawers_dialogs_unified_for_all_entities",
+      "title": "Unified Side Drawers/Dialogs for All Entities",
+      "status": "done",
+      "report": "agent_pack/reports/101_side_drawers_dialogs_unified_for_all_entities_REPORT.md",
+      "started_at": "2026-06-28T01:43:59+03:00",
+      "completed_at": "2026-06-28T01:55:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "102",
+      "slug": "invoice_builder_final_owned_workflow",
+      "title": "Invoice Builder Final Owned Workflow",
+      "status": "done",
+      "report": "agent_pack/reports/102_invoice_builder_final_owned_workflow_REPORT.md",
+      "started_at": "2026-06-28T02:04:00+03:00",
+      "completed_at": "2026-06-28T02:12:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "103",
+      "slug": "invoice_list_actions_pay_supply_ship_return",
+      "title": "Invoice List Actions: Pay, Supply, Ship, Return",
+      "status": "done",
+      "report": "agent_pack/reports/103_invoice_list_actions_pay_supply_ship_return_REPORT.md",
+      "started_at": "2026-06-28T02:22:00+03:00",
+      "completed_at": "2026-06-28T02:30:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "104",
+      "slug": "finance_model_final_no_installments_with_supply",
+      "title": "Finance Model Final No-Installments With Supply",
+      "status": "done",
+      "report": "agent_pack/reports/104_finance_model_final_no_installments_with_supply_REPORT.md",
+      "started_at": "2026-06-28T02:32:00+03:00",
+      "completed_at": "2026-06-28T02:48:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "105",
+      "slug": "payment_supply_remittance_ui_and_permissions",
+      "title": "Payment Supply/Remittance UI + Permissions",
+      "status": "done",
+      "report": "agent_pack/reports/105_payment_supply_remittance_ui_and_permissions_REPORT.md",
+      "started_at": "2026-06-28T02:52:00+03:00",
+      "completed_at": "2026-06-28T03:04:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "106",
+      "slug": "partial_shipping_invoice_items_final_logic",
+      "title": "Partial Shipping by Invoice Items Final Logic",
+      "status": "done",
+      "report": "agent_pack/reports/106_partial_shipping_invoice_items_final_logic_REPORT.md",
+      "started_at": "2026-06-28T03:12:00+03:00",
+      "completed_at": "2026-06-28T03:18:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "107",
+      "slug": "returns_refunds_outlet_return_balance",
+      "title": "Returns/Refunds + Outlet Return Balance",
+      "status": "done",
+      "report": "agent_pack/reports/107_returns_refunds_outlet_return_balance_REPORT.md",
+      "started_at": "2026-06-28T03:22:00+03:00",
+      "completed_at": "2026-06-28T03:32:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "108",
+      "slug": "outlet_balance_limit_engine_with_returns",
+      "title": "Outlet Balance + Limit Engine With Returns",
+      "status": "done",
+      "report": "agent_pack/reports/108_outlet_balance_limit_engine_with_returns_REPORT.md",
+      "started_at": "2026-06-28T03:35:00+03:00",
+      "completed_at": "2026-06-28T04:45:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "109",
+      "slug": "notifications_actions_legacy_plus_final",
+      "title": "Notifications + Actions Legacy Plus Final",
+      "status": "done",
+      "report": "agent_pack/reports/109_notifications_actions_legacy_plus_final_REPORT.md",
+      "started_at": "2026-06-28T04:45:00+03:00",
+      "completed_at": "2026-06-28T05:30:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "110",
+      "slug": "inventory_receipts_sales_returns_reconciliation",
+      "title": "Inventory Receipts/Sales/Returns Reconciliation",
+      "status": "done",
+      "report": "agent_pack/reports/110_inventory_receipts_sales_returns_reconciliation_REPORT.md",
+      "started_at": "2026-06-28T05:35:00+03:00",
+      "completed_at": "2026-06-28T06:15:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "111",
+      "slug": "professional_exports_only_final",
+      "title": "Professional Exports Only Final",
+      "status": "done",
+      "report": "agent_pack/reports/111_professional_exports_only_final_REPORT.md",
+      "started_at": "2026-06-28T06:15:00+03:00",
+      "completed_at": "2026-06-28T07:10:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "112",
+      "slug": "backend_dead_code_filter_and_tests_cleanup",
+      "title": "Backend Dead Code Filter + Tests Cleanup",
+      "status": "done",
+      "report": "agent_pack/reports/112_backend_dead_code_filter_and_tests_cleanup_REPORT.md",
+      "started_at": "2026-06-28T07:10:00+03:00",
+      "completed_at": "2026-06-28T07:55:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "113",
+      "slug": "frontend_page_css_component_split_cleanup",
+      "title": "Frontend Page CSS + Component Split Cleanup",
+      "status": "done",
+      "report": "agent_pack/reports/113_frontend_page_css_component_split_cleanup_REPORT.md",
+      "started_at": "2026-06-28T07:55:00+03:00",
+      "completed_at": "2026-06-28T08:35:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "114",
+      "slug": "author_and_outlet_accounts_scope_final",
+      "title": "Author + Outlet Accounts Scope Final",
+      "status": "done",
+      "report": "agent_pack/reports/114_author_and_outlet_accounts_scope_final_REPORT.md",
+      "started_at": "2026-06-28T08:35:00+03:00",
+      "completed_at": "2026-06-28T09:20:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "115",
+      "slug": "reports_dashboard_finance_command_center_final",
+      "title": "Reports/Dashboard Finance Command Center Final",
+      "status": "done",
+      "report": "agent_pack/reports/115_reports_dashboard_finance_command_center_final_REPORT.md",
+      "started_at": "2026-06-28T09:20:00+03:00",
+      "completed_at": "2026-06-28T09:55:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "116",
+      "slug": "end_to_end_business_flows_automation",
+      "title": "End-to-End Business Flows Automation",
+      "status": "done",
+      "report": "agent_pack/reports/116_end_to_end_business_flows_automation_REPORT.md",
+      "started_at": "2026-06-28T09:55:00+03:00",
+      "completed_at": "2026-06-28T10:15:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "117",
+      "slug": "visual_material_regression_full_app_pass",
+      "title": "Visual Material Regression Full App Pass",
+      "status": "done",
+      "report": "agent_pack/reports/117_visual_material_regression_full_app_pass_REPORT.md",
+      "started_at": "2026-06-28T10:15:00+03:00",
+      "completed_at": "2026-06-28T10:45:00+03:00",
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "118",
+      "slug": "security_rbac_audit_for_new_actions",
+      "title": "Security/RBAC Audit for New Actions",
+      "status": "open",
+      "report": null,
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "119",
+      "slug": "final_codebase_cleanup_build_test_gate",
+      "title": "Final Codebase Cleanup + Build/Test Gate",
+      "status": "pending",
+      "report": null,
+      "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "120",
+      "slug": "final_directadmin_delivery_smoke_gate",
+      "title": "Final DirectAdmin Delivery Smoke Gate",
+      "status": "pending",
+      "report": null,
+      "created_at": "2026-06-27T21:30:00+03:00"
     }
   ],
   "change_request": "post_completion_fix_login_layout_finance_balance_notifications_egp_egypt_time_professional_mui",
-  "last_updated_at": "2026-06-27T15:40:00+03:00",
+  "last_updated_at": "2026-06-28T10:45:00+03:00",
   "client_name": "مطبعة حمزة",
   "developer": "Ziad Elsayed CodzHub",
-  "updated_at": "2026-06-27T17:55:00+03:00",
+  "updated_at": "2026-06-28T10:45:00+03:00",
   "active_corrections": {
     "no_installments": true,
     "no_imports": true,
