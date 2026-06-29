@@ -1,205 +1,88 @@
-# Final Business Rules — Finance, Shipping, Returns, Inventory
+# Final Business Rules Current — مطبعة حمزة Locked State
 
-هذا الملف هو العقد النهائي للبيزنس. أي كود أو شاشة أو اختبار يخالفه يعتبر خطأ ويجب إصلاحه.
+هذا هو ملف القواعد الحالي بعد آخر تعديلات يدوية. عند وجود تعارض مع تقارير قديمة، هذا الملف ومعه `LATEST_REPO_LOCKED_SNAPSHOT.md` هما المصدر الأحدث.
 
-## 1. قرارات ملغاة نهائيًا
+## 1. قرارات نهائية
 
-### ممنوع التقسيط
-- لا يوجد installments.
-- لا يوجد payment plans.
-- لا يوجد جدول أقساط في UI.
-- لا يوجد إنشاء خطة أقساط.
-- لا يوجد حالات overdue الخاصة بالأقساط.
-- أي بقايا `payment_installments` أو `installment` يجب حذفها أو تحويلها migration-safe إذا كانت موجودة في fresh schema.
+- لا يوجد تقسيط.
+- لا يوجد Import Excel/CSV في المنتج الحالي.
+- التصدير Export فقط.
+- العملة جنيه مصري فقط.
+- التوقيت Africa/Cairo.
+- المشروع Monolith واحد للنشر على DirectAdmin.
 
-### ممنوع Import
-- لا يوجد Import Excel.
-- لا يوجد Import CSV.
-- لا يوجد templates upload.
-- لا يوجد preview import.
-- التصدير فقط مسموح.
+## 2. الدفع والتحصيل
 
-## 2. حالات الدفع النهائية
+حالات الدفع المعروضة للمستخدم:
 
-الفاتورة لها 3 حالات دفع أساسية فقط:
+- غير مدفوع / آجل.
+- مدفوع جزئياً.
+- مدفوع بالكامل.
 
-1. `deferred_full` — مؤجل كليًا: لم يتم تحصيل أي مبلغ.
-2. `partially_paid` — مدفوع جزئيًا: تم تحصيل جزء من إجمالي الفاتورة.
-3. `fully_paid` — مدفوع كليًا: تم تحصيل إجمالي الفاتورة.
+الدفع الجزئي ليس تقسيطاً؛ هو عملية دفع مستقلة.
 
-يمكن في قاعدة البيانات استخدام أسماء ثابتة أخرى لو موجودة بالفعل، لكن يجب أن يعرض UI هذه المعاني فقط ولا يظهر تقسيط.
+كل Payment يحتوي:
 
-## 3. التوريد والتحصيل
-
-التحصيل غير التوريد:
-
-- **تم الدفع/التحصيل**: المنفذ دفع أو تم استلام مبلغ منه.
-- **تم التوريد**: المبلغ المحصل دخل خزينة/إدارة المطبعة وتم تأكيده.
-
-كل payment له:
-
+- invoice_id
 - amount
 - method
-- collected_at/payment_date
-- supply_status: `supplied` أو `not_supplied`
-- supplied_at
-- supplied_by
-- reference_number
+- date
+- reference
 - notes
-- audit log
+- supply_status: supplied / not_supplied
+- receipt metadata عند وجود إيصال
 
-## 4. الأرصدة المالية
+## 3. التوريد المالي
 
-### رصيد معلق
-هو كل المبلغ المستحق على المنافذ ولم يتم تحصيله بعد.
+`تم توريده` تعني أن المبلغ المحصل دخل الخزينة.
 
-```text
-pending_receivable = invoice_total - collected_total - approved_return_credit_adjustments
-```
+`لم يورد` تعني أن المبلغ تم تحصيله من المنفذ لكنه لم يدخل الخزينة.
 
-### رصيد فعلي / محصل
-هو كل المبلغ الذي تم تحصيله من المنافذ.
+هذا لا علاقة له بواردات الكتب أو المخزون.
 
-```text
-actual_collected = sum(payments.amount)
-```
+## 4. واردات الكتب والمخزون
 
-### محصل ومورد
-```text
-supplied_balance = sum(payments.amount where supply_status = supplied)
-```
+واردات الكتب هي حركة مخزون فقط:
 
-### محصل ولم يورد
-```text
-unsupplied_collected_balance = sum(payments.amount where supply_status = not_supplied)
-```
+- تزيد المخزون.
+- تنشئ inventory transaction.
+- لا تنشئ payment.
+- لا تغير رصيد المنفذ.
+- لا تؤثر على الليميت.
 
-### رصيد مسترجعات
-قيمة المسترجعات المعتمدة للمنفذ، ويجب أن تظهر في كشف حساب المنفذ وتدخل في حساب limit.
+## 5. الفواتير
 
-```text
-return_balance = sum(approved_returns.value)
-```
+الفاتورة تعتمد على:
 
-## 5. حد المنفذ / الليميت
+- منفذ.
+- نوع منفذ.
+- كتب/منتجات.
+- أسعار حسب نوع المنفذ.
+- خصم.
+- شحن.
+- دفع أولي اختياري.
+- إيصال دفع اختياري مع الدفع.
 
-يتم قياسه على صافي المديونية الفعلية، وليس على الإجمالي الخام فقط.
+## 6. الشحن الجزئي
 
-```text
-net_outlet_exposure = pending_receivable - return_balance + manual_debit_adjustments - manual_credit_adjustments
-```
+الشحن يتم على بنود الفاتورة وكمياتها. لا يمكن شحن كمية أكبر من المتبقي غير المشحون وغير المرتجع.
 
-إذا تعدى `net_outlet_exposure` حد المنفذ `credit_limit` يتم إنشاء إشعار.
+## 7. الاسترجاع
 
-## 6. الاسترجاع
+الاسترجاع:
 
-الاسترجاع له سجل واضح وليس تعديل صامت:
+- مرتبط بالفاتورة.
+- مرتبط ببنود وكميات.
+- يزيد المخزون للمنتجات المتتبعة.
+- يضيف قيد مالي يقلل receivable.
+- يدخل في كشف الحساب والليميت.
 
-- return record
-- return items
-- linked invoice
-- linked outlet
-- returned quantities
-- reason
-- status
-- inventory effect
-- return credit value
-- audit log
+## 8. الإيصالات
 
-أنواع الاسترجاع:
+الكود الحالي يحفظ إيصالات الدفع ويجعلها approved تلقائياً في سيناريوهات الإنشاء الحالية. توجد endpoints لمراجعة الإيصالات في backend، لكن الواجهة الحالية تم تبسيطها وإزالة review queue منها في آخر التعديلات.
 
-- استرجاع جزئي من فاتورة.
-- استرجاع كامل من فاتورة.
-- استرجاع منتج/كمية محددة.
+أي عودة لنظام review queue تحتاج Step جديدة.
 
-قواعد الاسترجاع:
+## 9. الإشعارات
 
-- لا يمكن إرجاع كمية أكبر من الكمية الأصلية ناقص المرتجع سابقًا.
-- الاسترجاع يزيد المخزون إذا المنتج stock_policy = track.
-- الاسترجاع يضيف قيمة إلى return balance للمنفذ.
-- الاسترجاع يؤثر على كشف الحساب والليميت.
-- الاسترجاع لا يحذف الفاتورة ولا الدفعات القديمة؛ يضاف كسجل مستقل.
-
-## 7. الشحن الجزئي
-
-الشحن يتم على مستوى منتجات الفاتورة وكمياتها:
-
-- يختار المستخدم فاتورة.
-- تظهر بنود الفاتورة.
-- لكل بند يظهر: الكمية الأصلية، المشحون سابقًا، المتبقي للشحن.
-- يحدد المستخدم كمية للشحن لكل منتج.
-- لا يمكن شحن كمية أكبر من المتبقي.
-- إذا كل البنود اتشحنت بالكامل تصبح الفاتورة `shipped`.
-- إذا جزء فقط اتشحن تصبح `partially_shipped`.
-- إذا لم يتم شحن شيء تبقى `pending/not_shipped`.
-
-الشحن لا يغير الماليات إلا إذا تم إضافة قواعد مالية صريحة لاحقًا.
-
-## 8. إنشاء الفاتورة النهائي
-
-إنشاء الفاتورة يجب أن يكون flow احترافي:
-
-1. اختيار المنفذ.
-2. تحميل نوع المنفذ والمحافظة والرصيد/الليميت.
-3. اختيار الكتب.
-4. السعر يأتي تلقائيًا حسب نوع المنفذ.
-5. عرض المخزون المتاح.
-6. تحديد الكميات.
-7. عرض الإجمالي والخصم والشحن وصافي المطلوب.
-8. تحديد الدفع: مؤجل كليًا / مدفوع جزئيًا / مدفوع كليًا.
-9. إذا فيه دفع: تحديد هل مدفوع ومورد أو مدفوع فقط.
-10. حفظ الفاتورة + item snapshots + stock ledger + finance ledger + notifications + audit.
-
-## 9. Actions من الفواتير
-
-من شاشة الفواتير أو تفاصيل الفاتورة يجب توفر Actions حسب الصلاحية:
-
-- عرض التفاصيل.
-- تسجيل دفع.
-- تعليم كمدفوع كليًا.
-- توريد دفعة/دفعات.
-- شحن الفاتورة جزئيًا أو كليًا.
-- إنشاء استرجاع.
-- تصدير/طباعة.
-- إلغاء/أرشفة حسب قواعد محددة.
-
-## 10. الإشعارات
-
-يجب إنشاء إشعارات للأحداث المهمة:
-
-- مخزون منخفض/سالب.
-- تجاوز ليميت منفذ.
-- رصيد محصل غير مورد لفترة.
-- فاتورة مؤجلة بالكامل.
-- فاتورة مدفوعة جزئيًا.
-- شحن جزئي معلّق.
-- مسترجعات جديدة.
-- أخطاء أو تسويات مالية يدوية.
-
-كل إشعار له action_url يفتح الشاشة الصحيحة.
-
----
-
-# Correction Addendum — Inventory Receipts, Payment Receipts, Notifications
-
-This addendum supersedes any older wording that mixed book supply/inventory receipts with financial remittance.
-
-## Inventory receipts are not finance
-
-`واردات الكتب` / `استلام مخزون` only increase/decrease stock through inventory ledger. They must not affect balances, payments, collected amount, remittance, or outlet limit.
-
-## Payments and receipts
-
-Payments are created against an outlet invoice. Every payment operation can have a receipt/proof attachment, even when the payment is partial. Receipts must be reviewable.
-
-## Payment states
-
-Only three states are allowed: `مؤجل كلياً`, `مدفوع جزئياً`, `مدفوع كلياً`. Installments remain cancelled.
-
-## Notifications
-
-Dashboard notifications must use `معاينة` and `تجاهل`. `معاينة` routes to the related module/entity. `حل المشكلة` is not allowed as a generic action.
-
-## Returns and partial shipping
-
-Partial shipping is by invoice item quantities. Returns are by invoice item quantities and affect stock, outlet return balance/credit, outlet limit/statement, notifications, and exports.
+الإشعارات موجودة للمخزون والأسعار والمدفوعات والماليات والفواتير. توجد policy سابقة للمعاينة/التجاهل، لكن الكود الحالي في TopBar لا يزال يستخدم mark as read / resolve. هذا مسجل كـ Known Issue فقط ولا توجد خطوة مفتوحة له.

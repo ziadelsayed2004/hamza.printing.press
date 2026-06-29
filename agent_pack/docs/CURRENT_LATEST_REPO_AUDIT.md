@@ -1,123 +1,99 @@
-# Current Repo Audit — مطبعة حمزة
+# Current Latest Repo Audit — Locked State
 
-هذا الملف هو لقطة تحقق من آخر ريبو مرفوع قبل فتح خطوات التصحيح الجديدة. هو ليس تقرير نجاح؛ هو قائمة مشاكل مؤكدة يجب حلها خطوة بخطوة.
+هذا فحص فعلي لآخر ريبو مرفوع باسم `hamza.printing.press-main (3).zip` بعد تعديلات المستخدم اليدوية.
 
-## 1. نتيجة فحص التصميم الحالية
+## الحالة العامة
 
-تم تشغيل:
+- المشروع حديث ومنظم كمشروع Express + React/Vite/MUI.
+- لا توجد خطوات Agent مفتوحة حالياً.
+- آخر Step مسجل ومكتمل: `150_rearrange_invoice_filters_date_notch_fix`.
+- تم تنظيف Agent Pack من ملفات steps المكررة وأرشفتها.
+- لا يوجد V2/V3؛ الـ pack موحد.
+
+## ما تم التأكد منه في الملفات
+
+### Backend
+
+الموديولات موجودة تحت `server/modules` وتشمل:
+
+- auth
+- users
+- roles
+- audit
+- authors
+- products
+- product-prices
+- outlet-types
+- outlets
+- invoices
+- payments
+- inventory
+- shipments
+- returns
+- finance
+- notifications
+- reports
+- exports
+- admin
+
+### Database
+
+- يوجد 13 migration من `001_initial_schema.sql` إلى `013_new_roles_and_permissions.sql`.
+- تم عمل dry-run للـ SQL migrations داخل SQLite memory ونجح.
+- schema يدعم: users/roles/permissions، authors/products/prices، outlets/types، inventory receipts/transactions، invoices/items/payments، shipments/items، returns/items، finance ledger، notifications.
+
+### Frontend
+
+الصفحات الأساسية موجودة داخل `client/src/pages` مع CSS sibling files لكل صفحة تقريباً:
+
+- Dashboard, Invoices, Payments, Finance, Inventory, Shipments, Returns via actions, Products, Authors, Outlets, OutletTypes, Reports, Exports, Notifications, Users, AuditLogs, Profile.
+
+### Business logic
+
+- إنشاء فاتورة: منفذ + كتب + سعر حسب نوع منفذ + مخزون + خصم + شحن + دفع أولي اختياري.
+- الدفع: partial/full حسب المبلغ، مع supply status.
+- الإيصال: upload metadata موجود وملفات الإيصالات يتم حفظها، لكن يوجد hardcoded Windows path يجب مراجعته لاحقاً.
+- الشحن الجزئي: يتحقق من الكمية المتبقية لكل invoice item.
+- الاسترجاع: يتحقق من الكمية المتبقية القابلة للإرجاع ويضيف stock transaction وقيد finance ledger.
+- واردات الكتب: stock-only من ناحية الخدمة، لكن schema لا يزال يحمل unit_cost كحقل بيانات فقط.
+
+## فحوصات الجودة
+
+### Style gate
+
+الأمر:
 
 ```bash
-npm run style:gate
+node scripts/style_quality_gate.js
 ```
 
-والنتيجة: **فشل**.
-
-المخرجات الأساسية:
+النتيجة:
 
 ```text
-❌ Failure: Found 21 style quality gate violations:
-
-[Missing Sibling CSS] at components/ConfirmDialog.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at components/EntityDrawer.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at components/forms/FieldGrid.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at components/forms/FormActions.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at components/forms/FormSection.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/AuditLogs.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Authors.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Exports.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Finance.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Inventory.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Invoices.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Login.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Notifications.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/OutletTypes.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Outlets.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Payments.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Products.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Profile.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Reports.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Shipments.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
-
-[Missing Sibling CSS] at pages/Users.jsx:File-level
-  Message: Missing matching .css stylesheet beside this component/page.
+Failure: Found 2 style quality gate violations
 ```
 
-## 2. ديون ستايل مؤكدة في `client/src`
+المتبقي:
 
-- عدد `style={...}` الحالي: **30** موضع تقريبًا.
-- عدد `sx={...}` الحالي: **847** موضع تقريبًا.
-- عدد `!important` الحالي في CSS: **184** موضع تقريبًا.
-- ملفات كثيرة لا تملك CSS sibling مستقل رغم وجود JSX pages/components.
-- توجد محاذاة يسار في حقول ونصوص عربية يجب تحويلها RTL/right alignment إلا القيم التقنية فقط.
-- بعض الـ dialogs/drawers غير موحدة، والمسافات والأبعاد ليست بنظام واحد.
-- يوجد اعتماد كبير على overrides عامة بدل theme/components/classes منظمة.
+- Heavy sx في `client/src/pages/Exports.jsx`.
+- 5 قواعد `!important` في `client/src/layouts/MainLayout.css`.
 
-## 3. ديون بيزنس/باك إند مؤكدة
+### Migration dry-run
 
-- يوجد بقايا installment/payment plan في schema/tests/services/docs رغم أن التقسيط ملغي نهائيًا.
-- يوجد بقايا import jobs في schema/docs رغم أن الاستيراد ملغي نهائيًا.
-- الفواتير تحتاج Actions مباشرة من قائمة الفواتير/تفاصيل الفاتورة: تسجيل دفع، تعليم مدفوع، توريد مدفوع، شحن، استرجاع.
-- الشحن الجزئي موجود كفكرة لكنه يحتاج تحقق نهائي: اختيار item من الفاتورة + كمية مشحونة لا تتجاوز المتبقي.
-- الاسترجاع غير مكتمل كمنظومة: محتاج return records، return items، تأثير على المخزون، تأثير على رصيد مسترجعات المنفذ، تأثير على limit والحسابات والإشعارات.
-- الماليات يجب أن تعتمد على قواعد نهائية فقط:
-  - رصيد معلق = قيمة فواتير/أجزاء لم يتم تحصيلها من المنافذ.
-  - رصيد فعلي = ما تم تحصيله فعليًا.
-  - الرصيد الفعلي متقسم إلى: تم توريده / لم يتم توريده.
-  - رصيد مسترجعات = قيمة مسترجعات مرتبطة بالمنفذ، تدخل في كشف الحساب والـ limit.
+تم تطبيق كل migrations بترتيبها داخل SQLite memory بنجاح.
 
-## 4. ديون Agent Pack
+## بقايا/ديون يجب معرفتها فقط
 
-- `TASK_BOARD.md` غير متزامن مع `status.json` في بعض الخطوات.
-- توجد خطوات قديمة أصبحت ملغاة أو متناقضة مع القرار النهائي، مثل import pipeline وinstallments.
-- توجد أكثر من final gate قديمة؛ يجب تجاهلها والاعتماد على Final واحد جديد في آخر الخطوات الجديدة.
-- يجب أن يصبح المصدر الوحيد للحقيقة هو:
-  - `agent_pack/status.json`
-  - `agent_pack/TASK_BOARD.md`
-  - ملفات الخطوات المفتوحة من 096 فصاعدًا.
+هذه ليست خطوات مفتوحة الآن:
 
-## 5. قرار التنفيذ
+1. `import_jobs` و `import_job_rows` ما زالت في migration 001 رغم منع Import.
+2. `installment_due` ما زالت داخل check constraint في migrations القديمة رغم منع التقسيط.
+3. `server/config/index.js` يحسب rootDir لمستوى أعلى من المشروع.
+4. رفع الإيصالات في invoices/payments يستخدم path ثابت خاص بجهاز Windows.
+5. بعض التقارير القديمة داخل `agent_pack/reports` تصف حالات تاريخية لم تعد source of truth.
+6. UI notification dropdown ما زال يعرض mark/read وresolve، بينما السياسة السابقة كانت معاينة/تجاهل.
+7. style gate لا يزال يفشل بسبب مشكلتين فقط.
 
-لا يتم تقليل إمكانيات النظام القديم. المطلوب هو:
+## الخلاصة
 
-1. الحفاظ على قيمة النظام القديم وتحسينها.
-2. إزالة ما تم إلغاؤه فقط: التقسيط، Import Excel/CSV، override العشوائي، الهوية القديمة، الديون المتضاربة.
-3. إضافة المطلوب الجديد: توريد، تحصيل، أرصدة، شحن جزئي، استرجاع، حسابات منافذ/مؤلفين، إشعارات وأكشنز، UI Google Material احترافي.
+النسخة الحالية مفهومة ومقفولة. لا توجد خطوة تنفيذ قادمة حالياً. أي تعديل جديد يجب أن يبدأ من Step 151 بطلب صريح من المستخدم.

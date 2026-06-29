@@ -1,44 +1,26 @@
 # 00 START HERE — مطبعة حمزة
 
-الـ Agent Pack موحد حاليًا ولا يحتوي إصدارات منفصلة. استخدم البرومبت الموجود في:
+هذا الـ Agent Pack موحد ومقفول حتى آخر Step مكتملة: **150**.
 
-`agent_pack/prompts/COPY_THIS_PROMPT_AR.md`
+## قبل أي تشغيل
 
-أول خطوة مفتوحة حاليًا هي 096.
+اقرأ:
 
-قبل أي تنفيذ يجب قراءة:
+1. `agent_pack/status.json`
+2. `agent_pack/docs/LATEST_REPO_LOCKED_SNAPSHOT.md`
+3. `agent_pack/docs/MANUAL_CHANGES_UNDERSTOOD.md`
+4. `agent_pack/docs/FINAL_BUSINESS_RULES_CURRENT.md`
+5. `agent_pack/TASK_BOARD.md`
 
-- `agent_pack/prompts/ONE_PROMPT_RUNNER.md`
-- `agent_pack/docs/CURRENT_LATEST_REPO_AUDIT.md`
-- `agent_pack/docs/FINAL_BUSINESS_RULES_CURRENT.md`
-- `agent_pack/docs/FINAL_MATERIAL_RTL_DESIGN_SYSTEM.md`
-- `agent_pack/TASK_BOARD.md`
-- `agent_pack/status.json`
+## الحالة الحالية
 
-القواعد النهائية:
+لا توجد خطوات مفتوحة. لا تشغل أي تعديل بدون طلب جديد من المستخدم.
 
-- لا تقسيط.
-- لا Import.
-- Export فقط.
-- دفع: مؤجل كلي / مدفوع جزئي / مدفوع كلي.
-- التوريد منفصل عن التحصيل.
-- شحن جزئي حسب منتجات الفاتورة.
-- استرجاع مرتبط بالمخزون والرصيد والليميت.
-- Material UI احترافي، RTL، EGP، Africa/Cairo.
-- لا inline style ولا `!important` جديد.
+## لو المستخدم طلب تعديل جديد
 
-
----
-
-## Inventory/Payments/Notifications Correction Phase — 2026-06-28
-
-Opened current steps 121–145 to correct the latest business rules:
-
-- Book inventory receipts are stock-only, not finance.
-- Payment creation selects outlet then invoice and supports receipt upload for every payment, including partial payments.
-- Payment receipts have a review queue.
-- Dashboard notifications use `معاينة` and `تجاهل` only.
-- Insufficient stock previews route to product/inventory context.
-- Partial shipping selects invoice item quantities.
-- Returns affect stock, outlet return balance/credit, limit, statements, notifications, and exports.
-- No imports and no installments remain allowed.
+- أضف Step جديدة بعد 150.
+- افتحها فقط.
+- نفذ خطوة واحدة.
+- اكتب التقرير.
+- أغلقها.
+- توقف.

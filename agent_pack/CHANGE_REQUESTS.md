@@ -1,32 +1,26 @@
 # Change Requests — مطبعة حمزة
 
-هذا الملف يجمع طلبات التطوير داخل Agent Pack واحد موحد بدون تقسيمات إصدارات.
+## Current state
 
-## Current priority
+كل طلبات التطوير حتى آخر ريبو مرفوع مقفولة داخل Agent Pack موحد. لا توجد خطوات مفتوحة حالياً.
 
-- Design system كامل.
-- RTL كامل.
-- إزالة inline styles.
-- CSS منظم لكل صفحة وComponent.
-- ترجمة عربية في JSON واحد.
-- إصلاح sidebar/layout/login refresh.
-- Dashboard احترافي.
-- حسابات مؤلفين ومنافذ بصلاحيات scoped.
-- Balance/Finance Ledger كامل.
-- Payments/Installments/Shipping/Inventory/Notifications مترابطة.
+## Locked baseline understood
 
+- المشروع باسم: مطبعة حمزة.
+- المطور: Ziad Elsayed CodzHub.
+- Monolith Node.js على DirectAdmin.
+- Backend Express + SQLite.
+- Frontend React/Vite/Material UI.
+- لا يوجد تقسيط.
+- لا يوجد Import.
+- Export فقط.
+- واردات الكتب مخزون فقط.
+- الدفع جزئي/كامل/غير مدفوع.
+- التوريد المالي يخص الخزينة فقط.
+- إيصالات الدفع موجودة، والكود الحالي يعتمد Auto Approval.
+- الشحن الجزئي حسب بنود الفاتورة.
+- الاسترجاع حسب بنود الفاتورة ويرجع مخزون ويقلل مديونية.
 
----
+## Future changes
 
-## Inventory/Payments/Notifications Correction Phase — 2026-06-28
-
-Opened current steps 121–145 to correct the latest business rules:
-
-- Book inventory receipts are stock-only, not finance.
-- Payment creation selects outlet then invoice and supports receipt upload for every payment, including partial payments.
-- Payment receipts have a review queue.
-- Dashboard notifications use `معاينة` and `تجاهل` only.
-- Insufficient stock previews route to product/inventory context.
-- Partial shipping selects invoice item quantities.
-- Returns affect stock, outlet return balance/credit, limit, statements, notifications, and exports.
-- No imports and no installments remain allowed.
+أي طلب جديد يتم فتحه كـ Step جديدة بعد 150 داخل نفس الـ Agent Pack، بدون V2/V3 وبدون إنشاء باك منفصل.

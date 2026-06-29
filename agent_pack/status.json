@@ -4,7 +4,7 @@
   "mode": "unified_current_pack_no_versions",
   "deployment_strategy": "single_node_monolith_directadmin",
   "total_steps": 150,
-  "current_step": "150",
+  "current_step": null,
   "steps": [
     {
       "id": "001",
@@ -363,12 +363,14 @@
       "id": "040",
       "slug": "directadmin_deploy_docs_final_verify",
       "title": "Directadmin Deploy Docs Final Verify",
-      "status": "blocked",
-      "report": null,
+      "status": "done",
+      "report": "agent_pack/reports/040_directadmin_deploy_docs_final_verify_CLOSED_SUPERSEDED.md",
       "started_at": null,
       "completed_at": null,
       "blocked_reason": "Superseded by new client change request. Final DirectAdmin verification moved to 049 after DB reset, server flattening, and UI redesign.",
-      "note": "blocked_superseded_by_current_final"
+      "note": "closed_superseded_archived_no_execution_required",
+      "closed_at": "2026-06-29T00:00:00+03:00",
+      "closed_reason": "Superseded final gate archived as closed. The active work continued through later steps and is now locked at step 150."
     },
     {
       "id": "041",
@@ -727,10 +729,12 @@
       "id": "080",
       "slug": "final_business_design_deploy_gate",
       "title": "Former Final Business Design Deploy Gate — Held Until Step 095",
-      "status": "blocked",
-      "report": null,
+      "status": "done",
+      "report": "agent_pack/reports/080_final_business_design_deploy_gate_CLOSED_SUPERSEDED.md",
       "blocked_reason": "Final gate moved to 095 after new finance/import/style corrections.",
-      "note": "blocked_superseded_by_current_final"
+      "note": "closed_superseded_archived_no_execution_required",
+      "closed_at": "2026-06-29T00:00:00+03:00",
+      "closed_reason": "Superseded final gate archived as closed. The active work continued through later steps and is now locked at step 150."
     },
     {
       "id": "081",
@@ -1435,5 +1439,9 @@
     "developer_credit": "Ziad Elsayed CodzHub"
   },
   "last_updated": "2026-06-28T16:30:00+03:00",
-  "latest_change_request": "inventory receipts are stock-only; payment receipt upload/review; notification preview/ignore; partial shipping and returns finalization"
+  "latest_change_request": "inventory receipts are stock-only; payment receipt upload/review; notification preview/ignore; partial shipping and returns finalization",
+  "pack_state": "locked_no_open_steps",
+  "locked_at": "2026-06-29T00:00:00+03:00",
+  "last_known_completed_step": "150",
+  "next_step_policy": "Do not execute or invent steps. If the user asks for a new change, add a new step after 150 and then run exactly one step."
 }

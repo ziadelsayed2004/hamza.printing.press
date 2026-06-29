@@ -2,551 +2,1051 @@
   {
     "id": "001",
     "slug": "repo_reality_audit",
-    "description": "Audit the current repository, detect framework, database, routes, views, static assets, package scripts, deployment assumptions, and risks. Produce a factual audit report only; do not refactor yet."
+    "title": "Repo Reality Audit",
+    "status": "done",
+    "report": "agent_pack/reports/001_repo_reality_audit_REPORT.md"
   },
   {
     "id": "002",
     "slug": "target_architecture_plan",
-    "description": "Create/confirm target architecture for a single deployable Node.js monolith with Express API and React/Vite/MUI client built into public/. Define server/client/storage structure."
+    "title": "Target Architecture Plan",
+    "status": "done",
+    "report": "agent_pack/reports/002_target_architecture_plan_REPORT.md"
   },
   {
     "id": "003",
     "slug": "repo_structure_bootstrap",
-    "description": "Create the organized folders: server/src modules, client scaffold if missing, storage folders, scripts, docs. Do not delete legacy UI yet."
+    "title": "Repo Structure Bootstrap",
+    "status": "done",
+    "report": "agent_pack/reports/003_repo_structure_bootstrap_REPORT.md"
   },
   {
     "id": "004",
     "slug": "env_config_security_bootstrap",
-    "description": "Add .env.example, config loader, NODE_ENV/PORT/session/database paths, secure defaults, health endpoint, and storage safety rules."
+    "title": "Env Config Security Bootstrap",
+    "status": "done",
+    "report": "agent_pack/reports/004_env_config_security_bootstrap_REPORT.md"
   },
   {
     "id": "005",
     "slug": "fresh_database_schema",
-    "description": "Since the project is allowed to start from scratch, design and create fresh SQLite schema/migrations for all core modules without preserving old records."
+    "title": "Fresh Database Schema",
+    "status": "done",
+    "report": "agent_pack/reports/005_fresh_database_schema_REPORT.md"
   },
   {
     "id": "006",
     "slug": "database_runner_and_seed",
-    "description": "Implement migration runner, reset/dev seed command, initial admin seed, outlet type seed examples, and safe database initialization."
+    "title": "Database Runner And Seed",
+    "status": "done",
+    "report": "agent_pack/reports/006_database_runner_and_seed_REPORT.md"
   },
   {
     "id": "007",
     "slug": "auth_users_roles_schema",
-    "description": "Implement users, roles, permissions, role_permissions, user_role assignments, password hashing, account status, and session/auth tables where needed."
+    "title": "Auth Users Roles Schema",
+    "status": "done",
+    "report": "agent_pack/reports/007_auth_users_roles_schema_REPORT.md"
   },
   {
     "id": "008",
     "slug": "advanced_rbac_middleware",
-    "description": "Build advanced permission middleware: role permissions, optional user overrides, page/menu permissions, action-level API guards, super_admin bypass, and consistent 403 responses."
+    "title": "Advanced Rbac Middleware",
+    "status": "done",
+    "report": "agent_pack/reports/008_advanced_rbac_middleware_REPORT.md"
   },
   {
     "id": "009",
     "slug": "audit_log_system",
-    "description": "Add audit log model/service/middleware for login, create, update, delete, disable, payment, inventory, invoice, export, and permission actions."
+    "title": "Audit Log System",
+    "status": "done",
+    "report": "agent_pack/reports/009_audit_log_system_REPORT.md"
   },
   {
     "id": "010",
     "slug": "auth_api_and_sessions",
-    "description": "Create auth APIs: login, logout, me, change password, reset password by admin, session validation, account disable handling, and secure cookie/session config."
+    "title": "Auth Api And Sessions",
+    "status": "done",
+    "report": "agent_pack/reports/010_auth_api_and_sessions_REPORT.md"
   },
   {
     "id": "011",
     "slug": "user_management_api",
-    "description": "Create user management APIs for creating, editing, disabling, enabling, archiving/deleting users, assigning roles, and listing permissions."
+    "title": "User Management Api",
+    "status": "done",
+    "report": "agent_pack/reports/011_user_management_api_REPORT.md"
   },
   {
     "id": "012",
     "slug": "outlet_types_module",
-    "description": "Create admin-managed outlet types module. Admin can add/edit/disable outlet types dynamically; these types drive product prices."
+    "title": "Outlet Types Module",
+    "status": "done",
+    "report": "agent_pack/reports/012_outlet_types_module_REPORT.md"
   },
   {
     "id": "013",
     "slug": "outlets_module",
-    "description": "Create outlets module with outlet type, governorate, detailed address, phone, credit limit, status, notes, and filters."
+    "title": "Outlets Module",
+    "status": "done",
+    "report": "agent_pack/reports/013_outlets_module_REPORT.md"
   },
   {
     "id": "014",
     "slug": "authors_module",
-    "description": "Create authors module and optional author accounts: author profile, linked user account, status, and author-book relationships."
+    "title": "Authors Module",
+    "status": "done",
+    "report": "agent_pack/reports/014_authors_module_REPORT.md"
   },
   {
     "id": "015",
     "slug": "products_books_module",
-    "description": "Create normalized books/products module with title, code/SKU, author links, category, status, stock policy, and metadata."
+    "title": "Products Books Module",
+    "status": "done",
+    "report": "agent_pack/reports/015_products_books_module_REPORT.md"
   },
   {
     "id": "016",
     "slug": "product_prices_by_outlet_type",
-    "description": "Implement product_prices so one book has a separate active price per outlet type. Invoice creation must resolve price from selected outlet type and save snapshots."
+    "title": "Product Prices By Outlet Type",
+    "status": "done",
+    "report": "agent_pack/reports/016_product_prices_by_outlet_type_REPORT.md"
   },
   {
     "id": "017",
     "slug": "inventory_ledger_schema",
-    "description": "Implement inventory ledger schema: receipts, receipt items, inventory transactions, stock summaries, stock adjustments, and opening balances."
+    "title": "Inventory Ledger Schema",
+    "status": "done",
+    "report": "agent_pack/reports/017_inventory_ledger_schema_REPORT.md"
   },
   {
     "id": "018",
     "slug": "inventory_receipts_logic",
-    "description": "Implement receiving books as inventory receipts that automatically increase stock and create ledger transactions."
+    "title": "Inventory Receipts Logic",
+    "status": "done",
+    "report": "agent_pack/reports/018_inventory_receipts_logic_REPORT.md"
   },
   {
     "id": "019",
     "slug": "invoice_schema",
-    "description": "Create invoice v2 schema: invoice header, items, snapshots, totals, statuses, history, notes, created_by, and immutable financial snapshots."
+    "title": "Invoice Schema",
+    "status": "done",
+    "report": "agent_pack/reports/019_invoice_schema_REPORT.md"
   },
   {
     "id": "020",
     "slug": "invoice_create_pricing_stock",
-    "description": "Implement invoice create/update logic: selected outlet -> outlet type -> price per book, validate stock, calculate totals, decrement stock via ledger."
+    "title": "Invoice Create Pricing Stock",
+    "status": "done",
+    "report": "agent_pack/reports/020_invoice_create_pricing_stock_REPORT.md"
   },
   {
     "id": "021",
     "slug": "payments_cash_deferred_installments",
-    "description": "Implement payments: cash, deferred, installments, mixed; invoice_payments; installment schedule; paid/remaining auto-calculation."
+    "title": "Payments Cash Deferred Installments",
+    "status": "done",
+    "report": "agent_pack/reports/021_payments_cash_deferred_installments_REPORT.md"
   },
   {
     "id": "022",
     "slug": "payment_status_engine",
-    "description": "Build calculation engine for paid_amount, remaining_amount, payment_status, overdue installments, reversal/correction rules, and audit entries."
+    "title": "Payment Status Engine",
+    "status": "done",
+    "report": "agent_pack/reports/022_payment_status_engine_REPORT.md"
   },
   {
     "id": "023",
     "slug": "shipments_partial_model",
-    "description": "Add shipments and shipment_items. Allow partial shipment operationally while keeping payment/fees on invoice level unless explicitly configured later."
+    "title": "Shipments Partial Model",
+    "status": "done",
+    "report": "agent_pack/reports/023_shipments_partial_model_REPORT.md"
   },
   {
     "id": "024",
     "slug": "filters_search_api",
-    "description": "Implement advanced filters for invoices/products/outlets/authors: by book, author, outlet, outlet type, governorate, date, payment status, shipping status, remaining amount."
+    "title": "Filters Search Api",
+    "status": "done",
+    "report": "agent_pack/reports/024_filters_search_api_REPORT.md"
   },
   {
     "id": "025",
     "slug": "reports_api",
-    "description": "Create reports APIs: sales, paid, remaining, deferred, balances by outlet/governorate/outlet type, stock reports, author reports, receipt reports."
+    "title": "Reports Api",
+    "status": "done",
+    "report": "agent_pack/reports/025_reports_api_REPORT.md"
   },
   {
     "id": "026",
     "slug": "excel_export_system",
-    "description": "Implement Excel export for products, prices, authors, outlets, invoices, payments, inventory, reports, outstanding balances."
+    "title": "Excel Export System",
+    "status": "done",
+    "report": "agent_pack/reports/026_excel_export_system_REPORT.md"
   },
   {
     "id": "027",
     "slug": "excel_import_templates",
-    "description": "Implement Excel templates/import pipeline with preview, validation, accepted/rejected rows, and error sheet generation."
+    "title": "Excel Import Templates",
+    "status": "done",
+    "report": "agent_pack/reports/027_excel_import_templates_REPORT.md"
   },
   {
     "id": "028",
     "slug": "pdf_invoice_reports_cleanup",
-    "description": "Standardize PDF generation for invoices/reports, remove unused PDF dependencies if safe, and ensure RTL Arabic rendering works."
+    "title": "Pdf Invoice Reports Cleanup",
+    "status": "done",
+    "report": "agent_pack/reports/028_pdf_invoice_reports_cleanup_REPORT.md"
   },
   {
     "id": "029",
     "slug": "react_vite_mui_bootstrap",
-    "description": "Create React + Vite + Material UI frontend, RTL theme, routing, API client, auth context, error boundaries, and build output to public/."
+    "title": "React Vite Mui Bootstrap",
+    "status": "done",
+    "report": "agent_pack/reports/029_react_vite_mui_bootstrap_REPORT.md"
   },
   {
     "id": "030",
     "slug": "mui_layout_navigation",
-    "description": "Build professional dashboard layout: responsive sidebar, topbar, breadcrumbs, role-aware menus, mobile drawer, loading states, and empty states."
+    "title": "Mui Layout Navigation",
+    "status": "done",
+    "report": "agent_pack/reports/030_mui_layout_navigation_REPORT.md"
   },
   {
     "id": "031",
     "slug": "login_users_roles_ui",
-    "description": "Build login, profile, users, roles, permissions matrix, account enable/disable, password reset, and audit view UI."
+    "title": "Login Users Roles Ui",
+    "status": "done",
+    "report": "agent_pack/reports/031_login_users_roles_ui_REPORT.md"
   },
   {
     "id": "032",
     "slug": "products_authors_prices_ui",
-    "description": "Build UI for authors, books/products, product details, price per outlet type, DataGrid, filters, and forms."
+    "title": "Products Authors Prices Ui",
+    "status": "done",
+    "report": "agent_pack/reports/032_products_authors_prices_ui_REPORT.md"
   },
   {
     "id": "033",
     "slug": "outlets_outlet_types_ui",
-    "description": "Build UI for outlet types and outlets with governorate/address/phone/status/credit limit filters."
+    "title": "Outlets Outlet Types Ui",
+    "status": "done",
+    "report": "agent_pack/reports/033_outlets_outlet_types_ui_REPORT.md"
   },
   {
     "id": "034",
     "slug": "invoices_ui",
-    "description": "Build invoices UI: list, advanced filters, create invoice flow, item selection, automatic outlet-type prices, totals, details page."
+    "title": "Invoices Ui",
+    "status": "done",
+    "report": "agent_pack/reports/034_invoices_ui_REPORT.md"
   },
   {
     "id": "035",
     "slug": "payments_installments_ui",
-    "description": "Build payments UI inside invoice and standalone: add payment, create installment plan, view remaining, overdue, and payment history."
+    "title": "Payments Installments Ui",
+    "status": "done",
+    "report": "agent_pack/reports/035_payments_installments_ui_REPORT.md"
   },
   {
     "id": "036",
     "slug": "inventory_shipments_ui",
-    "description": "Build inventory receipts, stock ledger, adjustments, stock alerts, shipments, partial shipment status, and shipment items UI."
+    "title": "Inventory Shipments Ui",
+    "status": "done",
+    "report": "agent_pack/reports/036_inventory_shipments_ui_REPORT.md"
   },
   {
     "id": "037",
     "slug": "reports_exports_ui",
-    "description": "Build dashboard/reports/excel/pdf export UI with cards, charts, filters, and permission-aware actions."
+    "title": "Reports Exports Ui",
+    "status": "done",
+    "report": "agent_pack/reports/037_reports_exports_ui_REPORT.md"
   },
   {
     "id": "038",
     "slug": "legacy_ui_deprecation",
-    "description": "After new MUI screens are verified, deprecate old HTML/SweetAlert-heavy pages, keep fallback only if necessary, and clean routes/assets."
+    "title": "Legacy Ui Deprecation",
+    "status": "done",
+    "report": "agent_pack/reports/038_legacy_ui_deprecation_REPORT.md"
   },
   {
     "id": "039",
     "slug": "test_suite_and_quality_gate",
-    "description": "Add automated tests for auth/RBAC/pricing/invoices/payments/inventory/reports plus lint/build checks and API smoke tests."
+    "title": "Test Suite And Quality Gate",
+    "status": "done",
+    "report": "agent_pack/reports/039_test_suite_and_quality_gate_REPORT.md"
   },
   {
     "id": "040",
     "slug": "directadmin_deploy_docs_final_verify",
-    "description": "Finalize DirectAdmin single Node app deployment docs, build scripts, smoke test checklist, final verification report, and handoff notes."
+    "title": "Directadmin Deploy Docs Final Verify",
+    "status": "done",
+    "report": "agent_pack/reports/040_directadmin_deploy_docs_final_verify_CLOSED_SUPERSEDED.md"
   },
   {
     "id": "041",
     "slug": "fresh_database_reset_super_admin_only",
-    "description": "Hard reset SQLite for fresh production start. Seed permissions and a single super_admin account only; no demo data, no staff, no outlet types, no books, no outlets, no invoices."
+    "title": "Fresh Database Reset + Super Admin Only",
+    "status": "done",
+    "report": "agent_pack/reports/041_fresh_database_reset_super_admin_only_REPORT.md"
   },
   {
     "id": "042",
     "slug": "flatten_server_structure_no_src",
-    "description": "Refactor backend from server/src/* to simpler server/* paths. Update app.js, scripts, package scripts, tests, imports, and docs. Keep one Node.js monolith deployment."
+    "title": "Flatten Server Structure No src",
+    "status": "done",
+    "report": "agent_pack/reports/042_flatten_server_structure_no_src_REPORT.md"
   },
   {
     "id": "043",
     "slug": "remove_old_identity_visual_system",
-    "description": "Remove old warehouse/bookstore identity, legacy colors, and inconsistent branding from the React UI. Move app name/brand to configurable settings and create a clean neutral professional visual baseline."
+    "title": "Remove Old Identity + Visual System",
+    "status": "done",
+    "report": "agent_pack/reports/043_remove_old_identity_visual_system_REPORT.md"
   },
   {
     "id": "044",
     "slug": "material_light_dark_theme_overhaul",
-    "description": "Build a premium Material UI theme system with light/dark mode, RTL tokens, typography, spacing, elevations, form/table/card standards, and persistent mode toggle."
+    "title": "Material Light/Dark Theme Overhaul",
+    "status": "done",
+    "report": "agent_pack/reports/044_material_light_dark_theme_overhaul_REPORT.md"
   },
   {
     "id": "045",
     "slug": "dashboard_redesign_executive_experience",
-    "description": "Replace the current weak dashboard with a professional executive dashboard: KPIs, quick actions, charts/insights, recent activity, alerts, and responsive layout."
+    "title": "Dashboard Redesign Executive Experience",
+    "status": "done",
+    "report": "agent_pack/reports/045_dashboard_redesign_executive_experience_REPORT.md"
   },
   {
     "id": "046",
     "slug": "navigation_information_architecture_polish",
-    "description": "Rebuild sidebar/topbar navigation into clear grouped sections for operations/catalog/finance/inventory/reports/admin with role-aware visibility and mobile usability."
+    "title": "Navigation Information Architecture Polish",
+    "status": "done",
+    "report": "agent_pack/reports/046_navigation_information_architecture_polish_REPORT.md"
   },
   {
     "id": "047",
     "slug": "forms_tables_dialog_cleanup_ux",
-    "description": "Reduce dialog-heavy flows. Convert major create/edit/detail flows to pages or drawers. Standardize DataGrid filters, empty states, loading states, validations, confirmations, and snackbars."
+    "title": "Forms Tables Dialog Cleanup UX",
+    "status": "done",
+    "report": "agent_pack/reports/047_forms_tables_dialog_cleanup_ux_REPORT.md"
   },
   {
     "id": "048",
     "slug": "fresh_start_quality_smoke_verification",
-    "description": "Run full fresh-start verification: db reset, super-admin login, CRUD smoke paths, light/dark toggle, build, tests, lint, API health, and DirectAdmin deploy readiness."
+    "title": "Fresh Start Quality Smoke Verification",
+    "status": "done",
+    "report": "agent_pack/reports/048_fresh_start_quality_smoke_verification_REPORT.md"
   },
   {
     "id": "049",
     "slug": "directadmin_deploy_docs_final_verify",
-    "description": "Finalize simple deployment docs after the new structure and UI reset: one Node app, React build into public, storage safety, env, npm commands, restart, and handoff notes."
+    "title": "DirectAdmin Deploy Docs Final Verify",
+    "status": "done",
+    "report": "agent_pack/reports/049_directadmin_deploy_docs_final_verify_REPORT.md"
   },
   {
     "id": "050",
     "slug": "login_session_sidebar_layout_hotfix",
-    "description": "Fix the post-login refresh bug, normalize auth/user permission hydration, and correct RTL sidebar/topbar/content layout positioning."
+    "title": "Login Session Hydration + Sidebar/Layout Hotfix",
+    "status": "done",
+    "report": "agent_pack/reports/050_login_session_sidebar_layout_hotfix_REPORT.md"
   },
   {
     "id": "051",
     "slug": "professional_material_shell_rebuild",
-    "description": "Replace the current weak shell with a premium Material Design style app shell: right sidebar, topbar, content grid, responsive drawer, grouped navigation, active states, and polished spacing."
+    "title": "Professional Material Shell Rebuild",
+    "status": "done",
+    "report": "agent_pack/reports/051_professional_material_shell_rebuild_REPORT.md"
   },
   {
     "id": "052",
     "slug": "egypt_currency_timezone_localization",
-    "description": "Standardize all money as Egyptian Pound and all displayed dates/times as Egypt time, with shared server/client formatting utilities and tests."
+    "title": "Egypt Currency + Timezone Localization",
+    "status": "done",
+    "report": "agent_pack/reports/052_egypt_currency_timezone_localization_REPORT.md"
   },
   {
     "id": "053",
     "slug": "finance_balance_engine_egp",
-    "description": "Rebuild the legacy balance concept as an advanced finance ledger connected to invoices, payments, credit limits, and manual adjustments in EGP."
+    "title": "Finance Balance Engine EGP",
+    "status": "done",
+    "report": "agent_pack/reports/053_finance_balance_engine_egp_REPORT.md"
   },
   {
     "id": "054",
     "slug": "finance_balance_ui_dashboard_history",
-    "description": "Add professional finance balance cards, history tables, manual adjustment UI, and dashboard financial overview using the new balance engine."
+    "title": "Finance Balance UI + Dashboard History",
+    "status": "done",
+    "report": "agent_pack/reports/054_finance_balance_ui_dashboard_history_REPORT.md"
   },
   {
     "id": "055",
     "slug": "notifications_engine_legacy_plus",
-    "description": "Restore and upgrade legacy stock/store-limit notifications into a unified advanced notification engine for stock, credit limits, invoices, payments, shipments, and system events."
+    "title": "Notifications Engine Legacy Plus",
+    "status": "done",
+    "report": "agent_pack/reports/055_notifications_engine_legacy_plus_REPORT.md"
   },
   {
     "id": "056",
     "slug": "notifications_ui_center_badges",
-    "description": "Add a polished notification center, topbar badge, dashboard alerts, unread/read/resolved workflow, filters, and action links."
+    "title": "Notifications UI Center + Badges",
+    "status": "done",
+    "report": "agent_pack/reports/056_notifications_ui_center_badges_REPORT.md"
   },
   {
     "id": "057",
     "slug": "legacy_feature_parity_merge_audit",
-    "description": "Compare the old repo behavior with the modern app, document all remaining functional gaps, and open/implement only critical parity fixes needed for a complete professional system."
+    "title": "Legacy Feature Parity Merge Audit",
+    "status": "done",
+    "report": "agent_pack/reports/057_legacy_feature_parity_merge_audit_REPORT.md"
   },
   {
     "id": "058",
     "slug": "dashboard_executive_ops_finance_perfection",
-    "description": "Rebuild the dashboard as a high-value operations + finance command center with KPIs, alerts, cash/receivables, stock risk, latest invoices, payments, and quick actions."
+    "title": "Dashboard Executive Ops/Finance Perfection",
+    "status": "done",
+    "report": "agent_pack/reports/058_dashboard_executive_ops_finance_perfection_REPORT.md"
   },
   {
     "id": "059",
     "slug": "business_flow_integrity_e2e",
-    "description": "Verify and fix connected flows across outlet types, outlets, products, prices, inventory receipts, invoices, payments, balances, shipments, notifications, and reports."
+    "title": "Business Flow Integrity E2E",
+    "status": "done",
+    "report": "agent_pack/reports/059_business_flow_integrity_e2e_REPORT.md"
   },
   {
     "id": "060",
     "slug": "final_visual_quality_deploy_gate",
-    "description": "Run final quality gate for UI polish, light/dark mode, responsive layout, EGP/Egypt time, finance, notifications, tests, build, and simple DirectAdmin deployment."
+    "title": "Final Visual Quality + Deploy Gate",
+    "status": "done",
+    "report": "agent_pack/reports/060_final_visual_quality_deploy_gate_REPORT.md"
   },
   {
     "id": "061",
     "slug": "unified_design_system_contract",
-    "description": "Convert `agent_pack/docs/design.md` into the active design contract for the repo and prepare the frontend structure needed to apply it."
+    "title": "Unified Design System Contract",
+    "status": "done",
+    "report": "agent_pack/reports/061_unified_design_system_contract_REPORT.md"
   },
   {
     "id": "062",
     "slug": "frontend_style_inventory_line_by_line",
-    "description": "Create a concrete line-by-line frontend style debt inventory before refactoring pages."
+    "title": "Frontend Style Inventory Line By Line",
+    "status": "done",
+    "report": "agent_pack/reports/062_frontend_style_inventory_line_by_line_REPORT.md"
   },
   {
     "id": "063",
     "slug": "css_extraction_no_inline_styles",
-    "description": "Remove inline CSS and move styles into structured CSS files."
+    "title": "CSS Extraction No Inline Styles",
+    "status": "done",
+    "report": "agent_pack/reports/063_css_extraction_no_inline_styles_REPORT.md"
   },
   {
     "id": "064",
     "slug": "rtl_layout_sidebar_no_refresh_fix",
-    "description": "Fix the login/session/sidebar issue and rebuild the RTL layout distribution."
+    "title": "RTL Layout Sidebar No Refresh Fix",
+    "status": "done",
+    "report": "agent_pack/reports/064_rtl_layout_sidebar_no_refresh_fix_REPORT.md"
   },
   {
     "id": "065",
     "slug": "material_shell_light_dark_perfection",
-    "description": "Create a polished Google Material-inspired app shell with Light/Dark mode."
+    "title": "Material Shell Light Dark Perfection",
+    "status": "done",
+    "report": "agent_pack/reports/065_material_shell_light_dark_perfection_REPORT.md"
   },
   {
     "id": "066",
     "slug": "single_ar_translation_json",
-    "description": "Move UI labels to one Arabic JSON dictionary."
+    "title": "Single Arabic Translation JSON",
+    "status": "done",
+    "report": "agent_pack/reports/066_single_ar_translation_json_REPORT.md"
   },
   {
     "id": "067",
     "slug": "forms_fields_labels_spacing_overhaul",
-    "description": "Fix all form fields, labels, drawers, and cramped layouts."
+    "title": "Forms Fields Labels Spacing Overhaul",
+    "status": "done",
+    "report": "agent_pack/reports/067_forms_fields_labels_spacing_overhaul_REPORT.md"
   },
   {
     "id": "068",
     "slug": "entity_drawers_dialogs_professional_ui",
-    "description": "Standardize side drawers and confirmation dialogs."
+    "title": "Entity Drawers Dialogs Professional UI",
+    "status": "done",
+    "report": "agent_pack/reports/068_entity_drawers_dialogs_professional_ui_REPORT.md"
   },
   {
     "id": "069",
     "slug": "dashboard_command_center_redesign",
-    "description": "Rebuild Dashboard as a professional operations + finance command center."
+    "title": "Dashboard Command Center Redesign",
+    "status": "done",
+    "report": "agent_pack/reports/069_dashboard_command_center_redesign_REPORT.md"
   },
   {
     "id": "070",
     "slug": "author_accounts_invoice_scope",
-    "description": "Complete author account logic."
+    "title": "Author Accounts Invoice Scope",
+    "status": "done",
+    "report": "agent_pack/reports/070_author_accounts_invoice_scope_REPORT.md"
   },
   {
     "id": "071",
     "slug": "outlet_accounts_invoice_scope",
-    "description": "Add outlet accounts."
+    "title": "Outlet Accounts Invoice Scope",
+    "status": "done",
+    "report": "agent_pack/reports/071_outlet_accounts_invoice_scope_REPORT.md"
   },
   {
     "id": "072",
     "slug": "balance_finance_ledger_full_reconciliation",
-    "description": "Make balance/finance system complete, auditable, and tied to invoices/payments."
+    "title": "Balance Finance Ledger Full Reconciliation",
+    "status": "done",
+    "report": "agent_pack/reports/072_balance_finance_ledger_full_reconciliation_REPORT.md"
   },
   {
     "id": "073",
-    "slug": "payments_installments_shipping_logic_integrity",
-    "description": "Verify and complete cash/deferred/installments/shipping logic."
+    "slug": "payments_collection_supply_shipping_logic_integrity",
+    "title": "Payments Collection Supply Shipping Logic Integrity",
+    "status": "done",
+    "report": "agent_pack/reports/073_payments_collection_supply_shipping_logic_integrity_REPORT.md"
   },
   {
     "id": "074",
     "slug": "inventory_receipts_stock_ledger_integrity",
-    "description": "Make inventory, receipts, invoice stock deduction, and adjustments fully reliable."
+    "title": "Inventory Receipts Stock Ledger Integrity",
+    "status": "done",
+    "report": "agent_pack/reports/074_inventory_receipts_stock_ledger_integrity_REPORT.md"
   },
   {
     "id": "075",
     "slug": "notifications_legacy_plus_advanced_rules",
-    "description": "Bring back old notification value and expand it professionally."
+    "title": "Notifications Legacy Plus Advanced Rules",
+    "status": "done",
+    "report": "agent_pack/reports/075_notifications_legacy_plus_advanced_rules_REPORT.md"
   },
   {
     "id": "076",
     "slug": "pricing_outlets_products_end_to_end",
-    "description": "Verify product pricing by outlet type and invoice snapshots end-to-end."
+    "title": "Pricing Outlets Products E2E",
+    "status": "done",
+    "report": "agent_pack/reports/076_pricing_outlets_products_end_to_end_REPORT.md"
   },
   {
     "id": "077",
     "slug": "legacy_feature_parity_deep_audit",
-    "description": "Ensure the new platform covers the old system and adds the requested upgrades."
+    "title": "Legacy Feature Parity Deep Audit",
+    "status": "done",
+    "report": "agent_pack/reports/077_legacy_feature_parity_deep_audit_REPORT.md"
   },
   {
     "id": "078",
     "slug": "style_quality_gate_script",
-    "description": "Add automated style/design checks to prevent regressions."
+    "title": "Style Quality Gate Script",
+    "status": "done",
+    "report": "agent_pack/reports/078_style_quality_gate_script_REPORT.md"
   },
   {
     "id": "079",
     "slug": "visual_regression_manual_qa_pack",
-    "description": "Create a practical visual QA checklist and fix high-priority visual defects found."
+    "title": "Visual Regression Manual QA Pack",
+    "status": "done",
+    "report": "agent_pack/reports/079_visual_regression_manual_qa_pack_REPORT.md"
   },
   {
     "id": "080",
     "slug": "final_business_design_deploy_gate",
-    "description": "Run the final gate after the new design and logic steps."
+    "title": "Former Final Business Design Deploy Gate — Held Until Step 095",
+    "status": "done",
+    "report": "agent_pack/reports/080_final_business_design_deploy_gate_CLOSED_SUPERSEDED.md"
+  },
+  {
+    "id": "081",
+    "slug": "finance_supply_model_purge_installments",
+    "title": "Finance Supply Model Purge Installments",
+    "status": "done",
+    "report": "agent_pack/reports/081_finance_supply_model_purge_installments_REPORT.md"
+  },
+  {
+    "id": "082",
+    "slug": "remove_excel_import_pipeline_export_only",
+    "title": "Remove Excel Import Pipeline Export Only",
+    "status": "done",
+    "report": "agent_pack/reports/082_remove_excel_import_pipeline_export_only_REPORT.md"
+  },
+  {
+    "id": "083",
+    "slug": "invoice_builder_owned_dynamic_workflow",
+    "title": "Invoice Builder Owned Dynamic Workflow",
+    "status": "done",
+    "report": "agent_pack/reports/083_invoice_builder_owned_dynamic_workflow_REPORT.md"
+  },
+  {
+    "id": "084",
+    "slug": "partial_shipping_by_invoice_items",
+    "title": "Partial Shipping By Invoice Items",
+    "status": "done",
+    "report": "agent_pack/reports/084_partial_shipping_by_invoice_items_REPORT.md"
+  },
+  {
+    "id": "085",
+    "slug": "supply_remittance_finance_ui",
+    "title": "Supply Remittance Finance Ui",
+    "status": "done",
+    "report": "agent_pack/reports/085_supply_remittance_finance_ui_REPORT.md"
+  },
+  {
+    "id": "086",
+    "slug": "professional_exports_arabic_reports",
+    "title": "Professional Exports Arabic Reports",
+    "status": "done",
+    "report": "agent_pack/reports/086_professional_exports_arabic_reports_REPORT.md"
+  },
+  {
+    "id": "087",
+    "slug": "css_cascade_no_important_refactor",
+    "title": "Css Cascade No Important Refactor",
+    "status": "done",
+    "report": "agent_pack/reports/087_css_cascade_no_important_refactor_REPORT.md"
+  },
+  {
+    "id": "088",
+    "slug": "mui_library_style_conflict_cleanup",
+    "title": "Mui Library Style Conflict Cleanup",
+    "status": "done",
+    "report": "agent_pack/reports/088_mui_library_style_conflict_cleanup_REPORT.md"
+  },
+  {
+    "id": "089",
+    "slug": "legacy_parity_enhancement_not_reduction",
+    "title": "Legacy Parity Enhancement Not Reduction",
+    "status": "done",
+    "report": "agent_pack/reports/089_legacy_parity_enhancement_not_reduction_REPORT.md"
+  },
+  {
+    "id": "090",
+    "slug": "end_to_end_business_chain_verification",
+    "title": "End To End Business Chain Verification",
+    "status": "done",
+    "report": "agent_pack/reports/090_end_to_end_business_chain_verification_REPORT.md"
+  },
+  {
+    "id": "091",
+    "slug": "permissions_for_finance_supply_shipping_exports",
+    "title": "Permissions For Finance Supply Shipping Exports",
+    "status": "done",
+    "report": "agent_pack/reports/091_permissions_for_finance_supply_shipping_exports_REPORT.md"
+  },
+  {
+    "id": "092",
+    "slug": "reports_finance_statement_polish",
+    "title": "Reports Finance Statement Polish",
+    "status": "done",
+    "report": "agent_pack/reports/092_reports_finance_statement_polish_REPORT.md"
+  },
+  {
+    "id": "093",
+    "slug": "full_code_logic_dead_feature_audit",
+    "title": "Full Code Logic Dead Feature Audit",
+    "status": "done",
+    "report": "agent_pack/reports/093_full_code_logic_dead_feature_audit_REPORT.md"
+  },
+  {
+    "id": "094",
+    "slug": "visual_design_regression_cleanup_no_overrides",
+    "title": "Visual Design Regression Cleanup No Overrides",
+    "status": "done",
+    "report": "agent_pack/reports/094_visual_design_regression_cleanup_no_overrides_REPORT.md"
+  },
+  {
+    "id": "095",
+    "slug": "final_unified_quality_gate",
+    "title": "Final Unified Quality Gate",
+    "status": "done",
+    "report": "agent_pack/reports/095_final_unified_quality_gate_REPORT.md"
   },
   {
     "id": "096",
     "slug": "agent_pack_unified_cleanup_and_obsolete_purge",
     "title": "Agent Pack Unified Cleanup + Obsolete Purge",
-    "status": "open"
+    "status": "done",
+    "report": "agent_pack/reports/096_agent_pack_unified_cleanup_and_obsolete_purge_REPORT.md"
   },
   {
     "id": "097",
     "slug": "latest_repo_deep_style_logic_audit",
     "title": "Latest Repo Deep Style + Logic Audit",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/097_latest_repo_deep_style_logic_audit_REPORT.md"
   },
   {
     "id": "098",
     "slug": "material_css_architecture_no_important_rebuild",
     "title": "Material CSS Architecture No-Important Rebuild",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/098_material_css_architecture_no_important_rebuild_REPORT.md"
   },
   {
     "id": "099",
     "slug": "rtl_fields_labels_alignment_global_fix",
     "title": "RTL Fields Labels Alignment Global Fix",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/099_rtl_fields_labels_alignment_global_fix_REPORT.md"
   },
   {
     "id": "100",
     "slug": "sidebar_topbar_layout_final_fix",
     "title": "Sidebar + Topbar Layout Final Fix",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/100_sidebar_topbar_layout_final_fix_REPORT.md"
   },
   {
     "id": "101",
     "slug": "side_drawers_dialogs_unified_for_all_entities",
     "title": "Unified Side Drawers/Dialogs for All Entities",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/101_side_drawers_dialogs_unified_for_all_entities_REPORT.md"
   },
   {
     "id": "102",
     "slug": "invoice_builder_final_owned_workflow",
     "title": "Invoice Builder Final Owned Workflow",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/102_invoice_builder_final_owned_workflow_REPORT.md"
   },
   {
     "id": "103",
     "slug": "invoice_list_actions_pay_supply_ship_return",
     "title": "Invoice List Actions: Pay, Supply, Ship, Return",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/103_invoice_list_actions_pay_supply_ship_return_REPORT.md"
   },
   {
     "id": "104",
     "slug": "finance_model_final_no_installments_with_supply",
     "title": "Finance Model Final No-Installments With Supply",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/104_finance_model_final_no_installments_with_supply_REPORT.md"
   },
   {
     "id": "105",
     "slug": "payment_supply_remittance_ui_and_permissions",
     "title": "Payment Supply/Remittance UI + Permissions",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/105_payment_supply_remittance_ui_and_permissions_REPORT.md"
   },
   {
     "id": "106",
     "slug": "partial_shipping_invoice_items_final_logic",
     "title": "Partial Shipping by Invoice Items Final Logic",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/106_partial_shipping_invoice_items_final_logic_REPORT.md"
   },
   {
     "id": "107",
     "slug": "returns_refunds_outlet_return_balance",
     "title": "Returns/Refunds + Outlet Return Balance",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/107_returns_refunds_outlet_return_balance_REPORT.md"
   },
   {
     "id": "108",
     "slug": "outlet_balance_limit_engine_with_returns",
     "title": "Outlet Balance + Limit Engine With Returns",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/108_outlet_balance_limit_engine_with_returns_REPORT.md"
   },
   {
     "id": "109",
     "slug": "notifications_actions_legacy_plus_final",
     "title": "Notifications + Actions Legacy Plus Final",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/109_notifications_actions_legacy_plus_final_REPORT.md"
   },
   {
     "id": "110",
     "slug": "inventory_receipts_sales_returns_reconciliation",
     "title": "Inventory Receipts/Sales/Returns Reconciliation",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/110_inventory_receipts_sales_returns_reconciliation_REPORT.md"
   },
   {
     "id": "111",
     "slug": "professional_exports_only_final",
     "title": "Professional Exports Only Final",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/111_professional_exports_only_final_REPORT.md"
   },
   {
     "id": "112",
     "slug": "backend_dead_code_filter_and_tests_cleanup",
     "title": "Backend Dead Code Filter + Tests Cleanup",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/112_backend_dead_code_filter_and_tests_cleanup_REPORT.md"
   },
   {
     "id": "113",
     "slug": "frontend_page_css_component_split_cleanup",
     "title": "Frontend Page CSS + Component Split Cleanup",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/113_frontend_page_css_component_split_cleanup_REPORT.md"
   },
   {
     "id": "114",
     "slug": "author_and_outlet_accounts_scope_final",
     "title": "Author + Outlet Accounts Scope Final",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/114_author_and_outlet_accounts_scope_final_REPORT.md"
   },
   {
     "id": "115",
     "slug": "reports_dashboard_finance_command_center_final",
     "title": "Reports/Dashboard Finance Command Center Final",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/115_reports_dashboard_finance_command_center_final_REPORT.md"
   },
   {
     "id": "116",
     "slug": "end_to_end_business_flows_automation",
     "title": "End-to-End Business Flows Automation",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/116_end_to_end_business_flows_automation_REPORT.md"
   },
   {
     "id": "117",
     "slug": "visual_material_regression_full_app_pass",
     "title": "Visual Material Regression Full App Pass",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/117_visual_material_regression_full_app_pass_REPORT.md"
   },
   {
     "id": "118",
     "slug": "security_rbac_audit_for_new_actions",
     "title": "Security/RBAC Audit for New Actions",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/118_security_rbac_audit_for_new_actions_REPORT.md"
   },
   {
     "id": "119",
     "slug": "final_codebase_cleanup_build_test_gate",
     "title": "Final Codebase Cleanup + Build/Test Gate",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/119_final_codebase_cleanup_build_test_gate_REPORT.md"
   },
   {
     "id": "120",
     "slug": "final_directadmin_delivery_smoke_gate",
     "title": "Final DirectAdmin Delivery Smoke Gate",
-    "status": "pending"
+    "status": "done",
+    "report": "agent_pack/reports/120_final_directadmin_delivery_smoke_gate_REPORT.md"
+  },
+  {
+    "id": "121",
+    "slug": "business_terms_inventory_receipts_not_finance",
+    "title": "Business Terms: Inventory Receipts Are Stock Only",
+    "status": "done",
+    "report": "agent_pack/reports/121_business_terms_inventory_receipts_not_finance_REPORT.md"
+  },
+  {
+    "id": "122",
+    "slug": "inventory_receipts_stock_only_backend_ui_cleanup",
+    "title": "Inventory Receipts Stock-Only Backend/UI Cleanup",
+    "status": "done",
+    "report": "agent_pack/reports/122_inventory_receipts_stock_only_backend_ui_cleanup_REPORT.md"
+  },
+  {
+    "id": "123",
+    "slug": "notifications_home_actions_preview_ignore",
+    "title": "Home Notifications Actions: Preview + Ignore",
+    "status": "done",
+    "report": "agent_pack/reports/123_notifications_home_actions_preview_ignore_REPORT.md"
+  },
+  {
+    "id": "124",
+    "slug": "insufficient_stock_notification_routing_arabic",
+    "title": "Insufficient Stock Notification Routing + Arabic Copy",
+    "status": "done",
+    "report": "agent_pack/reports/124_insufficient_stock_notification_routing_arabic_REPORT.md"
+  },
+  {
+    "id": "125",
+    "slug": "payment_flow_select_outlet_invoice_receipt_upload",
+    "title": "Payment Flow: Select Outlet + Invoice + Receipt Upload",
+    "status": "done",
+    "report": "agent_pack/reports/125_payment_flow_select_outlet_invoice_receipt_upload_REPORT.md"
+  },
+  {
+    "id": "126",
+    "slug": "payment_receipts_storage_review_queue",
+    "title": "Payment Receipts Storage + Review Queue",
+    "status": "done",
+    "report": "agent_pack/reports/126_payment_receipts_storage_review_queue_REPORT.md"
+  },
+  {
+    "id": "127",
+    "slug": "partial_payment_receipts_history",
+    "title": "Partial Payment Receipts + History",
+    "status": "done",
+    "report": "agent_pack/reports/127_partial_payment_receipts_history_REPORT.md"
+  },
+  {
+    "id": "128",
+    "slug": "payment_status_final_three_states_ui_backend",
+    "title": "Final Payment Status: Deferred / Partial / Full",
+    "status": "done",
+    "report": "agent_pack/reports/128_payment_status_final_three_states_ui_backend_REPORT.md"
+  },
+  {
+    "id": "129",
+    "slug": "financial_collection_review_no_book_supply_conflict",
+    "title": "Financial Collection Review Without Book-Supply Conflict",
+    "status": "done",
+    "report": "agent_pack/reports/129_financial_collection_review_no_book_supply_conflict_REPORT.md"
+  },
+  {
+    "id": "130",
+    "slug": "invoice_actions_pay_receipt_ship_return_from_list",
+    "title": "Invoice List Actions: Pay/Receipt, Ship, Return",
+    "status": "done",
+    "report": "agent_pack/reports/130_invoice_actions_pay_receipt_ship_return_from_list_REPORT.md"
+  },
+  {
+    "id": "131",
+    "slug": "partial_shipping_item_quantity_picker_recheck",
+    "title": "Partial Shipping Item Quantity Picker Recheck",
+    "status": "done",
+    "report": "agent_pack/reports/131_partial_shipping_item_quantity_picker_recheck_REPORT.md"
+  },
+  {
+    "id": "132",
+    "slug": "returns_flow_items_stock_outlet_credit",
+    "title": "Returns Flow: Items, Stock, Outlet Credit",
+    "status": "done",
+    "report": "agent_pack/reports/132_returns_flow_items_stock_outlet_credit_REPORT.md"
+  },
+  {
+    "id": "133",
+    "slug": "outlet_statement_balance_with_returns_receipts",
+    "title": "Outlet Statement: Balances, Returns, Receipts",
+    "status": "done",
+    "report": "agent_pack/reports/133_outlet_statement_balance_with_returns_receipts_REPORT.md"
+  },
+  {
+    "id": "134",
+    "slug": "dashboard_notifications_finance_inventory_rebuild",
+    "title": "Dashboard Notifications + Finance/Inventory Rebuild",
+    "status": "done",
+    "report": "agent_pack/reports/134_dashboard_notifications_finance_inventory_rebuild_REPORT.md"
+  },
+  {
+    "id": "135",
+    "slug": "backend_cleanup_cancelled_terms_deadcode",
+    "title": "Backend Cleanup: Cancelled Terms + Dead Code",
+    "status": "done",
+    "report": "agent_pack/reports/135_backend_cleanup_cancelled_terms_deadcode_REPORT.md"
+  },
+  {
+    "id": "136",
+    "slug": "frontend_payment_shipping_return_drawer_unification",
+    "title": "Frontend Drawer Unification: Payment/Shipping/Return",
+    "status": "done",
+    "report": "agent_pack/reports/136_frontend_payment_shipping_return_drawer_unification_REPORT.md"
+  },
+  {
+    "id": "137",
+    "slug": "permissions_audit_for_receipts_returns_shipping",
+    "title": "Permissions Audit for Receipts/Returns/Shipping",
+    "status": "done",
+    "report": "agent_pack/reports/137_permissions_audit_for_receipts_returns_shipping_REPORT.md"
+  },
+  {
+    "id": "138",
+    "slug": "professional_exports_receipts_returns_statements",
+    "title": "Professional Exports: Receipts, Returns, Statements",
+    "status": "done",
+    "report": "agent_pack/reports/138_professional_exports_receipts_returns_statements_REPORT.md"
+  },
+  {
+    "id": "139",
+    "slug": "end_to_end_receipt_shipping_return_stock_verification",
+    "title": "E2E Verification: Receipt + Shipping + Return + Stock",
+    "status": "done",
+    "report": "agent_pack/reports/139_end_to_end_receipt_shipping_return_stock_verification_REPORT.md"
+  },
+  {
+    "id": "140",
+    "slug": "final_style_logic_gate_no_regression",
+    "title": "Final Style/Logic Gate No Regression",
+    "status": "done",
+    "report": "agent_pack/reports/140_final_style_logic_gate_no_regression_REPORT.md"
+  },
+  {
+    "id": "141",
+    "slug": "notification_preview_routes_smoke_matrix",
+    "title": "Notification Preview Routes Smoke Matrix",
+    "status": "done",
+    "report": "agent_pack/reports/141_notification_preview_routes_smoke_matrix_REPORT.md"
+  },
+  {
+    "id": "142",
+    "slug": "payment_receipt_attachment_security_storage",
+    "title": "Payment Receipt Attachment Security + Storage",
+    "status": "done",
+    "report": "agent_pack/reports/142_payment_receipt_attachment_security_storage_REPORT.md"
+  },
+  {
+    "id": "143",
+    "slug": "invoice_creation_payment_receipt_dynamic_ux",
+    "title": "Invoice Creation + Payment Receipt Dynamic UX",
+    "status": "done",
+    "report": "agent_pack/reports/143_invoice_creation_payment_receipt_dynamic_ux_REPORT.md"
+  },
+  {
+    "id": "144",
+    "slug": "legacy_parity_final_after_new_corrections",
+    "title": "Legacy Parity Final After New Corrections",
+    "status": "done",
+    "report": "agent_pack/reports/144_legacy_parity_final_after_new_corrections_REPORT.md"
+  },
+  {
+    "id": "145",
+    "slug": "final_directadmin_delivery_after_corrections",
+    "title": "Final DirectAdmin Delivery After Corrections",
+    "status": "done",
+    "report": "agent_pack/reports/145_final_directadmin_delivery_after_corrections_REPORT.md"
+  },
+  {
+    "id": "146",
+    "slug": "dashboard_roles_layout_export_cleanup",
+    "title": "User Form Dropdowns, Placeholder Min-Widths, Layout Polish, & Dummy Data Purge",
+    "status": "done",
+    "report": "agent_pack/reports/146_dashboard_roles_layout_export_cleanup_REPORT.md"
+  },
+  {
+    "id": "147",
+    "slug": "payment_receipt_instant_approval_filters_cost_cleanup",
+    "title": "Payment Receipt Instant Approval, Redesigned Invoice Filters, Supply Cost Removal, and Full Returns Shortcut",
+    "status": "done",
+    "report": "agent_pack/reports/147_payment_receipt_instant_approval_filters_cost_cleanup_REPORT.md"
+  },
+  {
+    "id": "148",
+    "slug": "invoice_filters_translation_terminology_cleanup",
+    "title": "Invoice Filters Layout Restore, Stock Error Translation, Supply Alert MUI Styling, and Terminology Simplification",
+    "status": "done",
+    "report": "agent_pack/reports/148_invoice_filters_translation_terminology_cleanup_REPORT.md"
+  },
+  {
+    "id": "149",
+    "slug": "drawer_exports_roles_permissions",
+    "title": "Finance Drawer Conversion, Exports Redesign, Input Widths Fix, Breadcrumbs translation, and Roles Translation",
+    "status": "done",
+    "report": "agent_pack/reports/149_drawer_exports_roles_permissions_REPORT.md"
+  },
+  {
+    "id": "150",
+    "slug": "rearrange_invoice_filters_date_notch_fix",
+    "title": "Invoice Filters Grid Rearrangement, Customer Statement Full Width, Product/Invoice ID Dynamic Widths, and Date Notch Behavior Fix",
+    "status": "done",
+    "report": "agent_pack/reports/150_rearrange_invoice_filters_date_notch_fix_REPORT.md"
   }
 ]

@@ -1,48 +1,19 @@
-# مطبعة حمزة — Unified Agent Pack
+# Hamza Printing Press Agent Pack — Unified Locked State
 
-هذا الـ Agent Pack يدير تحديث منصة مطبعة حمزة من خلال خطوات واحدة تلو الأخرى.
+This agent pack belongs to **مطبعة حمزة** and is maintained by **Ziad Elsayed CodzHub**.
 
-## البرومبت الموحد
+## Status
 
-```text
-You are working on the Hamza Printing Press Bookstore Manager repo. Read `agent_pack/prompts/ONE_PROMPT_RUNNER.md` and follow it exactly. Execute exactly one open/pending step from `agent_pack/status.json`, update tracking, run verification, write the step report, then stop. Do not execute more than one step.
-```
+Locked after Step 150. No open/pending executable steps exist.
 
-## مصدر الحقيقة
+## Current truth files
 
 - `status.json`
 - `TASK_BOARD.md`
-- `prompts/ONE_PROMPT_RUNNER.md`
+- `docs/LATEST_REPO_LOCKED_SNAPSHOT.md`
+- `docs/MANUAL_CHANGES_UNDERSTOOD.md`
 - `docs/FINAL_BUSINESS_RULES_CURRENT.md`
-- `docs/FINAL_MATERIAL_RTL_DESIGN_SYSTEM.md`
 
-## الحالي
+## Future work
 
-الخطوات الجديدة من 096 إلى 120 تعالج:
-
-- تنظيف الـ agent pack.
-- إصلاح التصميم وRTL وMUI.
-- توحيد side drawers.
-- إلغاء التقسيط والاستيراد.
-- الماليات: معلق، محصل، مورد، غير مورد، مسترجعات.
-- الشحن الجزئي حسب بنود الفاتورة.
-- الاسترجاع والرصيد والليميت.
-- الفواتير كـ مركز أكشنز.
-- تنظيف backend/tests/dead code.
-- final deploy/smoke gate.
-
-
----
-
-## Inventory/Payments/Notifications Correction Phase — 2026-06-28
-
-Opened current steps 121–145 to correct the latest business rules:
-
-- Book inventory receipts are stock-only, not finance.
-- Payment creation selects outlet then invoice and supports receipt upload for every payment, including partial payments.
-- Payment receipts have a review queue.
-- Dashboard notifications use `معاينة` and `تجاهل` only.
-- Insufficient stock previews route to product/inventory context.
-- Partial shipping selects invoice item quantities.
-- Returns affect stock, outlet return balance/credit, limit, statements, notifications, and exports.
-- No imports and no installments remain allowed.
+When the user requests a new change, add a new step after 150 inside this same pack. Do not create V2/V3 and do not split the pack.
