@@ -8,6 +8,7 @@ import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
 import { FormSection } from '../components/forms/FormSection';
 import { FieldGrid } from '../components/forms/FieldGrid';
+import { EGYPT_GOVERNORATES } from '../constants/governorates';
 import {
   Box,
   Typography,
@@ -62,20 +63,7 @@ import {
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 
-const jordanGovernorates = [
-  'عمان',
-  'إربد',
-  'الزرقاء',
-  'البلقاء',
-  'المفرق',
-  'الكرك',
-  'مادبا',
-  'جرش',
-  'عجلون',
-  'الطفيلة',
-  'معان',
-  'العقبة'
-];
+
 
 export const Invoices = () => {
   const { hasPermission } = useAuth();
@@ -944,9 +932,9 @@ export const Invoices = () => {
 
           <Collapse in={showFilters} sx={{ mt: 2 }}>
             <Divider sx={{ my: 1.5 }} />
-            <Grid container spacing={2}>
-              {/* Text Search */}
-              <Grid item xs={12} sm={4} md={3}>
+            <Grid container spacing={2} className="filter-grid">
+              {/* Row 1: Search (3), Outlet (3), Outlet Type (2), Governorate (2), Payment Status (2) */}
+              <Grid item xs={12} sm={6} md={3}>
                 <TextField
                   fullWidth
                   label="رقم الفاتورة، المنفذ، الملاحظات"
@@ -963,8 +951,7 @@ export const Invoices = () => {
                 />
               </Grid>
 
-              {/* Outlet select */}
-              <Grid item xs={12} sm={4} md={3}>
+              <Grid item xs={12} sm={6} md={3}>
                 <FormControl fullWidth size="small">
                   <InputLabel>المنفذ</InputLabel>
                   <Select
@@ -982,8 +969,7 @@ export const Invoices = () => {
                 </FormControl>
               </Grid>
 
-              {/* Outlet Type select */}
-              <Grid item xs={12} sm={4} md={2}>
+              <Grid item xs={12} sm={6} md={2}>
                 <FormControl fullWidth size="small">
                   <InputLabel>فئة المنفذ</InputLabel>
                   <Select
@@ -1001,8 +987,7 @@ export const Invoices = () => {
                 </FormControl>
               </Grid>
 
-              {/* Governorate */}
-              <Grid item xs={12} sm={4} md={2}>
+              <Grid item xs={12} sm={6} md={2}>
                 <FormControl fullWidth size="small">
                   <InputLabel>المحافظة</InputLabel>
                   <Select
@@ -1011,7 +996,7 @@ export const Invoices = () => {
                     label="المحافظة"
                   >
                     <MenuItem value="">الكل</MenuItem>
-                    {jordanGovernorates.map((gov) => (
+                    {EGYPT_GOVERNORATES.map((gov) => (
                       <MenuItem key={gov} value={gov}>
                         {gov}
                       </MenuItem>
@@ -1020,48 +1005,7 @@ export const Invoices = () => {
                 </FormControl>
               </Grid>
 
-              {/* Has Remaining */}
-              <Grid item xs={12} sm={4} md={2}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>حالة المتبقي</InputLabel>
-                  <Select
-                    value={filterHasRemaining}
-                    onChange={(e) => setFilterHasRemaining(e.target.value)}
-                    label="حالة المتبقي"
-                  >
-                    <MenuItem value="">الكل</MenuItem>
-                    <MenuItem value="yes">يوجد متبقي ذمة مالية</MenuItem>
-                    <MenuItem value="no">مسددة بالكامل</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Min Remaining */}
-              <Grid item xs={12} sm={3} md={1.5}>
-                <TextField
-                  fullWidth
-                  label="أدنى متبقي"
-                  size="small"
-                  type="number"
-                  value={filterMinRemaining}
-                  onChange={(e) => setFilterMinRemaining(e.target.value)}
-                />
-              </Grid>
-
-              {/* Max Remaining */}
-              <Grid item xs={12} sm={3} md={1.5}>
-                <TextField
-                  fullWidth
-                  label="أقصى متبقي"
-                  size="small"
-                  type="number"
-                  value={filterMaxRemaining}
-                  onChange={(e) => setFilterMaxRemaining(e.target.value)}
-                />
-              </Grid>
-
-              {/* Payment Status */}
-              <Grid item xs={12} sm={3} md={1.5}>
+              <Grid item xs={12} sm={6} md={2}>
                 <FormControl fullWidth size="small">
                   <InputLabel>حالة الدفع</InputLabel>
                   <Select
@@ -1078,8 +1022,23 @@ export const Invoices = () => {
                 </FormControl>
               </Grid>
 
-              {/* Shipping Status */}
-              <Grid item xs={12} sm={3} md={1.5}>
+              {/* Row 2: Has Remaining (2), Shipping Status (2), Min Remaining (2), Max Remaining (2), Start Date (2), End Date (2) */}
+              <Grid item xs={12} sm={6} md={2}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>حالة المتبقي</InputLabel>
+                  <Select
+                    value={filterHasRemaining}
+                    onChange={(e) => setFilterHasRemaining(e.target.value)}
+                    label="حالة المتبقي"
+                  >
+                    <MenuItem value="">الكل</MenuItem>
+                    <MenuItem value="yes">يوجد متبقي ذمة مالية</MenuItem>
+                    <MenuItem value="no">مسددة بالكامل</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={2}>
                 <FormControl fullWidth size="small">
                   <InputLabel>حالة الشحن</InputLabel>
                   <Select
@@ -1096,51 +1055,84 @@ export const Invoices = () => {
                 </FormControl>
               </Grid>
 
-              {/* Product selector */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Autocomplete
-                  options={productsList}
-                  getOptionLabel={(option) => `(${option.code}) ${option.title}`}
+              <Grid item xs={12} sm={6} md={2}>
+                <TextField
+                  fullWidth
+                  label="أدنى متبقي"
                   size="small"
-                  onChange={(e, val) => setFilterProductId(val ? val.id : '')}
-                  renderInput={(params) => <TextField {...params} label="تصفية بحسب الكتاب" />}
+                  type="number"
+                  value={filterMinRemaining}
+                  onChange={(e) => setFilterMinRemaining(e.target.value)}
                 />
               </Grid>
 
-              {/* Author selector */}
-              <Grid item xs={12} sm={6} md={3}>
-                <Autocomplete
-                  options={authorsList}
-                  getOptionLabel={(option) => option.name}
+              <Grid item xs={12} sm={6} md={2}>
+                <TextField
+                  fullWidth
+                  label="أقصى متبقي"
                   size="small"
-                  onChange={(e, val) => setFilterAuthorId(val ? val.id : '')}
-                  renderInput={(params) => <TextField {...params} label="تصفية بحسب المؤلف" />}
+                  type="number"
+                  value={filterMaxRemaining}
+                  onChange={(e) => setFilterMaxRemaining(e.target.value)}
                 />
               </Grid>
 
-              {/* Start Date */}
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2}>
                 <TextField
                   fullWidth
                   label="من تاريخ"
                   size="small"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   value={filterStartDate}
                   onChange={(e) => setFilterStartDate(e.target.value)}
                 />
               </Grid>
 
-              {/* End Date */}
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid item xs={12} sm={6} md={2}>
                 <TextField
                   fullWidth
                   label="إلى تاريخ"
                   size="small"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   value={filterEndDate}
                   onChange={(e) => setFilterEndDate(e.target.value)}
+                />
+              </Grid>
+
+              {/* Row 3: Book (6), Author (6) */}
+              <Grid item xs={12} sm={6} md={6}>
+                <Autocomplete
+                  fullWidth
+                  options={productsList}
+                  getOptionLabel={(option) => `(${option.code}) ${option.title}`}
+                  size="small"
+                  onChange={(e, val) => setFilterProductId(val ? val.id : '')}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="تصفية بحسب الكتاب"
+                    />
+                  )}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={6}>
+                <Autocomplete
+                  fullWidth
+                  options={authorsList}
+                  getOptionLabel={(option) => option.name}
+                  size="small"
+                  onChange={(e, val) => setFilterAuthorId(val ? val.id : '')}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="تصفية بحسب المؤلف"
+                    />
+                  )}
                 />
               </Grid>
             </Grid>

@@ -177,3 +177,29 @@ net_outlet_exposure = pending_receivable - return_balance + manual_debit_adjustm
 - أخطاء أو تسويات مالية يدوية.
 
 كل إشعار له action_url يفتح الشاشة الصحيحة.
+
+---
+
+# Correction Addendum — Inventory Receipts, Payment Receipts, Notifications
+
+This addendum supersedes any older wording that mixed book supply/inventory receipts with financial remittance.
+
+## Inventory receipts are not finance
+
+`واردات الكتب` / `استلام مخزون` only increase/decrease stock through inventory ledger. They must not affect balances, payments, collected amount, remittance, or outlet limit.
+
+## Payments and receipts
+
+Payments are created against an outlet invoice. Every payment operation can have a receipt/proof attachment, even when the payment is partial. Receipts must be reviewable.
+
+## Payment states
+
+Only three states are allowed: `مؤجل كلياً`, `مدفوع جزئياً`, `مدفوع كلياً`. Installments remain cancelled.
+
+## Notifications
+
+Dashboard notifications must use `معاينة` and `تجاهل`. `معاينة` routes to the related module/entity. `حل المشكلة` is not allowed as a generic action.
+
+## Returns and partial shipping
+
+Partial shipping is by invoice item quantities. Returns are by invoice item quantities and affect stock, outlet return balance/credit, outlet limit/statement, notifications, and exports.

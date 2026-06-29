@@ -47,10 +47,20 @@ async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
     `, [item.id]);
     const allocatedQty = allocatedRow.qty;
 
-    if (deliveredQty < item.quantity) {
+    // 4. Returned quantity
+    const returnedRow = await db.get(`
+      SELECT COALESCE(SUM(ri.quantity), 0) as qty
+      FROM return_items ri
+      JOIN returns r ON r.id = ri.return_id
+      WHERE ri.invoice_item_id = ? AND r.status != 'cancelled'
+    `, [item.id]);
+    const returnedQty = returnedRow.qty;
+    const targetQty = Math.max(0, item.quantity - returnedQty);
+
+    if (deliveredQty < targetQty) {
       allDelivered = false;
     }
-    if (shippedQty < item.quantity) {
+    if (shippedQty < targetQty) {
       allShipped = false;
     }
     if (allocatedQty > 0) {
@@ -142,7 +152,15 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
       WHERE si.invoice_item_id = ? AND s.status != 'cancelled'
     `, [invoiceItemId]);
 
-    const remainingQty = invoiceItem.quantity - allocatedRow.qty;
+    // Calculate returned quantity
+    const returnedRow = await db.get(`
+      SELECT COALESCE(SUM(ri.quantity), 0) as qty
+      FROM return_items ri
+      JOIN returns r ON r.id = ri.return_id
+      WHERE ri.invoice_item_id = ? AND r.status != 'cancelled'
+    `, [invoiceItemId]);
+
+    const remainingQty = Math.max(0, invoiceItem.quantity - allocatedRow.qty - returnedRow.qty);
     if (qty > remainingQty) {
       throw new Error(`Requested shipment quantity for product "${invoiceItem.product_title}" exceeds the remaining unshipped quantity of ${remainingQty}.`);
     }
@@ -362,8 +380,15 @@ async function getRemainingShippableItems(invoiceId) {
       WHERE si.invoice_item_id = ? AND s.status != 'cancelled'
     `, [item.invoice_item_id]);
 
+    const returnedRow = await db.get(`
+      SELECT COALESCE(SUM(ri.quantity), 0) as qty
+      FROM return_items ri
+      JOIN returns r ON r.id = ri.return_id
+      WHERE ri.invoice_item_id = ? AND r.status != 'cancelled'
+    `, [item.invoice_item_id]);
+
     item.shipped_quantity = allocatedRow.qty;
-    item.remaining_quantity = Math.max(0, item.ordered_quantity - allocatedRow.qty);
+    item.remaining_quantity = Math.max(0, item.ordered_quantity - allocatedRow.qty - returnedRow.qty);
   }
 
   return items;

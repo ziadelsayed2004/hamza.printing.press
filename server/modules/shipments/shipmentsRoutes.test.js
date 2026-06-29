@@ -10,6 +10,7 @@ const outletTypesService = require('../outlet-types/outletTypesService');
 const inventoryService = require('../inventory/inventoryService');
 const invoicesService = require('../invoices/invoicesService');
 const shipmentsService = require('./shipmentsService');
+const returnsService = require('../returns/returnsService');
 
 describe('Shipments API Integration Tests', () => {
   let adminUser;
@@ -58,7 +59,11 @@ describe('Shipments API Integration Tests', () => {
       )
     `);
 
-    // 2. Delete invoice-related records
+    // 2. Delete return-related records, finance ledger entries, and shipments first
+    await db.run('DELETE FROM return_items WHERE invoice_item_id IN (SELECT id FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Shipment Outlet")))');
+    await db.run('DELETE FROM returns WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Shipment Outlet"))');
+    await db.run('DELETE FROM finance_ledger_entries WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Cairo Shipment Outlet")');
+
     await db.run(`
       DELETE FROM invoice_payments 
       WHERE invoice_id IN (
@@ -403,6 +408,67 @@ describe('Shipments API Integration Tests', () => {
       expect(item.ordered_quantity).toBe(5);
       expect(item.shipped_quantity).toBe(5);
       expect(item.remaining_quantity).toBe(0);
+    });
+
+    it('should correctly prevent shipping more than ordered minus shipped minus returned', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_shp_api_staff', password: 'password123' });
+
+      // Create a fresh test invoice with 10 items
+      const freshInvoice = await invoicesService.createInvoice({
+        outletId: cairoOutlet.id,
+        items: [{ productId: testBook.id, quantity: 10, unitPrice: 150 }],
+        discount: 0,
+        shippingCost: 0,
+        paymentType: 'cash',
+        collectionType: 'none',
+        collectedAmount: 0,
+        notes: 'Test returned items block',
+        userId: adminUser.id
+      });
+      const freshInvoiceItemId = freshInvoice.items[0].id;
+
+      // Create a return of 3 items for this invoice
+      await returnsService.createReturn({
+        invoiceId: freshInvoice.id,
+        reason: 'Client request return',
+        items: [{ invoiceItemId: freshInvoiceItemId, quantity: 3 }],
+        userId: adminUser.id
+      });
+
+      // Shipped 2 items first
+      await shipmentsService.createShipment({
+        invoiceId: freshInvoice.id,
+        shippingCarrier: 'DHL',
+        trackingNumber: 'TRK123',
+        items: [{ invoiceItemId: freshInvoiceItemId, quantity: 2 }],
+        userId: adminUser.id
+      });
+
+      // Remaining shippable should be 10 - 3 (returned) - 2 (shipped) = 5
+      const remRes = await agent.get(`/api/shipments/invoice/${freshInvoice.id}/remaining`);
+      expect(remRes.status).toBe(200);
+      const remItem = remRes.body.find(i => i.invoice_item_id === freshInvoiceItemId);
+      expect(remItem.remaining_quantity).toBe(5);
+
+      // Attempting to ship 6 items should fail because it exceeds remaining 5 items
+      const failRes = await agent
+        .post('/api/shipments')
+        .send({
+          invoiceId: freshInvoice.id,
+          items: [{ invoiceItemId: freshInvoiceItemId, quantity: 6 }]
+        });
+      expect(failRes.status).toBe(400);
+      expect(failRes.body.message).toContain('exceeds');
+
+      // Attempting to ship 5 items should succeed
+      const okRes = await agent
+        .post('/api/shipments')
+        .send({
+          invoiceId: freshInvoice.id,
+          items: [{ invoiceItemId: freshInvoiceItemId, quantity: 5 }]
+        });
+      expect(okRes.status).toBe(201);
     });
   });
 });

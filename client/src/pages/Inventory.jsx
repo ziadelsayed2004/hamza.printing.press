@@ -57,7 +57,7 @@ import {
 function TabPanel({ children, value, index, ...props }) {
   return (
     <Box role="tabpanel" hidden={value !== index} {...props}>
-      {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
+      {value === index && <Box sx={{ pt: 2, pb: 'var(--space-6)' }}>{children}</Box>}
     </Box>
   );
 }
@@ -165,7 +165,7 @@ export const Inventory = () => {
   const [rcSupplier, setRcSupplier] = useState('');
   const [rcDate, setRcDate] = useState(new Date().toISOString().split('T')[0]);
   const [rcNotes, setRcNotes] = useState('');
-  const [rcItems, setRcItems] = useState([{ productId: '', quantity: '', unitCost: '' }]);
+  const [rcItems, setRcItems] = useState([{ productId: '', quantity: '', unitCost: 0 }]);
   const [rcSubmitting, setRcSubmitting] = useState(false);
 
   const [allProducts, setAllProducts] = useState([]);
@@ -186,13 +186,13 @@ export const Inventory = () => {
     setRcSupplier('');
     setRcDate(new Date().toISOString().split('T')[0]);
     setRcNotes('');
-    setRcItems([{ productId: '', quantity: '', unitCost: '' }]);
+    setRcItems([{ productId: '', quantity: '', unitCost: 0 }]);
     setOpenCreateReceipt(true);
     fetchAllProducts();
   };
 
   const handleRcAddItem = () => {
-    setRcItems([...rcItems, { productId: '', quantity: '', unitCost: '' }]);
+    setRcItems([...rcItems, { productId: '', quantity: '', unitCost: 0 }]);
   };
 
   const handleRcRemoveItem = (index) => {
@@ -209,7 +209,7 @@ export const Inventory = () => {
 
   const handleSubmitReceipt = async (e) => {
     e.preventDefault();
-    if (!rcDate || rcItems.some(i => !i.productId || !i.quantity || !i.unitCost)) {
+    if (!rcDate || rcItems.some(i => !i.productId || !i.quantity)) {
       showToast('تاريخ الاستلام وتفاصيل جميع الأصناف مطلوبة.', 'error');
       return;
     }
@@ -222,7 +222,7 @@ export const Inventory = () => {
         items: rcItems.map(i => ({
           productId: parseInt(i.productId, 10),
           quantity: parseInt(i.quantity, 10),
-          unitCost: parseFloat(i.unitCost)
+          unitCost: 0
         }))
       });
       showToast('تم تسجيل إذن الوارد بنجاح وتحديث أرصدة المخزون.');
@@ -296,7 +296,7 @@ export const Inventory = () => {
 
   const txTypeLabel = (t) => {
     switch (t) {
-      case 'receipt': return 'وارد';
+      case 'receipt': return 'وارد كتب (استلام)';
       case 'sale': return 'مبيعات';
       case 'adjustment': return 'تسوية';
       case 'return': return 'مرتجع';
@@ -327,12 +327,12 @@ export const Inventory = () => {
       {/* Title */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          إدارة المخزون والوارد
+          إدارة المخزون وواردات الكتب
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {hasPermission('inventory.receipts.create') && (
             <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpenCreateReceipt}>
-              إذن وارد جديد
+              إذن استلام مخزون جديد
             </Button>
           )}
           {hasPermission('inventory.adjustments.create') && (
@@ -344,19 +344,19 @@ export const Inventory = () => {
       </Box>
 
       {/* Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs
-          value={tab}
-          onChange={(_, v) => setTab(v)}
-          textColor="secondary"
-          indicatorColor="secondary"
-          variant="fullWidth"
-        >
-          <Tab icon={<InventoryIcon />} label="ملخص المخزون" iconPosition="start" />
-          <Tab icon={<SwapVertIcon />} label="سجل الحركات" iconPosition="start" />
-          <Tab icon={<ReceiptIcon />} label="أذونات الوارد" iconPosition="start" />
-        </Tabs>
-      </Paper>
+      <Tabs
+        value={tab}
+        onChange={(_, v) => setTab(v)}
+        textColor="secondary"
+        indicatorColor="secondary"
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab icon={<InventoryIcon />} label="ملخص المخزون" iconPosition="start" sx={{ whiteSpace: 'nowrap' }} />
+        <Tab icon={<SwapVertIcon />} label="سجل الحركات" iconPosition="start" sx={{ whiteSpace: 'nowrap' }} />
+        <Tab icon={<ReceiptIcon />} label="واردات الكتب (استلام مخزون)" iconPosition="start" sx={{ whiteSpace: 'nowrap' }} />
+      </Tabs>
 
       {/* ── TAB 0: Stock Summary ── */}
       <TabPanel value={tab} index={0}>
@@ -437,7 +437,7 @@ export const Inventory = () => {
       {/* ── TAB 1: Transaction Ledger ── */}
       <TabPanel value={tab} index={1}>
         {/* Filters */}
-        <Grid container spacing={2} sx={{ mb: 2 }} alignItems="center">
+        <Grid container spacing={2} sx={{ mb: 2 }} alignItems="center" className="filter-grid">
           <Grid item xs={12} sm={4} md={3}>
             <TextField
               fullWidth size="small" label="معرّف المنتج (Product ID)" type="number"
@@ -450,7 +450,7 @@ export const Inventory = () => {
               <InputLabel>نوع الحركة</InputLabel>
               <Select value={txType} onChange={(e) => { setTxType(e.target.value); setTxOffset(0); }} label="نوع الحركة">
                 <MenuItem value="">الكل</MenuItem>
-                <MenuItem value="receipt">وارد</MenuItem>
+                <MenuItem value="receipt">وارد كتب (استلام مخزون)</MenuItem>
                 <MenuItem value="sale">مبيعات</MenuItem>
                 <MenuItem value="adjustment">تسوية</MenuItem>
                 <MenuItem value="return">مرتجع</MenuItem>
@@ -532,12 +532,12 @@ export const Inventory = () => {
       <TabPanel value={tab} index={2}>
         <Paper sx={{ overflow: 'hidden' }}>
           {receiptsLoading ? (
-            <LoadingState message="جاري تحميل أذونات الوارد..." />
+            <LoadingState message="جاري تحميل أذونات استلام المخزون..." />
           ) : receipts.length === 0 ? (
             <EmptyState
-              title="لا يوجد أذونات وارد"
-              description="لم يتم تسجيل أذونات وارد بعد."
-              actionLabel={hasPermission('inventory.receipts.create') ? 'إذن وارد جديد' : undefined}
+              title="لا توجد أذونات استلام مخزون"
+              description="لم يتم تسجيل أذونات استلام مخزون بعد."
+              actionLabel={hasPermission('inventory.receipts.create') ? 'إذن استلام مخزون جديد' : undefined}
               onAction={hasPermission('inventory.receipts.create') ? handleOpenCreateReceipt : undefined}
             />
           ) : (
@@ -559,7 +559,7 @@ export const Inventory = () => {
                       <TableCell sx={{ fontFamily: 'monospace', fontWeight: 500 }}>{row.receipt_number}</TableCell>
                       <TableCell>{row.supplier_name || '—'}</TableCell>
                       <TableCell>{row.received_date ? formatEgyptDate(row.received_date) : '—'}</TableCell>
-                      <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {row.notes || '—'}
                       </TableCell>
                       <TableCell>{row.user_full_name || '—'}</TableCell>
@@ -600,28 +600,28 @@ export const Inventory = () => {
       <EntityDrawer
         open={openCreateReceipt}
         onClose={() => !rcSubmitting && setOpenCreateReceipt(false)}
-        title="تسجيل إذن وارد جديد"
+        title="تسجيل إذن استلام مخزون جديد"
         actions={
           <>
             <Button variant="outlined" color="inherit" onClick={() => setOpenCreateReceipt(false)} disabled={rcSubmitting}>إلغاء</Button>
             <Button variant="contained" color="primary" type="submit" form="create-receipt-form" disabled={rcSubmitting}>
-              {rcSubmitting ? 'جاري التسجيل...' : 'تأكيد وتسجيل الوارد'}
+              {rcSubmitting ? 'جاري التسجيل...' : 'تأكيد وتسجيل استلام المخزون'}
             </Button>
           </>
         }
       >
         <form onSubmit={handleSubmitReceipt} id="create-receipt-form">
-          <FormSection title="البيانات الأساسية لإذن الوارد">
+          <FormSection title="البيانات الأساسية لإذن استلام المخزون">
             <FieldGrid columns={2}>
               <TextField fullWidth label="اسم المورّد (اختياري)" size="small" value={rcSupplier} onChange={(e) => setRcSupplier(e.target.value)} />
-              <TextField fullWidth required label="تاريخ الاستلام" size="small" type="date" InputLabelProps={{ shrink: true }} value={rcDate} onChange={(e) => setRcDate(e.target.value)} />
+              <TextField fullWidth required label="تاريخ الاستلام" size="small" type="date" InputLabelProps={{ shrink: true }} InputProps={{ notched: true }} value={rcDate} onChange={(e) => setRcDate(e.target.value)} />
             </FieldGrid>
             <Box sx={{ mt: 2 }}>
               <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={rcNotes} onChange={(e) => setRcNotes(e.target.value)} />
             </Box>
           </FormSection>
 
-          <FormSection title="أصناف الوارد">
+          <FormSection title="أصناف استلام المخزون">
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
               <Button size="small" startIcon={<AddIcon />} onClick={handleRcAddItem} variant="outlined" color="secondary">إضافة صنف</Button>
             </Box>
@@ -644,12 +644,8 @@ export const Inventory = () => {
                   </Select>
                 </FormControl>
 
-                <TextField required label="الكمية" size="small" type="number" inputProps={{ min: 1 }} sx={{ flex: 1 }}
+                <TextField required label="الكمية" size="small" type="number" inputProps={{ min: 1 }} sx={{ flex: 1.5 }}
                   value={item.quantity} onChange={(e) => handleRcItemChange(idx, 'quantity', e.target.value)} />
-
-                <TextField required label="تكلفة الوحدة" size="small" type="number" inputProps={{ step: '0.01', min: 0 }} sx={{ flex: 1.5 }}
-                  value={item.unitCost} onChange={(e) => handleRcItemChange(idx, 'unitCost', e.target.value)}
-                  InputProps={{ endAdornment: <InputAdornment position="end">ج.م</InputAdornment> }} />
 
                 <IconButton color="error" onClick={() => handleRcRemoveItem(idx)} disabled={rcItems.length <= 1} size="small">
                   <DeleteIcon fontSize="small" />
@@ -664,7 +660,7 @@ export const Inventory = () => {
       <EntityDrawer
         open={openReceiptDetail}
         onClose={() => setOpenReceiptDetail(false)}
-        title="تفاصيل إذن الوارد"
+        title="تفاصيل إذن استلام المخزون"
         loading={receiptDetailLoading}
         actions={<Button onClick={() => setOpenReceiptDetail(false)} variant="outlined">إغلاق</Button>}
       >
@@ -699,8 +695,6 @@ export const Inventory = () => {
                       <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>
                       <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>تكلفة الوحدة</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>الإجمالي</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -709,10 +703,6 @@ export const Inventory = () => {
                         <TableCell sx={{ fontWeight: 500 }}>{item.product_title}</TableCell>
                         <TableCell sx={{ fontFamily: 'monospace' }}>{item.product_code || '—'}</TableCell>
                         <TableCell align="center" sx={{ fontWeight: 'bold' }}>{item.quantity}</TableCell>
-                        <TableCell align="right">{formatCurrencyEGP(item.unit_cost)}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>
-                          {formatCurrencyEGP(parseFloat(item.unit_cost) * item.quantity)}
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

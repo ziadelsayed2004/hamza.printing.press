@@ -15,6 +15,57 @@ router.get('/permissions', requireAuth, checkPermission('roles.manage'), async (
   }
 });
 
+// 8. GET /api/users/roles - List all roles
+router.get('/roles', requireAuth, checkPermission('roles.manage'), async (req, res) => {
+  try {
+    const roles = await rolesService.getAllRoles();
+    // Fetch permissions associated with each role
+    for (const role of roles) {
+      const perms = await rolesService.getRolePermissions(role.id);
+      role.permissions = perms.map(p => p.name);
+    }
+    res.status(200).json(roles);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 9. POST /api/users/roles/:roleId/permissions - Update permissions for a role
+router.post('/roles/:roleId/permissions', requireAuth, checkPermission('roles.manage'), auditLog('update_role_permissions', 'roles'), async (req, res) => {
+  const { roleId } = req.params;
+  const { permissionIds } = req.body;
+
+  if (!Array.isArray(permissionIds)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'permissionIds must be an array.' });
+  }
+
+  try {
+    await rolesService.updateRolePermissions(roleId, permissionIds);
+    res.status(200).json({
+      success: true,
+      message: 'Role permissions updated successfully.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 10. GET /api/users/audit-logs - List audit logs
+router.get('/audit-logs', requireAuth, checkPermission('audit.view'), async (req, res) => {
+  const limit = parseInt(req.query.limit || '50', 10);
+  const offset = parseInt(req.query.offset || '0', 10);
+  const action = req.query.action || null;
+  const targetType = req.query.targetType || null;
+  
+  try {
+    const auditService = require('../audit/auditService');
+    const logs = await auditService.getLogs({ limit, offset, action, targetType });
+    res.status(200).json(logs);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
 // 2. GET /api/users - Paginated user list with search filters
 router.get('/', requireAuth, checkPermission('users.view'), async (req, res) => {
   const limit = parseInt(req.query.limit || '50', 10);
@@ -201,57 +252,6 @@ router.delete('/:id', requireAuth, checkPermission('users.archive'), auditLog('a
       success: true,
       message: 'User archived successfully (soft deleted).'
     });
-  } catch (err) {
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
-  }
-});
-
-// 8. GET /api/users/roles - List all roles
-router.get('/roles', requireAuth, checkPermission('roles.manage'), async (req, res) => {
-  try {
-    const roles = await rolesService.getAllRoles();
-    // Fetch permissions associated with each role
-    for (const role of roles) {
-      const perms = await rolesService.getRolePermissions(role.id);
-      role.permissions = perms.map(p => p.name);
-    }
-    res.status(200).json(roles);
-  } catch (err) {
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
-  }
-});
-
-// 9. POST /api/users/roles/:roleId/permissions - Update permissions for a role
-router.post('/roles/:roleId/permissions', requireAuth, checkPermission('roles.manage'), auditLog('update_role_permissions', 'roles'), async (req, res) => {
-  const { roleId } = req.params;
-  const { permissionIds } = req.body;
-
-  if (!Array.isArray(permissionIds)) {
-    return res.status(400).json({ error: 'Bad Request', message: 'permissionIds must be an array.' });
-  }
-
-  try {
-    await rolesService.updateRolePermissions(roleId, permissionIds);
-    res.status(200).json({
-      success: true,
-      message: 'Role permissions updated successfully.'
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
-  }
-});
-
-// 10. GET /api/users/audit-logs - List audit logs
-router.get('/audit-logs', requireAuth, checkPermission('audit.view'), async (req, res) => {
-  const limit = parseInt(req.query.limit || '50', 10);
-  const offset = parseInt(req.query.offset || '0', 10);
-  const action = req.query.action || null;
-  const targetType = req.query.targetType || null;
-  
-  try {
-    const auditService = require('../audit/auditService');
-    const logs = await auditService.getLogs({ limit, offset, action, targetType });
-    res.status(200).json(logs);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }

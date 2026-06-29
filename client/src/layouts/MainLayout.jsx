@@ -29,7 +29,6 @@ import {
   Menu,
   MenuItem,
   Badge,
-  useMediaQuery,
   useTheme
 } from '@mui/material';
 import {
@@ -61,16 +60,12 @@ import {
 } from '@mui/icons-material';
 import './MainLayout.css';
 
-const DRAWER_WIDTH = 270;
-const DRAWER_COLLAPSED_WIDTH = 72;
-
 export const MainLayout = () => {
   const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { mode, toggleColorMode } = useColorMode();
   const muiTheme = useTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down('md'));
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -78,8 +73,6 @@ export const MainLayout = () => {
   const [notifyAnchorEl, setNotifyAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-
-  const currentDrawerWidth = collapsed && !isMobile ? DRAWER_COLLAPSED_WIDTH : DRAWER_WIDTH;
 
   // ── Notifications Fetching ──
   const fetchNotifications = async () => {
@@ -122,11 +115,11 @@ export const MainLayout = () => {
 
   const getSeverityIcon = (severity) => {
     switch (severity) {
-      case 'critical': return <ErrorIcon className="main-layout__icon-btn" fontSize="small" style={{ color: '#ef4444' }} />;
-      case 'warning': return <WarningIcon className="main-layout__icon-btn" fontSize="small" style={{ color: '#f59e0b' }} />;
-      case 'success': return <CheckCircleIcon className="main-layout__icon-btn" fontSize="small" style={{ color: '#10b981' }} />;
+      case 'critical': return <ErrorIcon className="notification-severity-icon notification-severity-icon--critical" fontSize="small" />;
+      case 'warning': return <WarningIcon className="notification-severity-icon notification-severity-icon--warning" fontSize="small" />;
+      case 'success': return <CheckCircleIcon className="notification-severity-icon notification-severity-icon--success" fontSize="small" />;
       case 'info':
-      default: return <InfoIcon className="main-layout__icon-btn" fontSize="small" style={{ color: '#3b82f6' }} />;
+      default: return <InfoIcon className="notification-severity-icon notification-severity-icon--info" fontSize="small" />;
     }
   };
 
@@ -218,7 +211,7 @@ export const MainLayout = () => {
       titleKey: 'nav.inventorySection',
       title: 'المخزون',
       items: [
-        { textKey: 'nav.inventory', text: 'المخزون والوارد', icon: <InventoryIcon />, path: '/inventory', permission: 'inventory.view' }
+        { textKey: 'nav.inventory', text: 'المخزون وواردات الكتب', icon: <InventoryIcon />, path: '/inventory', permission: 'inventory.view' }
       ]
     },
     {
@@ -299,7 +292,7 @@ export const MainLayout = () => {
             );
 
             return (
-              <ListItem key={item.textKey} disablePadding style={{ display: 'block' }}>
+              <ListItem key={item.textKey} disablePadding className="sidebar-list-item">
                 {isCollapsedView ? (
                   <Tooltip title={t(item.textKey)} placement="left">
                     {buttonContent}
@@ -326,7 +319,7 @@ export const MainLayout = () => {
           className={`sidebar-header ${isCollapsedView ? 'sidebar-header--collapsed' : 'sidebar-header--expanded'}`}
         >
           <Box className="sidebar-logo-box">
-            <StoreIcon style={{ fontSize: 20 }} />
+            <StoreIcon className="sidebar-logo-icon" />
           </Box>
           {!isCollapsedView && (
             <Box className="sidebar-brand-container">
@@ -351,12 +344,12 @@ export const MainLayout = () => {
         <Divider />
 
         {/* ── Profile Card ── */}
-        <Box
+        <ListItemButton
           onClick={() => {
             navigate('/profile');
             if (isMobileLayout) setMobileOpen(false);
           }}
-          className="profile-card"
+          className={`profile-card ${isCollapsedView ? 'profile-card--collapsed' : 'profile-card--expanded'}`}
         >
           <Avatar className="main-layout__avatar">
             {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
@@ -371,7 +364,7 @@ export const MainLayout = () => {
               </Typography>
             </Box>
           )}
-        </Box>
+        </ListItemButton>
 
         {/* ── Menu Items ── */}
         <Box className="sidebar-menu-wrapper">
@@ -390,10 +383,7 @@ export const MainLayout = () => {
                   className="main-layout__icon-btn"
                 >
                   <MenuOpenIcon
-                    style={{
-                      transform: collapsed ? 'scaleX(1)' : 'scaleX(-1)',
-                      transition: 'transform 0.2s',
-                    }}
+                    className={`sidebar-toggle-icon ${collapsed ? 'sidebar-toggle-icon--collapsed' : 'sidebar-toggle-icon--expanded'}`}
                   />
                 </IconButton>
               </Tooltip>
@@ -412,11 +402,7 @@ export const MainLayout = () => {
       <AppBar
         position="fixed"
         elevation={0}
-        className="main-layout__appbar"
-        style={{
-          width: isMobile ? '100%' : `calc(100% - ${currentDrawerWidth}px)`,
-          left: 0,
-        }}
+        className={`main-layout__appbar ${collapsed ? 'main-layout__appbar--collapsed' : 'main-layout__appbar--expanded'}`}
       >
         <Toolbar className="main-layout__toolbar">
           {/* Mobile hamburger menu */}
@@ -543,7 +529,7 @@ export const MainLayout = () => {
             anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
           >
             <Box className="notify-header">
-              <Typography variant="subtitle2" style={{ fontWeight: 700 }}>
+              <Typography variant="subtitle2" className="notify-header__title">
                 {t('nav.notifications')}
               </Typography>
               {unreadCount > 0 && (
@@ -553,7 +539,7 @@ export const MainLayout = () => {
             <Divider />
             {notifications.length === 0 ? (
               <Box className="notify-empty">
-                <NotificationsIcon style={{ fontSize: 40, color: 'text.disabled', marginBottom: '8px' }} />
+                <NotificationsIcon className="notify-empty__icon" />
                 <Typography variant="body2" className="notify-empty__text">
                   {t('notifications.noNotifications')}
                 </Typography>
@@ -570,10 +556,10 @@ export const MainLayout = () => {
                       }
                     }}
                   >
-                    <Box style={{ marginTop: '2px', flexShrink: 0 }}>
+                    <Box className="notification-item__icon">
                       {getSeverityIcon(n.severity)}
                     </Box>
-                    <Box style={{ flexGrow: 1, minWidth: 0 }}>
+                    <Box className="notification-item__content">
                       <Typography variant="body2" noWrap className="notification-item__title">
                         {n.title}
                       </Typography>
@@ -590,7 +576,7 @@ export const MainLayout = () => {
                             size="small"
                             variant="text"
                             onClick={(e) => handleMarkAsRead(n.id, e)}
-                            style={{ fontSize: '0.7rem', padding: '0 4px', minWidth: 0 }}
+                            className="notification-item__action"
                           >
                             {t('notifications.markAsRead')}
                           </Button>
@@ -601,7 +587,7 @@ export const MainLayout = () => {
                             variant="text"
                             color="success"
                             onClick={(e) => handleResolve(n.id, e)}
-                            style={{ fontSize: '0.7rem', padding: '0 4px', minWidth: 0 }}
+                            className="notification-item__action"
                           >
                             {t('notifications.resolve')}
                           </Button>
@@ -618,7 +604,7 @@ export const MainLayout = () => {
                 size="small"
                 fullWidth
                 onClick={() => { navigate('/notifications'); handleNotifyClose(); }}
-                style={{ borderRadius: '8px', padding: '8px 0' }}
+                className="notify-footer__button"
               >
                 {t('notifications.viewAll')}
               </Button>
@@ -630,10 +616,7 @@ export const MainLayout = () => {
       {/* ══════ Sidebar Drawer ══════ */}
       <Box
         component="nav"
-        className="main-layout__sidebar-nav"
-        style={{
-          width: isMobile ? 'auto' : currentDrawerWidth
-        }}
+        className={`main-layout__sidebar-nav ${collapsed ? 'main-layout__sidebar-nav--collapsed' : 'main-layout__sidebar-nav--expanded'}`}
       >
         {/* Mobile Drawer */}
         <Drawer
@@ -643,14 +626,9 @@ export const MainLayout = () => {
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
           PaperProps={{
-            style: {
-              boxSizing: 'border-box',
-              width: DRAWER_WIDTH
-            }
+            className: 'main-layout__mobile-drawer-paper'
           }}
-          sx={{
-            display: { xs: 'block', md: 'none' }
-          }}
+          className="main-layout__mobile-drawer"
         >
           {drawerContent(true)}
         </Drawer>
@@ -660,17 +638,9 @@ export const MainLayout = () => {
           variant="permanent"
           anchor={muiTheme.direction === 'rtl' ? 'left' : 'right'}
           PaperProps={{
-            style: {
-              boxSizing: 'border-box',
-              width: currentDrawerWidth,
-              borderLeft: '1px solid var(--border-color)',
-              borderRight: 'none',
-              overflowX: 'hidden'
-            }
+            className: `main-layout__desktop-drawer-paper ${collapsed ? 'main-layout__desktop-drawer-paper--collapsed' : 'main-layout__desktop-drawer-paper--expanded'}`
           }}
-          sx={{
-            display: { xs: 'none', md: 'block' }
-          }}
+          className="main-layout__desktop-drawer"
           open
         >
           {drawerContent(false)}
@@ -680,10 +650,7 @@ export const MainLayout = () => {
       {/* ══════ Main Content ══════ */}
       <Box
         component="main"
-        className="main-layout__content-wrapper"
-        style={{
-          width: isMobile ? '100%' : `calc(100% - ${currentDrawerWidth}px)`,
-        }}
+        className={`main-layout__content-wrapper ${collapsed ? 'main-layout__content-wrapper--collapsed' : 'main-layout__content-wrapper--expanded'}`}
       >
         <Toolbar /> {/* Spacer for AppBar */}
         <Box className="main-layout__content">

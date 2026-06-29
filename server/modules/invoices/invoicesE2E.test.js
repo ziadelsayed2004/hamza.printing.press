@@ -24,6 +24,10 @@ describe('E2E Business Flow Integrity Tests', () => {
   async function cleanTestData() {
     await db.run('PRAGMA foreign_keys = OFF;');
     try {
+      await db.run('DELETE FROM return_items WHERE return_id IN (SELECT id FROM returns WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%"))');
+      await db.run('DELETE FROM returns WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
+      await db.run('DELETE FROM shipment_items WHERE shipment_id IN (SELECT id FROM shipments WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%"))');
+      await db.run('DELETE FROM shipments WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
       await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
       await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
       await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE notes LIKE "E2E E2E%")');
@@ -287,5 +291,42 @@ describe('E2E Business Flow Integrity Tests', () => {
     const notifRes3 = await agent.get('/api/notifications?status=unread');
     const limitNotif = notifRes3.body.find(n => n.category === 'outlet_credit_limit_exceeded' && n.source_id === outlet.id);
     expect(limitNotif).toBeDefined();
+
+    // 12. Create a payment receipt that is immediately approved
+    const payReviewRes = await agent.post('/api/payments').send({
+      invoiceId: invoice.id,
+      amount: 50.0,
+      paymentMethod: 'cash',
+      receiptName: 'receipt_proof.png',
+      receiptData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+    });
+    expect(payReviewRes.status).toBe(201);
+    expect(payReviewRes.body.payment.receipt_status).toBe('approved');
+
+    // 13. Create a partial shipment
+    const invoiceItemId = invoice.items[0].id;
+    const shipRes = await agent.post('/api/shipments').send({
+      invoiceId: invoice.id,
+      shippingCarrier: 'DHL',
+      trackingNumber: 'TRK-E2E-12345',
+      items: [{ invoiceItemId, quantity: 1 }]
+    });
+    expect(shipRes.status).toBe(201);
+
+    // 14. Create a return for the shipped item
+    const retRes = await agent.post('/api/returns').send({
+      invoiceId: invoice.id,
+      reason: 'E2E item return',
+      items: [{ invoiceItemId, quantity: 1 }]
+    });
+    expect(retRes.status).toBe(201);
+
+    // 15. Verify export downloads can run successfully
+    const expPaymentsRes = await agent.get('/api/exports/payments');
+    expect(expPaymentsRes.status).toBe(200);
+    const expReturnsRes = await agent.get('/api/exports/returns');
+    expect(expReturnsRes.status).toBe(200);
+    const expShipmentsRes = await agent.get('/api/exports/shipments');
+    expect(expShipmentsRes.status).toBe(200);
   });
 });

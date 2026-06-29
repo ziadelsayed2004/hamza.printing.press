@@ -1,4 +1,6 @@
 const db = require('../../db');
+const fs = require('fs');
+const path = require('path');
 const inventoryService = require('../inventory/inventoryService');
 const notificationsService = require('../notifications/notificationsService');
 
@@ -16,7 +18,9 @@ async function createInvoice({
   userId,
   paymentAmount = 0,
   paymentSupplyStatus = 'not_supplied',
-  paymentNotes = ''
+  paymentNotes = '',
+  paymentReceiptName = '',
+  paymentReceiptData = ''
 }) {
   if (!outletId) {
     throw new Error('Outlet ID is required');
@@ -44,6 +48,46 @@ async function createInvoice({
 
   // Generate unique invoice number
   const invoiceNumber = `INV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // Handle receipt file BEFORE opening transaction (file I/O outside transaction)
+  let receiptOriginalName = null;
+  let receiptStoredPath = null;
+  let receiptMimeType = null;
+  let receiptSize = null;
+  let receiptStatusForPayment = 'approved';
+
+  if (paymentReceiptData && paymentReceiptName) {
+    const storageDir = path.resolve('D:/Projects/BookStore Manager/storage');
+    const receiptsDir = path.join(storageDir, 'receipts');
+    if (!fs.existsSync(receiptsDir)) {
+      fs.mkdirSync(receiptsDir, { recursive: true });
+    }
+    const matches = paymentReceiptData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    let buffer;
+    if (matches && matches.length === 3) {
+      receiptMimeType = matches[1];
+      buffer = Buffer.from(matches[2], 'base64');
+    } else {
+      receiptMimeType = 'application/octet-stream';
+      buffer = Buffer.from(paymentReceiptData, 'base64');
+    }
+    receiptSize = buffer.length;
+    receiptOriginalName = paymentReceiptName;
+    const ext = (path.extname(paymentReceiptName) || '.bin').toLowerCase();
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/gif', 'application/pdf'];
+    const allowedExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.pdf'];
+    if (!allowedMimeTypes.includes(receiptMimeType) || !allowedExtensions.includes(ext)) {
+      throw new Error('Invalid file type. Only PNG, JPEG, GIF, and PDF are allowed.');
+    }
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (receiptSize > MAX_SIZE) {
+      throw new Error('File size exceeds the 5MB limit.');
+    }
+    const safeName = `receipt-${Date.now()}-${Math.floor(Math.random() * 100000)}${ext}`;
+    receiptStoredPath = path.join(receiptsDir, safeName);
+    fs.writeFileSync(receiptStoredPath, buffer);
+    receiptStatusForPayment = 'approved';
+  }
 
   // Begin Transaction
   await db.exec('BEGIN TRANSACTION;');
@@ -82,7 +126,12 @@ async function createInvoice({
       if (product.stock_policy === 'track') {
         const currentStock = await inventoryService.getRealTimeStock(productId);
         if (currentStock < qty) {
-          throw new Error(`Insufficient stock for product "${product.title}". Available: ${currentStock}, Requested: ${qty}`);
+          const err = new Error(`المخزون غير كافٍ للكتاب "${product.title}". المتاح: ${currentStock}، المطلوب: ${qty}`);
+          err.productId = productId;
+          err.productTitle = product.title;
+          err.currentStock = currentStock;
+          err.qty = qty;
+          throw err;
         }
       }
 
@@ -178,8 +227,9 @@ async function createInvoice({
         INSERT INTO invoice_payments (
           invoice_id, amount, payment_method, payment_date,
           reference_number, notes, recorded_by, supply_status,
-          supplied_at, supplied_by
-        ) VALUES (?, ?, 'cash', ?, NULL, ?, ?, ?, ?, ?)
+          supplied_at, supplied_by,
+          receipt_original_name, receipt_stored_path, receipt_mime_type, receipt_size, receipt_status
+        ) VALUES (?, ?, 'cash', ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       const paymentResult = await db.run(paymentSql, [
         invoiceId,
@@ -189,7 +239,12 @@ async function createInvoice({
         userId,
         paymentSupplyStatus,
         suppliedAt,
-        suppliedBy
+        suppliedBy,
+        receiptOriginalName,
+        receiptStoredPath,
+        receiptMimeType,
+        receiptSize,
+        receiptStatusForPayment
       ]);
       paymentId = paymentResult.lastID;
     }
@@ -269,6 +324,22 @@ async function createInvoice({
     return await getInvoiceById(invoiceId);
   } catch (err) {
     await db.exec('ROLLBACK;');
+    if (err.productId && err.qty !== undefined) {
+      try {
+        await notificationsService.createOrUpdateNotification({
+          category: 'stock_low',
+          severity: 'critical',
+          title: 'المخزون غير كافٍ للكتاب',
+          message: `المخزون غير كافٍ للكتاب "${err.productTitle}" — المتاح: ${err.currentStock}، المطلوب: ${err.qty}.`,
+          source_type: 'product',
+          source_id: err.productId,
+          dedupe_key: `insufficient_stock:${err.productId}:${err.currentStock}:${err.qty}`,
+          action_url: '/inventory'
+        });
+      } catch (e) {
+        console.error('Error creating insufficient stock notification in catch:', e);
+      }
+    }
     throw err;
   }
 }
@@ -344,7 +415,12 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
         const currentStock = await inventoryService.getRealTimeStock(productId);
         const availableStock = currentStock + oldQty;
         if (availableStock < qty) {
-          throw new Error(`Insufficient stock for product "${product.title}". Available: ${availableStock}, Requested: ${qty}`);
+          const err = new Error(`المخزون غير كافٍ للكتاب "${product.title}". المتاح: ${availableStock}، المطلوب: ${qty}`);
+          err.productId = productId;
+          err.productTitle = product.title;
+          err.currentStock = availableStock;
+          err.qty = qty;
+          throw err;
         }
       }
 
@@ -470,6 +546,22 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
     return await getInvoiceById(invoiceId);
   } catch (err) {
     await db.exec('ROLLBACK;');
+    if (err.productId && err.qty !== undefined) {
+      try {
+        await notificationsService.createOrUpdateNotification({
+          category: 'stock_low',
+          severity: 'critical',
+          title: 'المخزون غير كافٍ للكتاب',
+          message: `المخزون غير كافٍ للكتاب "${err.productTitle}" — المتاح: ${err.currentStock}، المطلوب: ${err.qty}.`,
+          source_type: 'product',
+          source_id: err.productId,
+          dedupe_key: `insufficient_stock:${err.productId}:${err.currentStock}:${err.qty}`,
+          action_url: '/inventory'
+        });
+      } catch (e) {
+        console.error('Error creating insufficient stock notification in catch:', e);
+      }
+    }
     throw err;
   }
 }
@@ -529,12 +621,9 @@ async function getInvoiceById(id) {
     ORDER BY ip.payment_date ASC
   `, [id]);
 
-  const installments = [];
-
   invoice.items = items;
   invoice.history = history;
   invoice.payments = payments;
-  invoice.installments = installments;
 
   return invoice;
 }

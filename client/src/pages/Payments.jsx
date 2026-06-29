@@ -41,7 +41,9 @@ import {
   Collapse,
   LinearProgress,
   Tooltip,
-  Checkbox
+  Checkbox,
+  Tab,
+  Tabs
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -90,21 +92,43 @@ export const Payments = () => {
   const [toastMsg, setToastMsg] = useState('');
   const [toastSeverity, setToastSeverity] = useState('success');
 
+  // Active Tab
+  const [activeTab, setActiveTab] = useState(0);
+
   // Add Payment Dialog
   const [openAddPayment, setOpenAddPayment] = useState(false);
+  const [payFormOutletId, setPayFormOutletId] = useState('');
+  const [outletInvoices, setOutletInvoices] = useState([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [payFormInvoiceId, setPayFormInvoiceId] = useState('');
   const [payFormAmount, setPayFormAmount] = useState('');
   const [payFormMethod, setPayFormMethod] = useState('cash');
   const [payFormDate, setPayFormDate] = useState(new Date().toISOString().split('T')[0]);
   const [payFormReference, setPayFormReference] = useState('');
   const [payFormNotes, setPayFormNotes] = useState('');
+  const [payFormReceiptName, setPayFormReceiptName] = useState('');
+  const [payFormReceiptData, setPayFormReceiptData] = useState('');
   const [payFormSubmitting, setPayFormSubmitting] = useState(false);
   const [payFormMetrics, setPayFormMetrics] = useState(null);
   const [payFormMetricsLoading, setPayFormMetricsLoading] = useState(false);
 
+  // Review Queue states
+  const [reviewQueue, setReviewQueue] = useState([]);
+  const [reviewQueueLoading, setReviewQueueLoading] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectTargetId, setRejectTargetId] = useState(null);
+  const [rejectNotes, setRejectNotes] = useState('');
+  const [rejectSubmitting, setRejectSubmitting] = useState(false);
+
+  // Review Queue filters
+  const [reviewFilterOutletId, setReviewFilterOutletId] = useState('');
+  const [reviewFilterInvoiceId, setReviewFilterInvoiceId] = useState('');
+  const [reviewFilterStatus, setReviewFilterStatus] = useState('pending_review');
+
   // Invoice Metrics Detail Dialog
   const [openMetrics, setOpenMetrics] = useState(false);
   const [metricsData, setMetricsData] = useState(null);
+  const [metricsPayments, setMetricsPayments] = useState([]);
   const [metricsLoading, setMetricsLoading] = useState(false);
 
   // Reverse Payment Dialog
@@ -119,6 +143,50 @@ export const Payments = () => {
   };
 
   // ---- Data fetching ----
+
+  const fetchReviewQueue = useCallback(async () => {
+    setReviewQueueLoading(true);
+    try {
+      let query = `/payments/receipts/review-queue?status=${reviewFilterStatus}`;
+      if (reviewFilterOutletId) query += `&outletId=${reviewFilterOutletId}`;
+      if (reviewFilterInvoiceId) query += `&invoiceId=${reviewFilterInvoiceId}`;
+      const data = await apiClient.get(query);
+      setReviewQueue(data);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تحميل قائمة مراجعة الإيصالات المعلقة.', 'error');
+    } finally {
+      setReviewQueueLoading(false);
+    }
+  }, [reviewFilterStatus, reviewFilterOutletId, reviewFilterInvoiceId]);
+
+  const handleExportReviewQueue = () => {
+    if (reviewQueue.length === 0) return;
+    
+    const headers = ['رقم الدفعة', 'منفذ البيع', 'رقم الفاتورة', 'المبلغ', 'طريقة الدفع', 'تاريخ الدفع', 'بواسطة', 'حالة المراجعة'];
+    const rows = reviewQueue.map(row => [
+      row.id,
+      row.outlet_name,
+      row.invoice_number,
+      row.amount,
+      translateMethod(row.payment_method),
+      row.payment_date ? formatEgyptDate(row.payment_date) : '-',
+      row.recorder_full_name || 'غير معروف',
+      row.receipt_status === 'pending_review' ? 'قيد المراجعة' : (row.receipt_status === 'approved' ? 'معتمد' : 'مرفوض')
+    ]);
+
+    const csvContent = "\uFEFF" 
+      + [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `مراجعة_الايصالات_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchPayments = useCallback(async () => {
     setLoading(true);
@@ -143,7 +211,10 @@ export const Payments = () => {
 
   useEffect(() => {
     fetchPayments();
-  }, [fetchPayments]);
+    if (hasPermission('payments.create')) {
+      fetchReviewQueue();
+    }
+  }, [fetchPayments, fetchReviewQueue]);
 
   useEffect(() => {
     const fetchOutlets = async () => {
@@ -282,18 +353,60 @@ export const Payments = () => {
 
   // ---- Add Payment ----
 
-  const handleOpenAddPayment = (prefilledInvoiceId = '') => {
+  // ---- Add Payment ----
+
+  const handlePayFormOutletChange = async (outletId) => {
+    setPayFormOutletId(outletId);
+    setPayFormInvoiceId('');
+    setPayFormMetrics(null);
+    setOutletInvoices([]);
+    if (!outletId) return;
+
+    setLoadingInvoices(true);
+    try {
+      const data = await apiClient.get(`/invoices?outletId=${outletId}&limit=100`);
+      const activeInvoices = data.filter(inv => inv.payment_status !== 'cancelled' && inv.remaining_amount > 0);
+      setOutletInvoices(activeInvoices);
+    } catch (err) {
+      console.error(err);
+      showToast('فشل تحميل فواتير المنفذ المختار.', 'error');
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
+  const handleOpenAddPayment = async (prefilledInvoiceId = '') => {
+    setPayFormOutletId('');
     setPayFormInvoiceId(prefilledInvoiceId ? String(prefilledInvoiceId) : '');
     setPayFormAmount('');
     setPayFormMethod('cash');
     setPayFormDate(new Date().toISOString().split('T')[0]);
     setPayFormReference('');
     setPayFormNotes('');
+    setPayFormReceiptName('');
+    setPayFormReceiptData('');
     setPayFormMetrics(null);
+    setOutletInvoices([]);
     setOpenAddPayment(true);
 
     if (prefilledInvoiceId) {
-      loadPayFormMetrics(prefilledInvoiceId);
+      setPayFormMetricsLoading(true);
+      try {
+        const metrics = await apiClient.get(`/payments/invoice/${prefilledInvoiceId}/metrics`);
+        setPayFormMetrics(metrics);
+
+        const invoiceDetails = await apiClient.get(`/invoices/${prefilledInvoiceId}`);
+        if (invoiceDetails) {
+          setPayFormOutletId(invoiceDetails.outlet_id);
+          const data = await apiClient.get(`/invoices?outletId=${invoiceDetails.outlet_id}&limit=100`);
+          const activeInvoices = data.filter(inv => inv.payment_status !== 'cancelled' && inv.remaining_amount > 0);
+          setOutletInvoices(activeInvoices);
+        }
+      } catch (err) {
+        console.error('Failed to prefill invoice details:', err);
+      } finally {
+        setPayFormMetricsLoading(false);
+      }
     }
   };
 
@@ -334,16 +447,61 @@ export const Payments = () => {
         paymentMethod: payFormMethod,
         paymentDate: payFormDate || undefined,
         referenceNumber: payFormReference,
-        notes: payFormNotes
+        notes: payFormNotes,
+        receiptName: payFormReceiptName || undefined,
+        receiptData: payFormReceiptData || undefined
       });
       showToast('تم تسجيل الدفعة بنجاح وتحديث حالة الفاتورة.');
       setOpenAddPayment(false);
       fetchPayments();
+      if (hasPermission('payments.create')) {
+        fetchReviewQueue();
+      }
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تسجيل الدفعة.', 'error');
     } finally {
       setPayFormSubmitting(false);
+    }
+  };
+
+  // ---- Review Receipts ----
+
+  const handleApproveReceipt = async (paymentId) => {
+    try {
+      await apiClient.post(`/payments/${paymentId}/review`, { action: 'approve' });
+      showToast('تم اعتماد إيصال الدفع بنجاح وتأثير الدفعة مالياً.');
+      fetchPayments();
+      fetchReviewQueue();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل اعتماد الإيصال.', 'error');
+    }
+  };
+
+  const handleOpenReject = (paymentId) => {
+    setRejectTargetId(paymentId);
+    setRejectNotes('');
+    setRejectDialogOpen(true);
+  };
+
+  const handleSubmitReject = async () => {
+    if (!rejectTargetId) return;
+    setRejectSubmitting(true);
+    try {
+      await apiClient.post(`/payments/${rejectTargetId}/review`, {
+        action: 'reject',
+        notes: rejectNotes
+      });
+      showToast('تم رفض إيصال الدفع وإخطار المسؤول بالسبب.');
+      setRejectDialogOpen(false);
+      fetchPayments();
+      fetchReviewQueue();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل رفض الإيصال.', 'error');
+    } finally {
+      setRejectSubmitting(false);
     }
   };
 
@@ -377,11 +535,14 @@ export const Payments = () => {
 
   const handleOpenMetrics = async (invoiceId) => {
     setMetricsData(null);
+    setMetricsPayments([]);
     setMetricsLoading(true);
     setOpenMetrics(true);
     try {
       const data = await apiClient.get(`/payments/invoice/${invoiceId}/metrics`);
       setMetricsData(data);
+      const history = await apiClient.get(`/payments?invoiceId=${invoiceId}&limit=100`);
+      setMetricsPayments(history);
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تحميل بيانات تحصيلات الفاتورة.', 'error');
@@ -413,7 +574,9 @@ export const Payments = () => {
         </Box>
       </Box>
 
-      {/* Expandable Filters */}
+      {/* سجل المدفوعات والتحصيل مباشرة */}
+      <>
+          {/* Expandable Filters */}
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
           <Box
@@ -422,7 +585,7 @@ export const Payments = () => {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FilterIcon color="action" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+              <Typography variant="subtitle1" className="filter-panel-title" sx={{ fontWeight: 'bold' }}>
                 خيارات البحث والتصفية
               </Typography>
             </Box>
@@ -433,7 +596,7 @@ export const Payments = () => {
 
           <Collapse in={showFilters} sx={{ mt: 2 }}>
             <Divider sx={{ my: 1.5 }} />
-            <Grid container spacing={2} alignItems="center">
+            <Grid container spacing={2} alignItems="center" className="filter-grid">
               <Grid item xs={12} sm={4} md={3}>
                 <TextField
                   fullWidth
@@ -487,6 +650,7 @@ export const Payments = () => {
                   size="small"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   value={filterStartDate}
                   onChange={(e) => setFilterStartDate(e.target.value)}
                 />
@@ -498,6 +662,7 @@ export const Payments = () => {
                   size="small"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   value={filterEndDate}
                   onChange={(e) => setFilterEndDate(e.target.value)}
                 />
@@ -617,6 +782,7 @@ export const Payments = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>سجّلت بواسطة</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>حالة التوريد</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>الإيصال</TableCell>
                   <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 160 }}>خيارات</TableCell>
                 </TableRow>
               </TableHead>
@@ -654,14 +820,28 @@ export const Payments = () => {
                       {row.reference_number || '-'}
                     </TableCell>
                     <TableCell>{row.user_full_name || 'غير معروف'}</TableCell>
-                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {row.notes || '-'}
                     </TableCell>
                     <TableCell>
                       {row.supply_status === 'supplied' ? (
-                        <Chip label="مورد للشركة" color="success" size="small" />
+                        <Chip label="تم توريدها للخزينة" color="success" size="small" />
                       ) : (
-                        <Chip label="معلق طرف المندوب" color="warning" size="small" variant="outlined" />
+                        <Chip label="مع المندوب (لم تورد)" color="warning" size="small" variant="outlined" />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {row.receipt_stored_path ? (
+                        <Button 
+                          size="small" 
+                          variant="text" 
+                          startIcon={<ReceiptIcon fontSize="small" />}
+                          onClick={() => window.open(`/api/payments/${row.id}/receipt`, '_blank')}
+                        >
+                          عرض الإيصال
+                        </Button>
+                      ) : (
+                        <Typography variant="caption" color="textSecondary">لا يوجد</Typography>
                       )}
                     </TableCell>
                     <TableCell align="center">
@@ -726,6 +906,42 @@ export const Payments = () => {
           </Box>
         </Box>
       </Paper>
+    </>
+
+      {/* ================ REJECT RECEIPT DIALOG ================ */}
+      <Dialog
+        open={rejectDialogOpen}
+        onClose={() => !rejectSubmitting && setRejectDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 'bold', color: 'error.main' }}>
+          رفض إيصال دفع
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            برجاء إدخال سبب رفض إيصال الدفع لإخطار المسؤول:
+          </Typography>
+          <TextField
+            fullWidth
+            required
+            label="سبب الرفض"
+            size="small"
+            multiline
+            rows={3}
+            value={rejectNotes}
+            onChange={(e) => setRejectNotes(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button variant="outlined" color="inherit" onClick={() => setRejectDialogOpen(false)} disabled={rejectSubmitting}>
+            إلغاء
+          </Button>
+          <Button variant="contained" color="error" onClick={handleSubmitReject} disabled={rejectSubmitting || !rejectNotes.trim()}>
+            {rejectSubmitting ? 'جاري الحفظ...' : 'تأكيد الرفض'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ================ ADD PAYMENT Drawer ================ */}
       <EntityDrawer
@@ -746,16 +962,44 @@ export const Payments = () => {
         <form onSubmit={handleSubmitPayment} id="add-payment-form">
           <FormSection title="تفاصيل الدفعة المالية">
             <Box sx={{ mb: 2 }}>
-              <TextField
-                fullWidth
-                required
-                label="رقم الفاتورة (Invoice ID)"
-                size="small"
-                type="number"
-                value={payFormInvoiceId}
-                onChange={(e) => setPayFormInvoiceId(e.target.value)}
-                onBlur={handlePayFormInvoiceBlur}
-              />
+              <FormControl fullWidth size="small" required>
+                <InputLabel>منفذ البيع (العميل)</InputLabel>
+                <Select
+                  value={payFormOutletId}
+                  onChange={(e) => handlePayFormOutletChange(e.target.value)}
+                  label="منفذ البيع (العميل)"
+                >
+                  {outlets.map(o => (
+                    <MenuItem key={o.id} value={o.id}>{o.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <FormControl fullWidth size="small" required disabled={!payFormOutletId || loadingInvoices}>
+                <InputLabel>الفاتورة المستهدفة</InputLabel>
+                <Select
+                  value={payFormInvoiceId}
+                  onChange={(e) => {
+                    setPayFormInvoiceId(e.target.value);
+                    loadPayFormMetrics(e.target.value);
+                  }}
+                  label="الفاتورة المستهدفة"
+                >
+                  {loadingInvoices ? (
+                    <MenuItem value="" disabled>جاري تحميل الفواتير...</MenuItem>
+                  ) : outletInvoices.length === 0 ? (
+                    <MenuItem value="" disabled>لا توجد فواتير مستحقة سداد لهذا المنفذ</MenuItem>
+                  ) : (
+                    outletInvoices.map(inv => (
+                      <MenuItem key={inv.id} value={inv.id}>
+                        فاتورة #{inv.invoice_number} ({formatCurrencyEGP(inv.remaining_amount)} متبقي)
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
             </Box>
 
             {/* Live invoice metrics preview */}
@@ -851,6 +1095,7 @@ export const Payments = () => {
                 size="small"
                 type="date"
                 InputLabelProps={{ shrink: true }}
+                InputProps={{ notched: true }}
                 value={payFormDate}
                 onChange={(e) => setPayFormDate(e.target.value)}
               />
@@ -876,6 +1121,39 @@ export const Payments = () => {
                 value={payFormNotes}
                 onChange={(e) => setPayFormNotes(e.target.value)}
               />
+            </Box>
+
+            {/* Receipt Upload */}
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 1, fontWeight: 'bold' }}>
+                رفع إيصال أو إثبات الدفع (اختياري - سيخضع للمراجعة والاعتماد)
+              </Typography>
+              <input
+                accept="image/*,application/pdf"
+                className="hidden-file-input"
+                id="receipt-file-upload"
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  setPayFormReceiptName(file.name);
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    setPayFormReceiptData(reader.result);
+                  };
+                  reader.readAsDataURL(file);
+                }}
+              />
+              <label htmlFor="receipt-file-upload">
+                <Button variant="outlined" component="span" startIcon={<ReceiptIcon />}>
+                  {payFormReceiptName ? `تغيير المستند: ${payFormReceiptName}` : 'اختر ملف إيصال الدفع'}
+                </Button>
+              </label>
+              {payFormReceiptName && (
+                <Typography variant="caption" display="block" sx={{ mt: 0.5, color: 'textSecondary' }}>
+                  الملف المحدد: {payFormReceiptName}
+                </Typography>
+              )}
             </Box>
           </FormSection>
         </form>
@@ -981,9 +1259,9 @@ export const Payments = () => {
               <Grid item xs={6} sm={3}>
                 <Typography variant="caption" color="textSecondary">حالة الدفع</Typography>
                 <Box sx={{ mt: 0.5 }}>
-                  {metricsData.paymentStatus === 'paid' && <Chip label="مسددة بالكامل" color="success" size="small" />}
-                  {metricsData.paymentStatus === 'unpaid' && <Chip label="غير مسددة" color="error" size="small" />}
-                  {metricsData.paymentStatus === 'partially_paid' && <Chip label="مسددة جزئياً" color="warning" size="small" />}
+                  {metricsData.paymentStatus === 'paid' && <Chip label="مدفوع كلياً" color="success" size="small" />}
+                  {metricsData.paymentStatus === 'unpaid' && <Chip label="مؤجل كلياً" color="error" size="small" />}
+                  {metricsData.paymentStatus === 'partially_paid' && <Chip label="مدفوع جزئياً" color="warning" size="small" />}
                   {metricsData.paymentStatus === 'overdue' && <Chip label="متأخرة" color="error" size="small" />}
                 </Box>
               </Grid>
@@ -993,7 +1271,7 @@ export const Payments = () => {
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 'bold' }}>
-                  المسدد: {formatCurrencyEGP(metricsData.paidAmount)}
+                  المدفوع: {formatCurrencyEGP(metricsData.paidAmount)}
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
                   المتبقي: {formatCurrencyEGP(metricsData.remainingAmount)}
@@ -1009,10 +1287,68 @@ export const Payments = () => {
               />
               <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block', textAlign: 'center' }}>
                 {metricsData.totalPrice > 0
-                  ? `${((metricsData.paidAmount / metricsData.totalPrice) * 100).toFixed(1)}% مسددة`
+                  ? `${((metricsData.paidAmount / metricsData.totalPrice) * 100).toFixed(1)}% مدفوعة`
                   : '0%'}
               </Typography>
             </Box>
+
+            {/* Payment History List */}
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, mt: 2 }}>
+              سجل عمليات الدفع والتحصيل لهذه الفاتورة:
+            </Typography>
+            {metricsPayments.length === 0 ? (
+              <Typography variant="body2" color="textSecondary">لا توجد عمليات دفع مسجلة بعد.</Typography>
+            ) : (
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الدفع</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>طريقة الدفع</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>المرجع</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>الإيصال</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>حالة المراجعة</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {metricsPayments.map((p) => (
+                      <TableRow key={p.id} hover>
+                        <TableCell sx={{ fontFamily: 'monospace' }}>{p.id}</TableCell>
+                        <TableCell>{p.payment_date ? formatEgyptDate(p.payment_date) : '-'}</TableCell>
+                        <TableCell>{translateMethod(p.payment_method)}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                          {formatCurrencyEGP(p.amount)}
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace' }}>{p.reference_number || '-'}</TableCell>
+                        <TableCell>
+                          {p.receipt_stored_path ? (
+                            <Button 
+                              size="small" 
+                              onClick={() => window.open(`/api/payments/${p.id}/receipt`, '_blank')}
+                            >
+                              عرض
+                            </Button>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {p.receipt_status === 'pending_review' && <Chip label="قيد المراجعة" color="warning" size="small" />}
+                          {p.receipt_status === 'approved' && <Chip label="معتمد" color="success" size="small" />}
+                          {p.receipt_status === 'rejected' && (
+                            <Tooltip title={p.receipt_review_note || 'تم الرفض بدون ملاحظات'}>
+                              <Chip label="مرفوض" color="error" size="small" />
+                            </Tooltip>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Box>
         ) : (
           !metricsLoading && <EmptyState title="لا يوجد بيانات" description="تعذر تحميل بيانات التحصيلات." />

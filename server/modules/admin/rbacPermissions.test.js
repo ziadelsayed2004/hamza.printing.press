@@ -139,4 +139,27 @@ describe('RBAC Permissions Integration Tests (Finance, Supply, Shipping, Exports
       expect(res.status).toBe(403);
     });
   });
+
+  describe('Critical Area: Returns, Receipts Review, and Notifications', () => {
+    it('should DENY returns endpoint for unauthorized user', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: unauthorizedUser.username, password: 'password123' });
+      const res = await agent.post('/api/returns').send({});
+      expect(res.status).toBe(403);
+    });
+
+    it('should DENY receipts review queue for unauthorized user', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: unauthorizedUser.username, password: 'password123' });
+      const res = await agent.get('/api/payments/receipts/review-queue');
+      expect(res.status).toBe(403);
+    });
+
+    it('should DENY notifications view for unauthorized user', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: unauthorizedUser.username, password: 'password123' });
+      const res = await agent.get('/api/notifications');
+      expect(res.status).toBe(403);
+    });
+  });
 });

@@ -225,6 +225,7 @@ export const Authors = () => {
               placeholder="البحث باسم المؤلف..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              sx={{ minWidth: 280 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">

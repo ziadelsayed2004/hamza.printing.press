@@ -1,1 +1,5 @@
 /* CSS Sibling for layout separation */
+
+.login-dialog {
+  width: max-content;
+}

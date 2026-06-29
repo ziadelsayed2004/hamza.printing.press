@@ -4,29 +4,40 @@
 
 Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_review`. الخطوات القديمة الملغاة موضحة بملاحظات وليست قابلة للتنفيذ من جديد.
 
-## Active Current Steps
+## Active Current Steps — Inventory/Payments/Notifications Corrections
 
 | # | Step | Status | Main output |
 |---|---|---|---|
-| 102 | `102_invoice_builder_final_owned_workflow` | done | Invoice Builder Final Owned Workflow |
-| 103 | `103_invoice_list_actions_pay_supply_ship_return` | done | Invoice List Actions: Pay, Supply, Ship, Return |
-| 104 | `104_finance_model_final_no_installments_with_supply` | done | Finance Model Final No-Installments With Supply |
-| 105 | `105_payment_supply_remittance_ui_and_permissions` | done | Payment Supply/Remittance UI + Permissions |
-| 106 | `106_partial_shipping_invoice_items_final_logic` | done | Partial Shipping by Invoice Items Final Logic |
-| 107 | `107_returns_refunds_outlet_return_balance` | done | Returns/Refunds + Outlet Return Balance |
-| 108 | `108_outlet_balance_limit_engine_with_returns` | done | Outlet Balance + Limit Engine With Returns |
-| 109 | `109_notifications_actions_legacy_plus_final` | done | Notifications + Actions Legacy Plus Final |
-| 110 | `110_inventory_receipts_sales_returns_reconciliation` | done | Inventory Receipts/Sales/Returns Reconciliation |
-| 111 | `111_professional_exports_only_final` | done | Professional Exports Only Final |
-| 112 | `112_backend_dead_code_filter_and_tests_cleanup` | done | Backend Dead Code Filter + Tests Cleanup |
-| 113 | `113_frontend_page_css_component_split_cleanup` | done | Frontend Page CSS + Component Split Cleanup |
-| 114 | `114_author_and_outlet_accounts_scope_final` | done | Author + Outlet Accounts Scope Final |
-| 115 | `115_reports_dashboard_finance_command_center_final` | done | Reports/Dashboard Finance Command Center Final |
-| 116 | `116_end_to_end_business_flows_automation` | done | End-to-End Business Flows Automation |
-| 117 | `117_visual_material_regression_full_app_pass` | done | Visual Material Regression Full App Pass |
-| 118 | `118_security_rbac_audit_for_new_actions` | done | Security/RBAC Audit for New Actions |
-| 119 | `119_final_codebase_cleanup_build_test_gate` | done | Final Codebase Cleanup + Build/Test Gate |
-| 120 | `120_final_directadmin_delivery_smoke_gate` | done | Final DirectAdmin Delivery Smoke Gate |
+| 121 | `121_business_terms_inventory_receipts_not_finance` | done | Business Terms: Inventory Receipts Are Stock Only |
+| 122 | `122_inventory_receipts_stock_only_backend_ui_cleanup` | done | Inventory Receipts Stock-Only Backend/UI Cleanup |
+| 123 | `123_notifications_home_actions_preview_ignore` | done | Home Notifications Actions: Preview + Ignore |
+| 124 | `124_insufficient_stock_notification_routing_arabic` | done | Insufficient Stock Notification Routing + Arabic Copy |
+| 125 | `125_payment_flow_select_outlet_invoice_receipt_upload` | done | Payment Flow: Select Outlet + Invoice + Receipt Upload |
+| 126 | `126_payment_receipts_storage_review_queue` | done | Payment Receipts Storage + Review Queue |
+| 127 | `127_partial_payment_receipts_history` | done | Partial Payment Receipts + History |
+| 128 | `128_payment_status_final_three_states_ui_backend` | done | Final Payment Status: Deferred / Partial / Full |
+| 129 | `129_financial_collection_review_no_book_supply_conflict` | done | Financial Collection Review Without Book-Supply Conflict |
+| 130 | `130_invoice_actions_pay_receipt_ship_return_from_list` | done | Invoice List Actions: Pay/Receipt, Ship, Return |
+| 131 | `131_partial_shipping_item_quantity_picker_recheck` | done | Partial Shipping Item Quantity Picker Recheck |
+| 132 | `132_returns_flow_items_stock_outlet_credit` | done | Returns Flow: Items, Stock, Outlet Credit |
+| 133 | `133_outlet_statement_balance_with_returns_receipts` | done | Outlet Statement: Balances, Returns, Receipts |
+| 134 | `134_dashboard_notifications_finance_inventory_rebuild` | done | Dashboard Notifications + Finance/Inventory Rebuild |
+| 135 | `135_backend_cleanup_cancelled_terms_deadcode` | done | Backend Cleanup: Cancelled Terms + Dead Code |
+| 136 | `136_frontend_payment_shipping_return_drawer_unification` | done | Frontend Drawer Unification: Payment/Shipping/Return |
+| 137 | `137_permissions_audit_for_receipts_returns_shipping` | done | Permissions Audit for Receipts/Returns/Shipping |
+| 138 | `138_professional_exports_receipts_returns_statements` | done | Professional Exports: Receipts, Returns, Statements |
+| 139 | `139_end_to_end_receipt_shipping_return_stock_verification` | done | E2E Verification: Receipt + Shipping + Return + Stock |
+| 140 | `140_final_style_logic_gate_no_regression` | done | Final Style/Logic Gate No Regression |
+| 141 | `141_notification_preview_routes_smoke_matrix` | done | Notification Preview Routes Smoke Matrix |
+| 142 | `142_payment_receipt_attachment_security_storage` | done | Payment Receipt Attachment Security + Storage |
+| 143 | `143_invoice_creation_payment_receipt_dynamic_ux` | done | Invoice Creation + Payment Receipt Dynamic UX |
+| 144 | `144_legacy_parity_final_after_new_corrections` | done | Legacy Parity Final After New Corrections |
+| 145 | `145_final_directadmin_delivery_after_corrections` | done | Final DirectAdmin Delivery After Corrections |
+| 146 | `146_dashboard_roles_layout_export_cleanup` | done | User Form Dropdowns, Placeholder Min-Widths, Layout Polish, & Dummy Data Purge |
+| 147 | `147_payment_receipt_instant_approval_filters_cost_cleanup` | done | Payment Receipt Instant Approval, Redesigned Invoice Filters, Supply Cost Removal, and Full Returns Shortcut |
+| 148 | `148_invoice_filters_translation_terminology_cleanup` | done | Invoice Filters Layout Restore, Stock Error Translation, Supply Alert MUI Styling, and Terminology Simplification |
+| 149 | `149_drawer_exports_roles_permissions` | done | Finance Drawer Conversion, Exports Redesign, Input Widths Fix, Breadcrumbs translation, and Roles Translation |
+| 150 | `150_rearrange_invoice_filters_date_notch_fix` | done | Invoice Filters Grid Rearrangement, Customer Statement Full Width, Product/Invoice ID Dynamic Widths, and Date Notch Behavior Fix |
 
 ## Historical / Completed Steps
 
@@ -58,7 +69,7 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 024 | `024_filters_search_api` | done |  |
 | 025 | `025_reports_api` | done |  |
 | 026 | `026_excel_export_system` | done |  |
-| 027 | `027_excel_import_templates` | done | cancelled_obsolete_import_removed |
+| 027 | `027_excel_import_templates` | done | cancelled_obsolete_removed |
 | 028 | `028_pdf_invoice_reports_cleanup` | done |  |
 | 029 | `029_react_vite_mui_bootstrap` | done |  |
 | 030 | `030_mui_layout_navigation` | done |  |
@@ -66,12 +77,12 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 032 | `032_products_authors_prices_ui` | done |  |
 | 033 | `033_outlets_outlet_types_ui` | done |  |
 | 034 | `034_invoices_ui` | done |  |
-| 035 | `035_payments_installments_ui` | done | cancelled_obsolete_installments_removed |
+| 035 | `035_payments_installments_ui` | done | cancelled_obsolete_removed |
 | 036 | `036_inventory_shipments_ui` | done |  |
 | 037 | `037_reports_exports_ui` | done |  |
 | 038 | `038_legacy_ui_deprecation` | done |  |
 | 039 | `039_test_suite_and_quality_gate` | done |  |
-| 040 | `040_directadmin_deploy_docs_final_verify` | blocked | blocked_superseded_by_current_final |
+| 040 | `040_directadmin_deploy_docs_final_verify` | blocked | historical_or_superseded_by_current_corrections |
 | 041 | `041_fresh_database_reset_super_admin_only` | done |  |
 | 042 | `042_flatten_server_structure_no_src` | done |  |
 | 043 | `043_remove_old_identity_visual_system` | done |  |
@@ -80,7 +91,7 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 046 | `046_navigation_information_architecture_polish` | done |  |
 | 047 | `047_forms_tables_dialog_cleanup_ux` | done |  |
 | 048 | `048_fresh_start_quality_smoke_verification` | done |  |
-| 049 | `049_directadmin_deploy_docs_final_verify` | done | superseded_by_current_final |
+| 049 | `049_directadmin_deploy_docs_final_verify` | done | historical_or_superseded_by_current_corrections |
 | 050 | `050_login_session_sidebar_layout_hotfix` | done |  |
 | 051 | `051_professional_material_shell_rebuild` | done |  |
 | 052 | `052_egypt_currency_timezone_localization` | done |  |
@@ -91,7 +102,7 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 057 | `057_legacy_feature_parity_merge_audit` | done |  |
 | 058 | `058_dashboard_executive_ops_finance_perfection` | done |  |
 | 059 | `059_business_flow_integrity_e2e` | done |  |
-| 060 | `060_final_visual_quality_deploy_gate` | done | superseded_by_current_final |
+| 060 | `060_final_visual_quality_deploy_gate` | done | historical_or_superseded_by_current_corrections |
 | 061 | `061_unified_design_system_contract` | done |  |
 | 062 | `062_frontend_style_inventory_line_by_line` | done |  |
 | 063 | `063_css_extraction_no_inline_styles` | done |  |
@@ -111,7 +122,7 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 077 | `077_legacy_feature_parity_deep_audit` | done |  |
 | 078 | `078_style_quality_gate_script` | done |  |
 | 079 | `079_visual_regression_manual_qa_pack` | done |  |
-| 080 | `080_final_business_design_deploy_gate` | blocked | blocked_superseded_by_current_final |
+| 080 | `080_final_business_design_deploy_gate` | blocked | historical_or_superseded_by_current_corrections |
 | 081 | `081_finance_supply_model_purge_installments` | done |  |
 | 082 | `082_remove_excel_import_pipeline_export_only` | done |  |
 | 083 | `083_invoice_builder_owned_dynamic_workflow` | done |  |
@@ -126,10 +137,29 @@ Status values: `pending`, `open`, `in_progress`, `done`, `blocked`, `needs_revie
 | 092 | `092_reports_finance_statement_polish` | done |  |
 | 093 | `093_full_code_logic_dead_feature_audit` | done |  |
 | 094 | `094_visual_design_regression_cleanup_no_overrides` | done |  |
-| 095 | `095_final_unified_quality_gate` | done | superseded_by_current_final |
-| 096 | `096_agent_pack_unified_cleanup_and_obsolete_purge` | done | Agent Pack Unified Cleanup + Obsolete Purge |
-| 097 | `097_latest_repo_deep_style_logic_audit` | done | Latest Repo Deep Style + Logic Audit |
-| 098 | `098_material_css_architecture_no_important_rebuild` | done | Material CSS Architecture No-Important Rebuild |
-| 099 | `099_rtl_fields_labels_alignment_global_fix` | done | RTL Fields Labels Alignment Global Fix |
-| 100 | `100_sidebar_topbar_layout_final_fix` | done | Sidebar + Topbar Layout Final Fix |
-| 101 | `101_side_drawers_dialogs_unified_for_all_entities` | done | Unified Side Drawers/Dialogs for All Entities |
+| 095 | `095_final_unified_quality_gate` | done | historical_or_superseded_by_current_corrections |
+| 096 | `096_agent_pack_unified_cleanup_and_obsolete_purge` | done |  |
+| 097 | `097_latest_repo_deep_style_logic_audit` | done |  |
+| 098 | `098_material_css_architecture_no_important_rebuild` | done |  |
+| 099 | `099_rtl_fields_labels_alignment_global_fix` | done |  |
+| 100 | `100_sidebar_topbar_layout_final_fix` | done |  |
+| 101 | `101_side_drawers_dialogs_unified_for_all_entities` | done |  |
+| 102 | `102_invoice_builder_final_owned_workflow` | done |  |
+| 103 | `103_invoice_list_actions_pay_supply_ship_return` | done |  |
+| 104 | `104_finance_model_final_no_installments_with_supply` | done |  |
+| 105 | `105_payment_supply_remittance_ui_and_permissions` | done |  |
+| 106 | `106_partial_shipping_invoice_items_final_logic` | done |  |
+| 107 | `107_returns_refunds_outlet_return_balance` | done |  |
+| 108 | `108_outlet_balance_limit_engine_with_returns` | done |  |
+| 109 | `109_notifications_actions_legacy_plus_final` | done |  |
+| 110 | `110_inventory_receipts_sales_returns_reconciliation` | done |  |
+| 111 | `111_professional_exports_only_final` | done |  |
+| 112 | `112_backend_dead_code_filter_and_tests_cleanup` | done |  |
+| 113 | `113_frontend_page_css_component_split_cleanup` | done |  |
+| 114 | `114_author_and_outlet_accounts_scope_final` | done |  |
+| 115 | `115_reports_dashboard_finance_command_center_final` | done |  |
+| 116 | `116_end_to_end_business_flows_automation` | done |  |
+| 117 | `117_visual_material_regression_full_app_pass` | done |  |
+| 118 | `118_security_rbac_audit_for_new_actions` | done |  |
+| 119 | `119_final_codebase_cleanup_build_test_gate` | done |  |
+| 120 | `120_final_directadmin_delivery_smoke_gate` | done | completed_before_current_corrections |

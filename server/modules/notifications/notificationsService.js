@@ -180,7 +180,7 @@ async function checkStockNotifications(productId) {
       source_type: 'product',
       source_id: productId,
       dedupe_key: `stock_negative:${productId}`,
-      action_url: `/catalog/products/${productId}`
+      action_url: '/inventory'
     });
     await resolveNotificationByDedupeKey(`stock_low:${productId}`);
   } else if (stock <= LOW_STOCK_THRESHOLD) {
@@ -192,7 +192,7 @@ async function checkStockNotifications(productId) {
       source_type: 'product',
       source_id: productId,
       dedupe_key: `stock_low:${productId}`,
-      action_url: `/catalog/products/${productId}`
+      action_url: '/inventory'
     });
     await resolveNotificationByDedupeKey(`stock_negative:${productId}`);
   } else {
@@ -230,7 +230,7 @@ async function checkOutletCreditLimitNotifications(outletId) {
       source_type: 'outlet',
       source_id: outletId,
       dedupe_key: `outlet_credit_limit:${outletId}`,
-      action_url: `/operations/outlets/${outletId}`
+      action_url: '/outlets'
     });
   } else {
     await resolveNotificationByDedupeKey(`outlet_credit_limit:${outletId}`);
@@ -260,7 +260,7 @@ async function checkOverdueInvoicesNotifications() {
       source_type: 'invoice',
       source_id: inv.id,
       dedupe_key: `invoice_overdue:${inv.id}`,
-      action_url: `/finance/invoices/${inv.id}`
+      action_url: '/invoices'
     });
   }
 
@@ -306,7 +306,7 @@ async function checkProductPriceNotifications(productId) {
       source_type: 'product',
       source_id: productId,
       dedupe_key: `product_price_missing:${productId}`,
-      action_url: `/catalog/products/${productId}`
+      action_url: '/products'
     });
   } else {
     await resolveNotificationByDedupeKey(`product_price_missing:${productId}`);
@@ -338,7 +338,7 @@ async function checkOutletFinanceNotifications(outletId) {
       source_type: 'outlet',
       source_id: outletId,
       dedupe_key: `outlet_unsupplied_cash:${outletId}`,
-      action_url: '/finance/payments'
+      action_url: '/payments'
     });
   } else {
     await resolveNotificationByDedupeKey(`outlet_unsupplied_cash:${outletId}`);
@@ -363,7 +363,7 @@ async function checkOutletFinanceNotifications(outletId) {
         source_type: 'outlet',
         source_id: outletId,
         dedupe_key: `outlet_credit_warning:${outletId}`,
-        action_url: `/operations/outlets/${outletId}`
+        action_url: '/outlets'
       });
     } else if (totalReceivable < creditLimit * 0.8) {
       await resolveNotificationByDedupeKey(`outlet_credit_warning:${outletId}`);

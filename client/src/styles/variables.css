@@ -45,12 +45,12 @@
 /* MUI or HTML element class for dark theme matching context */
 [data-theme="dark"],
 .dark-theme-root {
-  --color-bg: #0f172a;
-  --color-surface: #111827;
-  --color-surface-alt: #1f2937;
-  --color-text: #f9fafb;
-  --color-text-muted: #cbd5e1;
-  --border-color: #334155;
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-surface-alt: #2d2d2d;
+  --color-text: #e8eaed;
+  --color-text-muted: #9aa0a6;
+  --border-color: #3c4043;
   --border-strong: #475569;
   
   --color-primary-soft: rgba(138, 180, 248, 0.12);

@@ -16,11 +16,14 @@ const getBreadcrumbLabel = (name) => {
     'inventory': t('nav.inventory'),
     'invoices': t('nav.invoices'),
     'payments': t('nav.payments'),
+    'finance': t('nav.finance'),
     'shipments': t('nav.shipments'),
     'reports': t('nav.reports'),
     'imports': t('nav.imports'),
     'exports': t('nav.exports'),
-    'audit': t('nav.audit')
+    'audit': t('nav.audit'),
+    'profile': t('nav.profile'),
+    'notifications': t('nav.notifications')
   };
   return routeNameMap[name] || name;
 };

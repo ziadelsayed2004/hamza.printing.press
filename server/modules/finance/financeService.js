@@ -132,13 +132,25 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
     SELECT COALESCE(SUM(p.amount), 0) as total
     FROM invoice_payments p
     JOIN invoices i ON i.id = p.invoice_id
-    WHERE i.payment_status != 'cancelled' AND p.supply_status = 'supplied'
+    WHERE i.payment_status != 'cancelled' AND p.supply_status = 'supplied' AND p.receipt_status = 'approved'
   `;
   let unsuppliedSql = `
     SELECT COALESCE(SUM(p.amount), 0) as total
     FROM invoice_payments p
     JOIN invoices i ON i.id = p.invoice_id
-    WHERE i.payment_status != 'cancelled' AND p.supply_status = 'not_supplied'
+    WHERE i.payment_status != 'cancelled' AND p.supply_status = 'not_supplied' AND p.receipt_status = 'approved'
+  `;
+  let unreviewedReceiptsSql = `
+    SELECT COALESCE(SUM(p.amount), 0) as total, COUNT(p.id) as count
+    FROM invoice_payments p
+    JOIN invoices i ON i.id = p.invoice_id
+    WHERE i.payment_status != 'cancelled' AND p.receipt_status = 'pending_review'
+  `;
+  let rejectedReceiptsSql = `
+    SELECT COALESCE(SUM(p.amount), 0) as total
+    FROM invoice_payments p
+    JOIN invoices i ON i.id = p.invoice_id
+    WHERE i.payment_status != 'cancelled' AND p.receipt_status = 'rejected'
   `;
   let returnsSql = `
     SELECT COALESCE(SUM(return_value), 0) as total
@@ -151,11 +163,15 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
     const placeholders = outletIds.map(() => '?').join(',');
     suppliedSql += ` AND i.outlet_id IN (${placeholders})`;
     unsuppliedSql += ` AND i.outlet_id IN (${placeholders})`;
+    unreviewedReceiptsSql += ` AND i.outlet_id IN (${placeholders})`;
+    rejectedReceiptsSql += ` AND i.outlet_id IN (${placeholders})`;
     returnsSql += ` AND r.outlet_id IN (${placeholders})`;
     subParams.push(...outletIds);
   } else if (outletIds) {
     suppliedSql += ` AND 0=1`;
     unsuppliedSql += ` AND 0=1`;
+    unreviewedReceiptsSql += ` AND 0=1`;
+    rejectedReceiptsSql += ` AND 0=1`;
     returnsSql += ` AND 0=1`;
   }
 
@@ -169,6 +185,8 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
     )`;
     suppliedSql += authorFilter;
     unsuppliedSql += authorFilter;
+    unreviewedReceiptsSql += authorFilter;
+    rejectedReceiptsSql += authorFilter;
     subParams.push(...authorIds);
 
     returnsSql += ` AND r.invoice_id IN (
@@ -181,6 +199,8 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
   } else if (authorIds) {
     suppliedSql += ` AND 0=1`;
     unsuppliedSql += ` AND 0=1`;
+    unreviewedReceiptsSql += ` AND 0=1`;
+    rejectedReceiptsSql += ` AND 0=1`;
     returnsSql += ` AND 0=1`;
   }
 
@@ -204,6 +224,8 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
   const ledgerRow = await db.get(ledgerSql, ledgerParams);
   const suppliedRow = await db.get(suppliedSql, subParams);
   const unsuppliedRow = await db.get(unsuppliedSql, subParams);
+  const unreviewedRow = await db.get(unreviewedReceiptsSql, subParams);
+  const rejectedRow = await db.get(rejectedReceiptsSql, subParams);
   const returnsRow = await db.get(returnsSql, subParams);
   const partialShipmentsRow = await db.get(partialShipmentsSql, params);
   const stockAlertsRow = await db.get(stockAlertsSql, stockParams);
@@ -214,6 +236,9 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
   const totalReceivables = ledgerRow.totalReceivables;
   const suppliedBalance = suppliedRow.total;
   const unsuppliedBalance = unsuppliedRow.total;
+  const unreviewedBalance = unreviewedRow.total;
+  const unreviewedCount = unreviewedRow.count || 0;
+  const rejectedBalance = rejectedRow.total;
   const returnBalance = returnsRow.total;
   const partialShipmentsCount = partialShipmentsRow ? partialShipmentsRow.count : 0;
   const stockAlertsCount = stockAlertsRow ? stockAlertsRow.count : 0;
@@ -239,6 +264,12 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
     collected: totalCollected,
     supplied: suppliedBalance,
     unsupplied: unsuppliedBalance,
+    unreviewedReceipts: unreviewedBalance,
+    unreviewedCount,
+    rejectedReceipts: rejectedBalance,
+    unreviewed_receipts: unreviewedBalance,
+    unreviewed_count: unreviewedCount,
+    rejected_receipts: rejectedBalance,
     returns: returnBalance,
     partialShipmentsCount,
     stockAlertsCount

@@ -168,20 +168,6 @@ async function seed() {
     );
   }
 
-  // 5. Seed Outlet Types (For both tests and fresh dev starts)
-  console.log('Seeding standard outlet types...');
-  const outletTypes = [
-    { name: 'Wholesale', desc: 'Wholesale distributors and large bookstores' },
-    { name: 'Retail', desc: 'Standard retail outlets and individual shops' },
-    { name: 'Special Outlets', desc: 'Exhibitions and special promotional locations' }
-  ];
-  
-  for (const ot of outletTypes) {
-    await dbHelper.run(
-      'INSERT OR IGNORE INTO outlet_types (name, description, status) VALUES (?, ?, ?)',
-      [ot.name, ot.desc, 'active']
-    );
-  }
 
   console.log(`✓ Seeding completed successfully. Environment setup verified.`);
 }

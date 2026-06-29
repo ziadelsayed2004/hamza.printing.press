@@ -18,6 +18,10 @@ Read these files in full before editing anything:
 10. `agent_pack/checklists/VISUAL_RTL_MATERIAL_QA_CHECKLIST.md`
 11. `agent_pack/checklists/FINANCE_SHIPPING_RETURNS_QA_CHECKLIST.md`
 12. `agent_pack/checklists/VERIFY_GATE.md`
+13. `agent_pack/docs/INVENTORY_RECEIPTS_STOCK_ONLY_POLICY.md`
+14. `agent_pack/docs/PAYMENT_RECEIPTS_REVIEW_POLICY.md`
+15. `agent_pack/docs/NOTIFICATIONS_ACTIONS_PREVIEW_IGNORE_POLICY.md`
+16. `agent_pack/docs/RETURNS_PARTIAL_SHIPPING_PAYMENT_FLOW_FINAL.md`
 13. The selected step file from `agent_pack/steps/`.
 
 ## Step selection rule
@@ -51,6 +55,12 @@ Read these files in full before editing anything:
 - Returns/refunds must be records, affect stock, outlet return balance, outlet limit, statements, and notifications.
 - Partial shipping must be by invoice item quantities and must not exceed remaining unshipped quantities.
 - Invoice actions must include pay, mark paid, supply, ship, return, export/print according to permissions.
+
+- Inventory receipts / واردات الكتب are stock-only and must not affect finance, balances, payments, remittance, or outlet limits.
+- Payment creation must allow selecting outlet first, then invoice, then amount/payment details, with receipt/proof upload for every payment operation including partial payments.
+- Payment receipts must have review statuses and a review queue with preview/download/approve/reject permissions.
+- Dashboard notification actions must be `معاينة` and `تجاهل`; do not use generic `حل المشكلة`.
+- `معاينة` must route to the relevant section/entity, e.g. insufficient stock opens product/inventory context.
 - Keep and improve old platform value; remove only explicitly cancelled features.
 
 ## Design rules

@@ -19,7 +19,9 @@ import {
   Alert,
   Button,
   LinearProgress,
-  Stack
+  Stack,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   Store as StoreIcon,
@@ -37,7 +39,9 @@ import {
   NotificationImportant as AlertIcon,
   CheckCircle as CheckCircleIcon,
   LocalShipping as ShippingIcon,
-  AccessTime as AccessTimeIcon
+  AccessTime as AccessTimeIcon,
+  Launch as LaunchIcon,
+  Check as ResolveIcon
 } from '@mui/icons-material';
 import './Dashboard.css';
 
@@ -229,6 +233,8 @@ export const Dashboard = () => {
   const invoicesAmountVal = totalSales;
   const partialShipmentsVal = financeSummary ? (financeSummary.partialShipmentsCount || 0) : shipments.filter(s => s.status === 'pending').length;
   const stockAlertsVal = financeSummary ? (financeSummary.stockAlertsCount || 0) : (lowStockItemsCount + negativeStockItemsCount);
+  const unreviewedCountVal = financeSummary ? (financeSummary.unreviewedCount || 0) : 0;
+  const unreviewedAmountVal = financeSummary ? (financeSummary.unreviewedReceipts || 0) : 0;
 
   return (
     <Box className="dashboard-container">
@@ -304,13 +310,30 @@ export const Dashboard = () => {
               action={
                 <Stack direction="row" spacing={1}>
                   {alert.action_url && (
-                    <Button color="inherit" size="small" onClick={() => navigate(alert.action_url)}>
-                      معاينة
-                    </Button>
+                    <Tooltip title="معاينة">
+                      <IconButton
+                        color="inherit"
+                        size="small"
+                        onClick={() => {
+                          const cleanUrl = alert.action_url
+                            .replace(/^\/catalog\/products\/\d+/, '/inventory')
+                            .replace(/^\/operations\/outlets\/\d+/, '/outlets')
+                            .replace(/^\/finance\/invoices\/\d+/, '/invoices')
+                            .replace(/^\/finance\/payments/, '/payments')
+                            .replace(/^\/finance\/ledger/, '/finance')
+                            .replace(/^\/operations\/shipments/, '/shipments');
+                          navigate(cleanUrl);
+                        }}
+                      >
+                        <LaunchIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   )}
-                  <Button color="inherit" size="small" onClick={() => handleResolveAlert(alert.id)}>
-                    حل المشكلة
-                  </Button>
+                  <Tooltip title="تجاهل">
+                    <IconButton color="inherit" size="small" onClick={() => handleResolveAlert(alert.id)}>
+                      <ResolveIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
               }
             >
@@ -381,9 +404,9 @@ export const Dashboard = () => {
               </Typography>
             </Box>
             <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">إجمالي الديون المتأخرة</Typography>
-              <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--danger">
-                {formatCurrencyEGP(totalOverdue)}
+              <Typography className="snapshot-panel__stat-title">إيصالات قيد المراجعة</Typography>
+              <Typography className={`snapshot-panel__stat-value ${unreviewedCountVal > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
+                {unreviewedCountVal} إيصالات
               </Typography>
             </Box>
             <Box className="snapshot-panel__stat-box">
@@ -488,7 +511,7 @@ export const Dashboard = () => {
                         {formatCurrencyEGP(inv.total_price)}
                       </Typography>
                       <Chip
-                        label={inv.payment_status === 'paid' ? 'مدفوعة' : inv.payment_status === 'partially_paid' ? 'جزئي' : inv.payment_status === 'cancelled' ? 'ملغاة' : 'غير مدفوع'}
+                        label={inv.payment_status === 'paid' ? 'مدفوع كلياً' : inv.payment_status === 'partially_paid' ? 'مدفوع جزئياً' : inv.payment_status === 'cancelled' ? 'ملغاة' : 'مؤجل كلياً'}
                         size="small"
                         color={inv.payment_status === 'paid' ? 'success' : inv.payment_status === 'partially_paid' ? 'warning' : inv.payment_status === 'cancelled' ? 'default' : 'error'}
                         className="activity-item__chip"

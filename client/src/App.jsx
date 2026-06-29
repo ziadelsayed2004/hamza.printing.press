@@ -23,6 +23,7 @@ import { Finance } from './pages/Finance';
 import { Notifications } from './pages/Notifications';
 import { Box, Typography, Paper } from '@mui/material';
 import { LoadingState } from './components/LoadingState';
+import './App.css';
 
 // Guard for routes that require authentication
 const ProtectedRoute = ({ children }) => {
@@ -30,7 +31,7 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <Box style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', width: '100%' }}>
+      <Box className="route-loading">
         <LoadingState type="skeleton" />
       </Box>
     );
@@ -49,7 +50,7 @@ const GuestRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <Box style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', width: '100%' }}>
+      <Box className="route-loading">
         <LoadingState type="spinner" />
       </Box>
     );

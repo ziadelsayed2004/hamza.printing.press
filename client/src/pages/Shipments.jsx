@@ -128,7 +128,7 @@ export const Shipments = () => {
       try {
         const inv = await apiClient.get(`/invoices/${csInvoiceId}`);
         const remainingItems = await apiClient.get(`/shipments/invoice/${csInvoiceId}/remaining`);
-        
+
         // Merge the actual remaining quantities into the invoice items
         const updatedItems = inv.items.map(item => {
           const remItem = remainingItems.find(r => r.invoice_item_id === item.id);
@@ -138,7 +138,7 @@ export const Shipments = () => {
             remaining_quantity: remItem ? remItem.remaining_quantity : item.remaining_quantity
           };
         });
-        
+
         setLoadedInvoice({ ...inv, items: updatedItems });
       } catch (err) {
         setLoadedInvoice(null);
@@ -355,7 +355,7 @@ export const Shipments = () => {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <FilterIcon color="action" />
-              <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>خيارات البحث والتصفية</Typography>
+              <Typography variant="subtitle1" className="filter-panel-title" sx={{ fontWeight: 'bold' }}>خيارات البحث والتصفية</Typography>
             </Box>
             <IconButton size="small">
               {showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
@@ -364,7 +364,7 @@ export const Shipments = () => {
 
           <Collapse in={showFilters} sx={{ mt: 2 }}>
             <Divider sx={{ my: 1.5 }} />
-            <Grid container spacing={2} alignItems="center">
+            <Grid container spacing={2} alignItems="center" className="filter-grid">
               <Grid item xs={12} sm={4} md={3}>
                 <TextField
                   fullWidth label="معرّف الفاتورة (Invoice ID)" size="small" type="number"
@@ -524,8 +524,8 @@ export const Shipments = () => {
           <Alert severity="info" sx={{ mb: 2 }}>
             يتم تحميل أصناف الفاتورة تلقائياً عند اختيار الفاتورة. يرجى تحديد الكتب والكميات المراد شحنها.
           </Alert>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
+          <Grid container spacing={2} className="shipment-form-grid">
+            <Grid item xs={12}>
               <Autocomplete
                 options={invoicesList}
                 getOptionLabel={(option) => `${option.invoice_number} - ${option.outlet_name}`}
@@ -543,7 +543,7 @@ export const Shipments = () => {
                       ...(params.InputProps || {}),
                       endAdornment: (
                         <>
-                          {loadingInvoice ? <span style={{ fontSize: '11px', color: '#999', whiteSpace: 'nowrap' }}>جاري التحميل...</span> : null}
+                          {loadingInvoice ? <span className="autocomplete-loader-text">جاري التحميل...</span> : null}
                           {params.InputProps?.endAdornment}
                         </>
                       )
@@ -552,11 +552,11 @@ export const Shipments = () => {
                 )}
               />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField fullWidth label="شركة الشحن" size="small"
                 value={csCarrier} onChange={(e) => setCsCarrier(e.target.value)} />
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField fullWidth label="رقم التتبع" size="small"
                 value={csTracking} onChange={(e) => setCsTracking(e.target.value)}
                 inputProps={{ className: 'ltr-value' }} />

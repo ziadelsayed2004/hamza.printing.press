@@ -4,6 +4,7 @@ import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
+import { EGYPT_GOVERNORATES } from '../constants/governorates';
 import {
   Box,
   Typography,
@@ -26,7 +27,8 @@ import {
   Select,
   MenuItem,
   Snackbar,
-  Alert
+  Alert,
+  Stack
 } from '@mui/material';
 import {
   TrendingUp as TrendingUpIcon,
@@ -36,41 +38,12 @@ import {
   Clear as ClearIcon
 } from '@mui/icons-material';
 
-// Syrian Governorates for consistency
-const GOVERNORATES = [
-  'القاهرة',
-  'الجيزة',
-  'الإسكندرية',
-  'القليوبية',
-  'بورسعيد',
-  'السويس',
-  'الأقصر',
-  'أسوان',
-  'الدقهلية',
-  'الغربية',
-  'المنوفية',
-  'الشرقية',
-  'البحيرة',
-  'دمياط',
-  'المنيا',
-  'سوهاج',
-  'قنا',
-  'أسيوط',
-  'بني سويف',
-  'كفر الشيخ',
-  'الفيوم',
-  'مطروح',
-  'شمال سيناء',
-  'جنوب سيناء',
-  'البحر الأحمر',
-  'الوادي الجديد',
-  'الإسماعيلية'
-];
+
 
 function TabPanel({ children, value, index, ...props }) {
   return (
     <Box role="tabpanel" hidden={value !== index} {...props}>
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ pt: 3, pb: 'var(--space-6)' }}>{children}</Box>}
     </Box>
   );
 }
@@ -300,13 +273,13 @@ export const Reports = () => {
           textColor="primary"
           indicatorColor="primary"
         >
-          <Tab label="الخلاصة المالية" />
-          <Tab label="أرصدة المنافذ" />
-          <Tab label="مبيعات المحافظات" />
-          <Tab label="مبيعات فئات المنافذ" />
-          <Tab label="حالة المخزون" />
-          <Tab label="مبيعات المؤلفين" />
-          <Tab label="سجل التوريدات" />
+          <Tab label="الخلاصة المالية" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab label="أرصدة المنافذ" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab label="مبيعات المحافظات" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab label="مبيعات فئات المنافذ" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab label="حالة المخزون" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab label="مبيعات المؤلفين" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab label="سجل التوريدات" sx={{ whiteSpace: 'nowrap' }} />
         </Tabs>
       </Paper>
 
@@ -322,6 +295,7 @@ export const Reports = () => {
                   label="تاريخ البدء"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   size="small"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
@@ -333,6 +307,7 @@ export const Reports = () => {
                   label="تاريخ النهاية"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   size="small"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
@@ -386,7 +361,7 @@ export const Reports = () => {
                     label="المحافظة"
                   >
                     <MenuItem value="">الكل</MenuItem>
-                    {GOVERNORATES.map((g) => (
+                    {EGYPT_GOVERNORATES.map((g) => (
                       <MenuItem key={g} value={g}>{g}</MenuItem>
                     ))}
                   </Select>
@@ -477,68 +452,74 @@ export const Reports = () => {
       {/* ───── TAB 0: FINANCIAL SUMMARY ───── */}
       <TabPanel value={tab} index={0}>
         {summaryLoading ? <LoadingState /> : !summaryData ? <EmptyState title="لا توجد بيانات" /> : (
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ bgcolor: '#ebf5fb', borderRight: 6, borderColor: 'primary.main', display: 'flex', alignItems: 'center', p: 2 }}>
-                <TrendingUpIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
-                <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
-                  <Typography variant="subtitle2" color="text.secondary">إجمالي المبيعات</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }}>{formatCurrencyEGP(summaryData.totalSales)}</Typography>
-                </CardContent>
-              </Card>
+          <Stack spacing={3}>
+            {/* Main Financial Metrics */}
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ bgcolor: '#ebf5fb', borderRight: 6, borderColor: 'primary.main', display: 'flex', alignItems: 'center', p: 2 }}>
+                  <TrendingUpIcon color="primary" sx={{ fontSize: 40, mr: 2 }} />
+                  <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
+                    <Typography variant="subtitle2" color="text.secondary">إجمالي المبيعات</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }}>{formatCurrencyEGP(summaryData.totalSales)}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ bgcolor: '#e8f8f5', borderRight: 6, borderColor: 'success.main', display: 'flex', alignItems: 'center', p: 2 }}>
+                  <PaymentIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
+                  <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
+                    <Typography variant="subtitle2" color="text.secondary">المبالغ المسددة</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }} color="success.main">{formatCurrencyEGP(summaryData.totalPaid)}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Card sx={{ bgcolor: '#fdf2e9', borderRight: 6, borderColor: 'warning.main', display: 'flex', alignItems: 'center', p: 2 }}>
+                  <WalletIcon color="warning" sx={{ fontSize: 40, mr: 2 }} />
+                  <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
+                    <Typography variant="subtitle2" color="text.secondary">المبالغ المتبقية (الديون)</Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }} color="warning.main">{formatCurrencyEGP(summaryData.totalRemaining)}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
             </Grid>
 
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ bgcolor: '#e8f8f5', borderRight: 6, borderColor: 'success.main', display: 'flex', alignItems: 'center', p: 2 }}>
-                <PaymentIcon color="success" sx={{ fontSize: 40, mr: 2 }} />
-                <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
-                  <Typography variant="subtitle2" color="text.secondary">المبالغ المسددة</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }} color="success.main">{formatCurrencyEGP(summaryData.totalPaid)}</Typography>
-                </CardContent>
-              </Card>
+            {/* Detailed Supply and Shipment Metrics */}
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={3}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                  <Typography variant="body2" color="text.secondary">مدفوعات موردة (Supplied)</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'success.main' }}>{formatCurrencyEGP(summaryData.totalSupplied)}</Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                  <Typography variant="body2" color="text.secondary">مدفوعات غير موردة (Unsupplied)</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'error.main' }}>{formatCurrencyEGP(summaryData.totalUnsupplied)}</Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={2}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                  <Typography variant="body2" color="text.secondary">شحنات مكتملة</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>{summaryData.countShipped} فاتورة</Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={2}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                  <Typography variant="body2" color="text.secondary">شحنات جزئية</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'warning.main' }}>{summaryData.countPartiallyShipped} فاتورة</Typography>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={2}>
+                <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
+                  <Typography variant="body2" color="text.secondary">غير مشحون</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'error.main' }}>{summaryData.countNotShipped} فاتورة</Typography>
+                </Card>
+              </Grid>
             </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <Card sx={{ bgcolor: '#fdf2e9', borderRight: 6, borderColor: 'warning.main', display: 'flex', alignItems: 'center', p: 2 }}>
-                <WalletIcon color="warning" sx={{ fontSize: 40, mr: 2 }} />
-                <CardContent sx={{ py: 0, '&:last-child': { pb: 0 } }}>
-                  <Typography variant="subtitle2" color="text.secondary">المبالغ المتبقية (الديون)</Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 'bold', mt: 0.5 }} color="warning.main">{formatCurrencyEGP(summaryData.totalRemaining)}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            <Grid item xs={12} sm={3}>
-              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
-                <Typography variant="body2" color="text.secondary">مدفوعات موردة (Supplied)</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'success.main' }}>{formatCurrencyEGP(summaryData.totalSupplied)}</Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
-                <Typography variant="body2" color="text.secondary">مدفوعات غير موردة (Unsupplied)</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'error.main' }}>{formatCurrencyEGP(summaryData.totalUnsupplied)}</Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={2}>
-              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
-                <Typography variant="body2" color="text.secondary">شحنات مكتملة</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1 }}>{summaryData.countShipped} فاتورة</Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={2}>
-              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
-                <Typography variant="body2" color="text.secondary">شحنات جزئية</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'warning.main' }}>{summaryData.countPartiallyShipped} فاتورة</Typography>
-              </Card>
-            </Grid>
-            <Grid item xs={12} sm={2}>
-              <Card sx={{ p: 2, textAlign: 'center', bgcolor: '#f8f9f9' }}>
-                <Typography variant="body2" color="text.secondary">غير مشحون</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 'bold', mt: 1, color: 'error.main' }}>{summaryData.countNotShipped} فاتورة</Typography>
-              </Card>
-            </Grid>
-          </Grid>
+          </Stack>
         )}
       </TabPanel>
 
@@ -733,7 +714,7 @@ export const Reports = () => {
       {/* ───── TAB 6: RECEIPTS REPORT ───── */}
       <TabPanel value={tab} index={6}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>سجل توريدات الموردين وتكلفتها</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>سجل توريدات الموردين وكمياتها</Typography>
           <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportCSV('receipts')}>
             تصدير كملف Excel
           </Button>
@@ -746,7 +727,6 @@ export const Reports = () => {
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم المورد</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>عدد حركات التوريد</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>إجمالي الكمية الموردة</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>التكلفة الإجمالية للتوريد</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -755,7 +735,6 @@ export const Reports = () => {
                     <TableCell align="right">{row.supplierName}</TableCell>
                     <TableCell align="right">{row.totalReceipts}</TableCell>
                     <TableCell align="right">{row.totalQuantity.toLocaleString()} نسخة</TableCell>
-                    <TableCell align="right">{formatCurrencyEGP(row.totalCost)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

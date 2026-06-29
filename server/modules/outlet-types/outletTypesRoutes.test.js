@@ -35,6 +35,10 @@ describe('Outlet Types API Integration Tests', () => {
       fullName: 'OT Accountant'
     });
     await usersService.assignRole(accountantUser.id, accountantRole.id);
+
+    // Seed test-specific outlet types dynamically
+    await db.run('INSERT OR IGNORE INTO outlet_types (name, description, status) VALUES (?, ?, ?)', ['Wholesale', 'Wholesale', 'active']);
+    await db.run('INSERT OR IGNORE INTO outlet_types (name, description, status) VALUES (?, ?, ?)', ['Retail', 'Retail', 'active']);
   });
 
   afterAll((done) => {

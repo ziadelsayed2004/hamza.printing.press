@@ -18,9 +18,11 @@ function walk(dir) {
   return results;
 }
 
-// Find all JSX/JS and CSS files
+// Find all JSX/TSX source files and CSS files
 const allFiles = walk(clientSrcDir);
-const sourceFiles = allFiles.filter(f => f.endsWith('.jsx') || f.endsWith('.js'));
+const sourceFiles = allFiles.filter(
+  f => f.endsWith('.jsx') || f.endsWith('.tsx') || f.endsWith('.js') || f.endsWith('.ts')
+);
 
 const violations = [];
 
@@ -38,7 +40,7 @@ function addViolation(file, line, checkType, message, snippet) {
 // Check 1: Sibling CSS Check
 // Every .jsx component/page must have a matching .css file in the same folder.
 sourceFiles.forEach(file => {
-  if (file.endsWith('.jsx')) {
+  if (file.endsWith('.jsx') || file.endsWith('.tsx')) {
     const normalizedPath = file.replace(/\\/g, '/');
     const isComponentOrPage = normalizedPath.includes('/components/') || normalizedPath.includes('/pages/');
     if (isComponentOrPage) {
@@ -50,23 +52,23 @@ sourceFiles.forEach(file => {
   }
 });
 
-// Baseline limits for style and sx inline props to prevent new layout debt
+// Baseline limits for heavy sx props. DOM style props have a strict zero policy below.
 const BASELINE = {
-  'App.jsx': { sx: 0, style: 2 },
-  'layouts/MainLayout.jsx': { sx: 0, style: 17 },
-  'pages/AuditLogs.jsx': { sx: 1, style: 1 },
-  'pages/Dashboard.jsx': { sx: 1, style: 0 },
-  'pages/Exports.jsx': { sx: 2, style: 0 },
-  'pages/Finance.jsx': { sx: 7, style: 0 },
-  'pages/Inventory.jsx': { sx: 4, style: 2 },
-  'pages/Invoices.jsx': { sx: 2, style: 1 },
-  'pages/Login.jsx': { sx: 4, style: 0 },
-  'pages/Payments.jsx': { sx: 2, style: 2 },
-  'pages/Products.jsx': { sx: 0, style: 1 },
-  'pages/Reports.jsx': { sx: 3, style: 0 },
-  'pages/Shipments.jsx': { sx: 3, style: 2 },
-  'pages/Users.jsx': { sx: 0, style: 1 },
-  'theme/ThemeConfig.jsx': { sx: 0, style: 1 },
+  'App.jsx': { sx: 0 },
+  'layouts/MainLayout.jsx': { sx: 0 },
+  'pages/AuditLogs.jsx': { sx: 1 },
+  'pages/Dashboard.jsx': { sx: 1 },
+  'pages/Exports.jsx': { sx: 2 },
+  'pages/Finance.jsx': { sx: 7 },
+  'pages/Inventory.jsx': { sx: 4 },
+  'pages/Invoices.jsx': { sx: 2 },
+  'pages/Login.jsx': { sx: 4 },
+  'pages/Payments.jsx': { sx: 2 },
+  'pages/Products.jsx': { sx: 0 },
+  'pages/Reports.jsx': { sx: 3 },
+  'pages/Shipments.jsx': { sx: 3 },
+  'pages/Users.jsx': { sx: 0 },
+  'theme/ThemeConfig.jsx': { sx: 0 },
 };
 
 // Check 2: Content scan on source files (.jsx, .js)
@@ -76,8 +78,6 @@ sourceFiles.forEach(file => {
   const relPath = path.relative(clientSrcDir, file).replace(/\\/g, '/');
 
   let sxCount = 0;
-  let styleCount = 0;
-
   // Check for heavy sx={{ prop
   // We extract all sx={...} blocks and analyze them
   const sxRegex = /sx\s*=\s*\{/g;
@@ -131,13 +131,15 @@ sourceFiles.forEach(file => {
       return;
     }
 
-    // Inline style prop
-    if (trimmed.includes('style={{') || (trimmed.includes('style={') && !trimmed.includes('style={undefined') && !trimmed.includes('styleClass'))) {
-      styleCount++;
-      const baselineLimit = BASELINE[relPath] ? BASELINE[relPath].style : 0;
-      if (styleCount > baselineLimit) {
-        addViolation(file, lineNum, 'Inline style={{', `Inline style prop usage exceeded baseline limit of ${baselineLimit}.`, trimmed);
-      }
+    // Inline DOM styles are forbidden, both as JSX props and nested prop objects.
+    if (/\bstyle\s*(?:=|:)/.test(trimmed)) {
+      addViolation(
+        file,
+        lineNum,
+        'Inline style',
+        'Inline style usage is not allowed. Move the rule to the component stylesheet.',
+        trimmed
+      );
     }
 
     // Hardcoded old identity
@@ -184,7 +186,7 @@ sourceFiles.forEach(file => {
 
 // Check 3: CSS Files check
 let totalImportantCount = 0;
-const CSS_BASELINE_LIMIT = 184; // Current exact baseline count of !important rules
+const CSS_BASELINE_LIMIT = 0;
 
 allFiles.filter(f => f.endsWith('.css')).forEach(file => {
   const content = fs.readFileSync(file, 'utf8');

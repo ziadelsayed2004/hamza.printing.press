@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 import { APP_CONFIG } from '../config/appConfig';
+import './Login.css';
 import {
   Box,
   Button,
@@ -61,11 +62,10 @@ export const Login = () => {
       }}
     >
       <Paper
+        className="login-dialog"
         elevation={0}
         sx={{
           p: { xs: 3, sm: 5 },
-          maxWidth: 420,
-          width: '100%',
           borderRadius: 4,
           textAlign: 'center',
           backgroundColor: 'background.paper',

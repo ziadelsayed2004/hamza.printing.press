@@ -185,7 +185,7 @@ describe('Invoices API Integration Tests', () => {
           items: [{ productId: activeBookTrack.id, quantity: 20 }] // Available is 10
         });
       expect(response.status).toBe(400);
-      expect(response.body.message).toContain('Insufficient stock');
+      expect(response.body.message).toContain('المخزون غير كافٍ');
     });
 
     it('should create an invoice successfully, resolving pricing, stock decrements, and status history logs', async () => {
@@ -261,7 +261,7 @@ describe('Invoices API Integration Tests', () => {
           items: [{ productId: activeBookTrack.id, quantity: 15 }]
         });
       expect(response.status).toBe(400);
-      expect(response.body.message).toContain('Insufficient stock');
+      expect(response.body.message).toContain('المخزون غير كافٍ');
     });
 
     it('should successfully update an invoice, reconciling items, recalculating totals, and correctly updating ledger stock', async () => {

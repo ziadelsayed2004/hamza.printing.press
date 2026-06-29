@@ -54,6 +54,77 @@ import {
   Save as SaveIcon
 } from '@mui/icons-material';
 
+const roleTranslations = {
+  super_admin: 'مدير النظام (سوبر أدمن)',
+  admin: 'مدير',
+  accountant: 'محاسب مالي',
+  inventory_manager: 'مسؤول المخازن والجرد',
+  sales_staff: 'موظف مبيعات وتوزيع',
+  shipping_user: 'مسؤول الشحن واللوجستيات',
+  readonly_viewer: 'مراقب عام (قراءة فقط)',
+  author: 'حساب مؤلف كتب',
+  outlet: 'منفذ توزيع / فرع',
+  assistant: 'مساعد إداري',
+  visitor: 'حساب زائر (ماليات فقط)'
+};
+
+const permissionTranslations = {
+  'users.view': { name: 'عرض الحسابات', desc: 'استعراض قائمة مستخدمي النظام وتفاصيلهم.' },
+  'users.create': { name: 'إنشاء مستخدمين', desc: 'إضافة حسابات مستخدمين جديدة للنظام.' },
+  'users.update': { name: 'تعديل مستخدمين', desc: 'تعديل بيانات المستخدمين وصلاحياتهم.' },
+  'users.disable': { name: 'تعطيل حسابات', desc: 'إيقاف حسابات المستخدمين مؤقتاً ومنع دخولهم.' },
+  'users.archive': { name: 'أرشفة وحذف', desc: 'أرشفة حسابات المستخدمين وحذفها نهائياً.' },
+  'roles.manage': { name: 'إدارة الأدوار والصلاحيات (RBAC)', desc: 'إدارة مصفوفة توزيع صلاحيات الأدوار الوظيفية.' },
+  'permissions.manage': { name: 'إدارة الصلاحيات التفصيلية', desc: 'إدارة الصلاحيات الفردية المسجلة بالخلفية.' },
+  'authors.view': { name: 'عرض المؤلفين', desc: 'استعراض دليل وبيانات المؤلفين المسجلين.' },
+  'authors.create': { name: 'إضافة مؤلفين', desc: 'تسجيل مؤلفين جدد في دليل النظام.' },
+  'authors.update': { name: 'تعديل المؤلفين', desc: 'تحديث بيانات وعناوين وحسابات المؤلفين.' },
+  'products.view': { name: 'عرض الكتب والمنتجات', desc: 'تصفح وعرض دليل الكتب والمنتجات وتفاصيلها.' },
+  'products.create': { name: 'إضافة منتجات جديدة', desc: 'إدراج كتب ومنتجات جديدة وتفاصيل SKU.' },
+  'products.update': { name: 'تعديل منتجات قائمة', desc: 'تحديث تفاصيل الكتب والبيانات الفنية للمنتجات.' },
+  'products.delete': { name: 'حذف منتجات', desc: 'حذف الكتب أو المنتجات من النظام نهائياً.' },
+  'product_prices.view': { name: 'عرض لوائح الأسعار', desc: 'استعراض تفاصيل الأسعار حسب فئات منافذ البيع.' },
+  'product_prices.update': { name: 'تحديث الأسعار', desc: 'تعديل وتحديث لوائح أسعار المنتجات المعتمدة.' },
+  'outlet_types.view': { name: 'عرض فئات المنافذ', desc: 'عرض تصنيفات وفئات منافذ البيع.' },
+  'outlet_types.manage': { name: 'إدارة فئات المنافذ', desc: 'إنشاء وتعديل وتفعيل فئات تصنيف المنافذ.' },
+  'outlets.view': { name: 'عرض الفروع والمنافذ', desc: 'تصفح دليل منافذ البيع والفروع الموزعة.' },
+  'outlets.create': { name: 'إضافة منافذ توزيع', desc: 'تسجيل منفذ توزيع أو فرع جديد في النظام.' },
+  'outlets.update': { name: 'تعديل منافذ التوزيع', desc: 'تحديث عناوين وهواتف وحدود الائتمان للمنافذ.' },
+  'outlets.disable': { name: 'تعطيل منافذ التوزيع', desc: 'إيقاف التعامل مؤقتاً مع منفذ توزيع معين.' },
+  'invoices.view': { name: 'عرض الفواتير المبيعات', desc: 'تصفح سجل الفواتير وحالات السداد والتفاصيل.' },
+  'invoices.create': { name: 'إنشاء فواتير جديدة', desc: 'تسجيل فواتير مبيعات صادرة جديدة للمنافذ.' },
+  'invoices.update': { name: 'تعديل الفواتير', desc: 'تعديل بيانات الفواتير المعلقة قبل الترحيل.' },
+  'invoices.cancel': { name: 'إلغاء الفواتير', desc: 'إلغاء فواتير البيع الصادرة وعكس تأثيرها.' },
+  'invoices.export': { name: 'تصدير فواتير', desc: 'تنزيل فواتير المبيعات كملفات خارجية.' },
+  'payments.view': { name: 'عرض المقبوضات والدفعات', desc: 'استعراض سجل حركات المقبوضات وسداد الفواتير.' },
+  'payments.create': { name: 'تسجيل مقبوضات جديدة', desc: 'إدخال دفعات سداد نقدية أو بنكية لصالح الفواتير.' },
+  'payments.reverse': { name: 'إلغاء وعكس المقبوضات', desc: 'عكس حركة المقبوضات وإرجاع المديونية للفاتورة.' },
+  'inventory.view': { name: 'عرض المخزون وواردات الكتب', desc: 'استعراض رصيد المخازن الحالي وحركات الوارد.' },
+  'inventory.receipts.create': { name: 'تسجيل واردات مخزن', desc: 'إدخال شحنات كتب واردة جديدة للمستودع لزيادة الرصيد.' },
+  'inventory.adjustments.create': { name: 'تسجيل تسوية جرد', desc: 'إجراء تعديلات جردية يدوية للمخزون (عجز/زيادة).' },
+  'shipments.view': { name: 'عرض الشحنات والطرود', desc: 'متابعة سجل شحن الفواتير وحالات التوصيل.' },
+  'shipments.create': { name: 'إنشاء شحنات جديدة', desc: 'شحن الفواتير وتوليد طرود شحن للمنافذ.' },
+  'shipments.update': { name: 'تحديث حالة الشحن', desc: 'تحديث حالات الشحنات (شحن جزئي، تم التوصيل، إلخ).' },
+  'reports.view': { name: 'عرض التقارير المتقدمة', desc: 'استعراض الرسوم البيانية والملخصات الإدارية المجمعة.' },
+  'reports.export': { name: 'تصدير التقارير', desc: 'استخراج وتصدير التقارير بصيغ Excel أو PDF.' },
+  'exports.run': { name: 'تصدير البيانات لقاعدة البيانات', desc: 'استخراج الجداول الأساسية كملفات CSV.' },
+  'audit.view': { name: 'عرض سجل التدقيق والعمليات', desc: 'مراقبة سجل عمليات المستخدمين وتعديلاتهم.' },
+  'settings.update': { name: 'تحديث الإعدادات العامة', desc: 'تحديث خيارات النظام العامة والتحكم.' },
+  'backup.create': { name: 'إنشاء نسخ احتياطية', desc: 'أخذ نسخة احتياطية من قاعدة البيانات بالكامل.' },
+  'backup.restore': { name: 'استعادة نسخ احتياطية', desc: 'استعادة النظام لحالة نسخة احتياطية سابقة.' },
+  'finance.view': { name: 'عرض الخزينة والحركات المالية', desc: 'تتبع ملخصات النقدية ومقادير التوريد المعلقة.' },
+  'finance.adjust': { name: 'تسجيل تسوية مالية يدوية', desc: 'عمل قيود تسوية يدوية لزيادة/نقص النقدية بالفروع.' },
+  'finance.export': { name: 'تصدير بيانات المالية', desc: 'تصدير كشوف الحسابات وحركات الخزينة.' },
+  'finance.statement.view': { name: 'كشف حساب تفصيلي للعميل', desc: 'توليد وعرض كشف حساب أستاذ تفصيلي لكل منفذ بيع.' },
+  'payments.mark_supplied': { name: 'توريد مقبوضات الفروع', desc: 'تعليم الدفعات بأنها وردت لخزينة الشركة.' },
+  'payments.supply_batch': { name: 'توريد دفعات مجمعة', desc: 'إرسال حزمة مقبوضات دفعة واحدة للخزينة.' },
+  'notifications.view': { name: 'عرض الإشعارات والتحذيرات', desc: 'مشاهدة إشعارات العجز وحدود الائتمان.' },
+  'notifications.manage': { name: 'إدارة وتجاهل الإشعارات', desc: 'معالجة الإشعارات وحلها أو تجاهلها بالكامل.' }
+};
+
+const translateRoleName = (name) => roleTranslations[name] || name;
+const translatePermission = (name) => permissionTranslations[name] || { name, desc: '' };
+
 export const Users = () => {
   const { user: currentUser, hasPermission } = useAuth();
   const [tabValue, setTabValue] = useState(0);
@@ -314,10 +385,12 @@ export const Users = () => {
       <Tabs
         value={tabValue}
         onChange={(e, nv) => setTabValue(nv)}
+        variant="scrollable"
+        scrollButtons="auto"
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
       >
-        <Tab label="حسابات المستخدمين" sx={{ fontWeight: 'bold' }} />
-        {hasPermission('roles.manage') && <Tab label="جدول صلاحيات الأدوار (RBAC)" sx={{ fontWeight: 'bold' }} />}
+        <Tab label="حسابات المستخدمين" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+        {hasPermission('roles.manage') && <Tab label="جدول صلاحيات الأدوار (RBAC)" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />}
       </Tabs>
 
       {/* Tab 0: Users Management */}
@@ -329,7 +402,7 @@ export const Users = () => {
             placeholder="البحث باسم المستخدم أو الاسم الكامل..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            sx={{ mb: 3 }}
+            sx={{ mb: 3, minWidth: 280 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -362,7 +435,7 @@ export const Users = () => {
                       <TableCell align="right">
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                           {u.roles?.map((r) => (
-                            <Chip key={r} label={r} size="small" color="primary" variant="outlined" />
+                            <Chip key={r} label={translateRoleName(r)} size="small" color="primary" variant="outlined" />
                           ))}
                         </Box>
                       </TableCell>
@@ -427,7 +500,7 @@ export const Users = () => {
               >
                 {rolesList.map((r) => (
                   <MenuItem key={r.id} value={r.id}>
-                    {r.name}
+                    {translateRoleName(r.name)}
                   </MenuItem>
                 ))}
               </Select>
@@ -462,11 +535,11 @@ export const Users = () => {
                     label={
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {p.name}
+                          {translatePermission(p.name).name}
                         </Typography>
-                        {p.description && (
+                        {(translatePermission(p.name).desc || p.description) && (
                           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                            {p.description}
+                            {translatePermission(p.name).desc || p.description}
                           </Typography>
                         )}
                       </Box>
@@ -534,16 +607,16 @@ export const Users = () => {
                   label="الأدوار الممنوحة"
                   onChange={(e) => setFormRoles(e.target.value)}
                   renderValue={(selected) => (
-                    <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    <Box className="roles-chip-container">
                       {selected.map((value) => (
-                        <Chip key={value} label={value} size="small" />
+                        <Chip key={value} label={translateRoleName(value)} size="small" />
                       ))}
                     </Box>
                   )}
                 >
                   {rolesList.map((r) => (
                     <MenuItem key={r.id} value={r.name}>
-                      {r.name}
+                      {translateRoleName(r.name)}
                     </MenuItem>
                   ))}
                 </Select>

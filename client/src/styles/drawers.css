@@ -57,3 +57,9 @@
   gap: var(--space-3);
   z-index: 100;
 }
+
+/* Shipment Drawer form grid custom spacing */
+.shipment-form-grid > * {
+  width: 100%;
+  --Grid-parent-rowSpacing: 16px;
+}

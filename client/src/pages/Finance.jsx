@@ -4,6 +4,7 @@ import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
+import EntityDrawer from '../components/EntityDrawer';
 import {
   Box,
   Typography,
@@ -55,7 +56,7 @@ import {
 function TabPanel({ children, value, index, ...props }) {
   return (
     <Box role="tabpanel" hidden={value !== index} {...props}>
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ pt: 3, pb: 'var(--space-6)' }}>{children}</Box>}
     </Box>
   );
 }
@@ -497,22 +498,23 @@ export const Finance = () => {
           onChange={(e, newTab) => setTab(newTab)}
           indicatorColor="secondary"
           textColor="secondary"
-          variant="fullWidth"
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label="سجل حركات الخزينة والحسابات" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
-          <Tab label="أرصدة منافذ التوزيع" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
-          <Tab label="المبيعات والأرصدة بالمحافظات" icon={<MapIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
-          <Tab label="أرصدة فئات منافذ البيع" icon={<CategoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
-          <Tab label="سجل المدفوعات والتوريد" icon={<PaymentIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
-          <Tab label="كشف حساب عميل" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
+          <Tab label="سجل حركات الخزينة والحسابات" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          <Tab label="أرصدة منافذ التوزيع" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          <Tab label="المبيعات والأرصدة بالمحافظات" icon={<MapIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          <Tab label="أرصدة فئات منافذ البيع" icon={<CategoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          <Tab label="سجل المدفوعات والتوريد" icon={<PaymentIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          <Tab label="كشف حساب عميل" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
         </Tabs>
 
         {/* TAB 0: LEDGER HISTORY */}
         <TabPanel value={tab} index={0}>
           {/* Filters Panel */}
           <Box sx={{ p: 2, mb: 2, bg: 'action.hover', borderRadius: 2 }}>
-            <Grid container spacing={2} alignItems="center">
+            <Grid container spacing={2} alignItems="center" className="filter-grid">
               <Grid item xs={12} sm={3}>
                 <FormControl fullWidth size="small">
                   <InputLabel>تصفية حسب المنفذ</InputLabel>
@@ -552,6 +554,7 @@ export const Finance = () => {
                   label="من تاريخ"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   value={filterStartDate}
                   onChange={(e) => setFilterStartDate(e.target.value)}
                 />
@@ -564,6 +567,7 @@ export const Finance = () => {
                   label="إلى تاريخ"
                   type="date"
                   InputLabelProps={{ shrink: true }}
+                  InputProps={{ notched: true }}
                   value={filterEndDate}
                   onChange={(e) => setFilterEndDate(e.target.value)}
                 />
@@ -795,7 +799,7 @@ export const Finance = () => {
         <TabPanel value={tab} index={4}>
           {/* Filters */}
           <Box sx={{ p: 2, mb: 2, bg: 'action.hover', borderRadius: 2 }}>
-            <Grid container spacing={2} alignItems="center">
+            <Grid container spacing={2} alignItems="center" className="filter-grid">
               {/* Outlet Filter */}
               <Grid item xs={12} sm={4}>
                 <FormControl fullWidth size="small">
@@ -994,7 +998,7 @@ export const Finance = () => {
           {/* Outlet Selection Dropdown */}
           <Box sx={{ p: 2, mb: 3, bg: 'action.hover', borderRadius: 2 }}>
             <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <FormControl fullWidth size="small">
                   <InputLabel>اختر منفذ البيع لعرض كشف الحساب</InputLabel>
                   <Select
@@ -1141,83 +1145,87 @@ export const Finance = () => {
         </TabPanel>
       </Paper>
 
-      {/* MANUAL ADJUSTMENT DIALOG */}
-      <Dialog open={adjustOpen} onClose={() => !submittingAdj && setAdjustOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 'bold' }}>تسجيل حركة تسوية يدوية (الخزينة والحسابات)</DialogTitle>
-        <form onSubmit={handleAdjSubmit}>
-          <DialogContent dividers>
-            <Stack spacing={3}>
-              <FormControl fullWidth required size="small">
-                <InputLabel>اختر منفذ التوزيع / الفرع</InputLabel>
-                <Select
-                  value={adjOutletId}
-                  onChange={(e) => setAdjOutletId(e.target.value)}
-                  label="اختر منفذ التوزيع / الفرع"
-                  disabled={submittingAdj}
-                >
-                  {outlets.map(o => (
-                    <MenuItem key={o.id} value={o.id}>{o.name} ({o.governorate})</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth required size="small">
-                    <InputLabel>طبيعة التسوية</InputLabel>
-                    <Select
-                      value={adjType}
-                      onChange={(e) => setAdjType(e.target.value)}
-                      label="طبيعة التسوية"
-                      disabled={submittingAdj}
-                    >
-                      {Object.entries(adjustmentTypeTranslations).map(([k, v]) => (
-                        <MenuItem key={k} value={k}>{v}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    required
-                    size="small"
-                    label="المبلغ المالي"
-                    type="number"
-                    inputProps={{ step: '0.01', min: '0.01' }}
-                    value={adjAmount}
-                    onChange={(e) => setAdjAmount(e.target.value)}
-                    disabled={submittingAdj}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">ج.م</InputAdornment>,
-                    }}
-                  />
-                </Grid>
-              </Grid>
-
-              <TextField
-                fullWidth
-                required
-                multiline
-                rows={3}
-                size="small"
-                label="البيان وسبب التسوية (إلزامي)"
-                value={adjNotes}
-                onChange={(e) => setAdjNotes(e.target.value)}
-                disabled={submittingAdj}
-                placeholder="يرجى كتابة شرح كامل لسبب التعديل المالي..."
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setAdjustOpen(false)} disabled={submittingAdj}>إلغاء</Button>
-            <Button type="submit" variant="contained" color="secondary" disabled={submittingAdj}>
+      {/* MANUAL ADJUSTMENT DRAWER */}
+      <EntityDrawer
+        open={adjustOpen}
+        onClose={() => !submittingAdj && setAdjustOpen(false)}
+        title="تسجيل حركة تسوية يدوية (الخزينة والحسابات)"
+        size="medium"
+        actions={
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end', width: '100%' }}>
+            <Button onClick={() => setAdjustOpen(false)} disabled={submittingAdj} variant="outlined" color="inherit">إلغاء</Button>
+            <Button type="submit" form="manual-adjustment-form" variant="contained" color="secondary" disabled={submittingAdj}>
               {submittingAdj ? 'جاري الحفظ والتسجيل...' : 'تسجيل التسوية المالي'}
             </Button>
-          </DialogActions>
+          </Box>
+        }
+      >
+        <form id="manual-adjustment-form" onSubmit={handleAdjSubmit}>
+          <Stack spacing={3}>
+            <FormControl fullWidth required size="small">
+              <InputLabel>اختر منفذ التوزيع / الفرع</InputLabel>
+              <Select
+                value={adjOutletId}
+                onChange={(e) => setAdjOutletId(e.target.value)}
+                label="اختر منفذ التوزيع / الفرع"
+                disabled={submittingAdj}
+              >
+                {outlets.map(o => (
+                  <MenuItem key={o.id} value={o.id}>{o.name} ({o.governorate})</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required size="small">
+                  <InputLabel>طبيعة التسوية</InputLabel>
+                  <Select
+                    value={adjType}
+                    onChange={(e) => setAdjType(e.target.value)}
+                    label="طبيعة التسوية"
+                    disabled={submittingAdj}
+                  >
+                    {Object.entries(adjustmentTypeTranslations).map(([k, v]) => (
+                      <MenuItem key={k} value={k}>{v}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  required
+                  size="small"
+                  label="المبلغ المالي"
+                  type="number"
+                  inputProps={{ step: '0.01', min: '0.01' }}
+                  value={adjAmount}
+                  onChange={(e) => setAdjAmount(e.target.value)}
+                  disabled={submittingAdj}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">ج.م</InputAdornment>,
+                  }}
+                />
+              </Grid>
+            </Grid>
+
+            <TextField
+              fullWidth
+              required
+              multiline
+              rows={3}
+              size="small"
+              label="البيان وسبب التسوية (إلزامي)"
+              value={adjNotes}
+              onChange={(e) => setAdjNotes(e.target.value)}
+              disabled={submittingAdj}
+              placeholder="يرجى كتابة شرح كامل لسبب التعديل المالي..."
+            />
+          </Stack>
         </form>
-      </Dialog>
+      </EntityDrawer>
 
       {/* Alert toast message */}
       <Snackbar

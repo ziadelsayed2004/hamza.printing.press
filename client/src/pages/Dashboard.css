@@ -57,10 +57,10 @@
 }
 
 .kpi-card {
-  border-radius: var(--radius-md) !important;
-  background-color: var(--color-surface) !important;
-  border: 1px solid var(--border-color) !important;
-  transition: transform 0.2s, box-shadow 0.2s !important;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .kpi-card:hover {
@@ -68,17 +68,17 @@
   box-shadow: var(--shadow-sm);
 }
 
-.kpi-card--primary { border-inline-start: 5px solid var(--color-primary) !important; }
-.kpi-card--success { border-inline-start: 5px solid var(--color-success) !important; }
-.kpi-card--warning { border-inline-start: 5px solid var(--color-warning) !important; }
-.kpi-card--info { border-inline-start: 5px solid var(--color-info) !important; }
-.kpi-card--danger { border-inline-start: 5px solid var(--color-danger) !important; }
+.kpi-card--primary { border-inline-start: 5px solid var(--color-primary); }
+.kpi-card--success { border-inline-start: 5px solid var(--color-success); }
+.kpi-card--warning { border-inline-start: 5px solid var(--color-warning); }
+.kpi-card--info { border-inline-start: 5px solid var(--color-info); }
+.kpi-card--danger { border-inline-start: 5px solid var(--color-danger); }
 
 .kpi-card__body {
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-4) !important;
+  padding: var(--space-4);
 }
 
 .kpi-card__icon-wrapper {
@@ -127,9 +127,9 @@
 
 .snapshot-panel {
   padding: var(--space-5);
-  border-radius: var(--radius-md) !important;
-  background-color: var(--color-surface) !important;
-  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
 }
@@ -157,7 +157,7 @@
 }
 
 .snapshot-panel__progress-bar {
-  height: 8px !important;
+  height: 8px;
   border-radius: 4px;
 }
 
@@ -218,21 +218,21 @@
 }
 
 .quick-action-btn {
-  width: 100% !important;
-  height: 90px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: var(--space-2) !important;
-  border-radius: var(--radius-md) !important;
-  border: 1px solid var(--border-color) !important;
-  color: var(--color-text) !important;
-  background-color: var(--color-surface) !important;
-  transition: transform 0.2s, border-color 0.2s, background-color 0.2s !important;
+  width: 100%;
+  height: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
 }
 
 .quick-action-btn:hover {
-  background-color: var(--color-surface-hover) !important;
-  border-color: var(--color-secondary) !important;
+  background-color: var(--color-surface-hover);
+  border-color: var(--color-secondary);
   transform: translateY(-2px);
 }
 
@@ -260,9 +260,9 @@
 
 .activity-panel {
   padding: var(--space-4);
-  border-radius: var(--radius-md) !important;
-  background-color: var(--color-surface) !important;
-  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  border: 1px solid var(--border-color);
 }
 
 .activity-panel__header {
@@ -279,17 +279,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-3) 0 !important;
+  padding: var(--space-3) 0;
 }
 
 .activity-item__primary-text {
-  font-weight: 700 !important;
-  font-size: 0.875rem !important;
+  font-weight: 700;
+  font-size: 0.875rem;
 }
 
 .activity-item__secondary-text {
-  font-size: 0.75rem !important;
-  color: var(--color-text-muted) !important;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
 }
 
 .activity-item__meta {
@@ -303,8 +303,8 @@
 }
 
 .activity-item__chip {
-  font-size: 0.65rem !important;
-  height: 18px !important;
+  font-size: 0.65rem;
+  height: 18px;
   margin-top: var(--space-1);
 }
 
@@ -351,7 +351,7 @@
   border-radius: var(--radius-sm);
   background-color: var(--color-surface);
   border: 1px solid var(--border-color);
-  transition: transform 0.2s !important;
+  transition: transform 0.2s;
 }
 
 .onboarding-card:hover {

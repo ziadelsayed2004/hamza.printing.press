@@ -219,7 +219,7 @@ export const AuditLogs = () => {
         <DialogContent dividers>
           {selectedLog && (
             <Box sx={{ fontFamily: 'monospace', fontSize: '13px', direction: 'ltr', textAlign: 'left', backgroundColor: '#fafafa', p: 2, borderRadius: 2 }}>
-              <pre style={{ margin: 0, overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+              <pre className="audit-log-pre">
                 {JSON.stringify(selectedLog.details, null, 2)}
               </pre>
             </Box>

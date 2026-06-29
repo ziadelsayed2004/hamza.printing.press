@@ -3,8 +3,8 @@
   "created_at": "2026-06-26 12:20",
   "mode": "unified_current_pack_no_versions",
   "deployment_strategy": "single_node_monolith_directadmin",
-  "total_steps": 120,
-  "current_step": "120",
+  "total_steps": 150,
+  "current_step": "150",
   "steps": [
     {
       "id": "001",
@@ -1117,6 +1117,306 @@
       "started_at": "2026-06-28T13:20:00+03:00",
       "completed_at": "2026-06-28T13:30:00+03:00",
       "created_at": "2026-06-27T21:30:00+03:00"
+    },
+    {
+      "id": "121",
+      "slug": "business_terms_inventory_receipts_not_finance",
+      "title": "Business Terms: Inventory Receipts Are Stock Only",
+      "status": "done",
+      "report": "agent_pack/reports/121_business_terms_inventory_receipts_not_finance_REPORT.md",
+      "started_at": "2026-06-28T14:15:00+03:00",
+      "completed_at": "2026-06-28T14:21:00+03:00",
+      "created_at": "2026-06-28T16:30:00+03:00"
+    },
+    {
+      "id": "122",
+      "slug": "inventory_receipts_stock_only_backend_ui_cleanup",
+      "title": "Inventory Receipts Stock-Only Backend/UI Cleanup",
+      "status": "done",
+      "report": "agent_pack/reports/122_inventory_receipts_stock_only_backend_ui_cleanup_REPORT.md",
+      "started_at": "2026-06-28T15:46:00+03:00",
+      "completed_at": "2026-06-28T15:52:00+03:00",
+      "created_at": "2026-06-28T16:30:00+03:00"
+    },
+    {
+      "id": "123",
+      "slug": "notifications_home_actions_preview_ignore",
+      "title": "Home Notifications Actions: Preview + Ignore",
+      "status": "done",
+      "report": "agent_pack/reports/123_notifications_home_actions_preview_ignore_REPORT.md",
+      "started_at": "2026-06-28T15:54:00+03:00",
+      "completed_at": "2026-06-28T16:40:00+03:00",
+      "created_at": "2026-06-28T16:30:00+03:00"
+    },
+    {
+      "id": "124",
+      "slug": "insufficient_stock_notification_routing_arabic",
+      "title": "Insufficient Stock Notification Routing + Arabic Copy",
+      "status": "done",
+      "report": "agent_pack/reports/124_insufficient_stock_notification_routing_arabic_REPORT.md",
+      "started_at": "2026-06-28T16:51:00+03:00",
+      "completed_at": "2026-06-28T17:00:00+03:00",
+      "created_at": "2026-06-28T16:30:00+03:00"
+    },
+    {
+      "id": "125",
+      "slug": "payment_flow_select_outlet_invoice_receipt_upload",
+      "title": "Payment Flow: Select Outlet + Invoice + Receipt Upload",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T17:05:00+03:00",
+      "completed_at": "2026-06-28T17:15:00+03:00",
+      "report": "agent_pack/reports/125_payment_flow_select_outlet_invoice_receipt_upload_REPORT.md"
+    },
+    {
+      "id": "126",
+      "slug": "payment_receipts_storage_review_queue",
+      "title": "Payment Receipts Storage + Review Queue",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T17:20:00+03:00",
+      "completed_at": "2026-06-28T17:28:00+03:00",
+      "report": "agent_pack/reports/126_payment_receipts_storage_review_queue_REPORT.md"
+    },
+    {
+      "id": "127",
+      "slug": "partial_payment_receipts_history",
+      "title": "Partial Payment Receipts + History",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T17:28:00+03:00",
+      "completed_at": "2026-06-28T17:31:00+03:00",
+      "report": "agent_pack/reports/127_partial_payment_receipts_history_REPORT.md"
+    },
+    {
+      "id": "128",
+      "slug": "payment_status_final_three_states_ui_backend",
+      "title": "Final Payment Status: Deferred / Partial / Full",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T17:33:00+03:00",
+      "completed_at": "2026-06-28T17:38:00+03:00",
+      "report": "agent_pack/reports/128_payment_status_final_three_states_ui_backend_REPORT.md"
+    },
+    {
+      "id": "129",
+      "slug": "financial_collection_review_no_book_supply_conflict",
+      "title": "Financial Collection Review Without Book-Supply Conflict",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T17:39:00+03:00",
+      "completed_at": "2026-06-28T17:42:00+03:00",
+      "report": "agent_pack/reports/129_financial_collection_review_no_book_supply_conflict_REPORT.md"
+    },
+    {
+      "id": "130",
+      "slug": "invoice_actions_pay_receipt_ship_return_from_list",
+      "title": "Invoice List Actions: Pay/Receipt, Ship, Return",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T17:43:00+03:00",
+      "completed_at": "2026-06-28T17:46:00+03:00",
+      "report": "agent_pack/reports/130_invoice_actions_pay_receipt_ship_return_from_list_REPORT.md"
+    },
+    {
+      "id": "131",
+      "slug": "partial_shipping_item_quantity_picker_recheck",
+      "title": "Partial Shipping Item Quantity Picker Recheck",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T18:15:00+03:00",
+      "completed_at": "2026-06-28T18:25:00+03:00",
+      "report": "agent_pack/reports/131_partial_shipping_item_quantity_picker_recheck_REPORT.md"
+    },
+    {
+      "id": "132",
+      "slug": "returns_flow_items_stock_outlet_credit",
+      "title": "Returns Flow: Items, Stock, Outlet Credit",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:05:00+03:00",
+      "completed_at": "2026-06-28T20:10:00+03:00",
+      "report": "agent_pack/reports/132_returns_flow_items_stock_outlet_credit_REPORT.md"
+    },
+    {
+      "id": "133",
+      "slug": "outlet_statement_balance_with_returns_receipts",
+      "title": "Outlet Statement: Balances, Returns, Receipts",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:10:00+03:00",
+      "completed_at": "2026-06-28T20:12:00+03:00",
+      "report": "agent_pack/reports/133_outlet_statement_balance_with_returns_receipts_REPORT.md"
+    },
+    {
+      "id": "134",
+      "slug": "dashboard_notifications_finance_inventory_rebuild",
+      "title": "Dashboard Notifications + Finance/Inventory Rebuild",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:18:00+03:00",
+      "completed_at": "2026-06-28T20:22:00+03:00",
+      "report": "agent_pack/reports/134_dashboard_notifications_finance_inventory_rebuild_REPORT.md"
+    },
+    {
+      "id": "135",
+      "slug": "backend_cleanup_cancelled_terms_deadcode",
+      "title": "Backend Cleanup: Cancelled Terms + Dead Code",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:24:00+03:00",
+      "completed_at": "2026-06-28T20:27:00+03:00",
+      "report": "agent_pack/reports/135_backend_cleanup_cancelled_terms_deadcode_REPORT.md"
+    },
+    {
+      "id": "136",
+      "slug": "frontend_payment_shipping_return_drawer_unification",
+      "title": "Frontend Drawer Unification: Payment/Shipping/Return",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:28:00+03:00",
+      "completed_at": "2026-06-28T20:33:00+03:00",
+      "report": "agent_pack/reports/136_frontend_payment_shipping_return_drawer_unification_REPORT.md"
+    },
+    {
+      "id": "137",
+      "slug": "permissions_audit_for_receipts_returns_shipping",
+      "title": "Permissions Audit for Receipts/Returns/Shipping",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:36:00+03:00",
+      "completed_at": "2026-06-28T20:39:00+03:00",
+      "report": "agent_pack/reports/137_permissions_audit_for_receipts_returns_shipping_REPORT.md"
+    },
+    {
+      "id": "138",
+      "slug": "professional_exports_receipts_returns_statements",
+      "title": "Professional Exports: Receipts, Returns, Statements",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:39:00+03:00",
+      "completed_at": "2026-06-28T20:42:00+03:00",
+      "report": "agent_pack/reports/138_professional_exports_receipts_returns_statements_REPORT.md"
+    },
+    {
+      "id": "139",
+      "slug": "end_to_end_receipt_shipping_return_stock_verification",
+      "title": "E2E Verification: Receipt + Shipping + Return + Stock",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:44:00+03:00",
+      "completed_at": "2026-06-28T20:49:00+03:00",
+      "report": "agent_pack/reports/139_end_to_end_receipt_shipping_return_stock_verification_REPORT.md"
+    },
+    {
+      "id": "140",
+      "slug": "final_style_logic_gate_no_regression",
+      "title": "Final Style/Logic Gate No Regression",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:50:00+03:00",
+      "completed_at": "2026-06-28T20:52:00+03:00",
+      "report": "agent_pack/reports/140_final_style_logic_gate_no_regression_REPORT.md"
+    },
+    {
+      "id": "141",
+      "slug": "notification_preview_routes_smoke_matrix",
+      "title": "Notification Preview Routes Smoke Matrix",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T20:55:00+03:00",
+      "completed_at": "2026-06-28T20:58:00+03:00",
+      "report": "agent_pack/reports/141_notification_preview_routes_smoke_matrix_REPORT.md"
+    },
+    {
+      "id": "142",
+      "slug": "payment_receipt_attachment_security_storage",
+      "title": "Payment Receipt Attachment Security + Storage",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T21:03:00+03:00",
+      "completed_at": "2026-06-28T21:09:00+03:00",
+      "report": "agent_pack/reports/142_payment_receipt_attachment_security_storage_REPORT.md"
+    },
+    {
+      "id": "143",
+      "slug": "invoice_creation_payment_receipt_dynamic_ux",
+      "title": "Invoice Creation + Payment Receipt Dynamic UX",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T21:31:00+03:00",
+      "completed_at": "2026-06-28T21:40:00+03:00",
+      "report": "agent_pack/reports/143_invoice_creation_payment_receipt_dynamic_ux_REPORT.md"
+    },
+    {
+      "id": "144",
+      "slug": "legacy_parity_final_after_new_corrections",
+      "title": "Legacy Parity Final After New Corrections",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T21:47:00+03:00",
+      "completed_at": "2026-06-28T21:53:00+03:00",
+      "report": "agent_pack/reports/144_legacy_parity_final_after_new_corrections_REPORT.md"
+    },
+    {
+      "id": "145",
+      "slug": "final_directadmin_delivery_after_corrections",
+      "title": "Final DirectAdmin Delivery After Corrections",
+      "status": "done",
+      "created_at": "2026-06-28T16:30:00+03:00",
+      "started_at": "2026-06-28T21:55:00+03:00",
+      "completed_at": "2026-06-28T21:57:00+03:00",
+      "report": "agent_pack/reports/145_final_directadmin_delivery_after_corrections_REPORT.md"
+    },
+    {
+      "id": "146",
+      "slug": "dashboard_roles_layout_export_cleanup",
+      "title": "User Form Dropdowns, Placeholder Min-Widths, Layout Polish, & Dummy Data Purge",
+      "status": "done",
+      "created_at": "2026-06-28T22:00:00+03:00",
+      "started_at": "2026-06-28T22:05:00+03:00",
+      "completed_at": "2026-06-28T22:20:00+03:00",
+      "report": "agent_pack/reports/146_dashboard_roles_layout_export_cleanup_REPORT.md"
+    },
+    {
+      "id": "147",
+      "slug": "payment_receipt_instant_approval_filters_cost_cleanup",
+      "title": "Payment Receipt Instant Approval, Redesigned Invoice Filters, Supply Cost Removal, and Full Returns Shortcut",
+      "status": "done",
+      "created_at": "2026-06-28T23:20:00+03:00",
+      "started_at": "2026-06-28T23:22:00+03:00",
+      "completed_at": "2026-06-28T23:35:00+03:00",
+      "report": "agent_pack/reports/147_payment_receipt_instant_approval_filters_cost_cleanup_REPORT.md"
+    },
+    {
+      "id": "148",
+      "slug": "invoice_filters_translation_terminology_cleanup",
+      "title": "Invoice Filters Layout Restore, Stock Error Translation, Supply Alert MUI Styling, and Terminology Simplification",
+      "status": "done",
+      "created_at": "2026-06-28T23:45:00+03:00",
+      "started_at": "2026-06-28T23:50:00+03:00",
+      "completed_at": "2026-06-29T00:15:00+03:00",
+      "report": "agent_pack/reports/148_invoice_filters_translation_terminology_cleanup_REPORT.md"
+    },
+    {
+      "id": "149",
+      "slug": "drawer_exports_roles_permissions",
+      "title": "Finance Drawer Conversion, Exports Redesign, Input Widths Fix, Breadcrumbs translation, and Roles Translation",
+      "status": "done",
+      "created_at": "2026-06-29T12:00:00+03:00",
+      "started_at": "2026-06-29T12:10:00+03:00",
+      "completed_at": "2026-06-29T13:40:00+03:00",
+      "report": "agent_pack/reports/149_drawer_exports_roles_permissions_REPORT.md"
+    },
+    {
+      "id": "150",
+      "slug": "rearrange_invoice_filters_date_notch_fix",
+      "title": "Invoice Filters Grid Rearrangement, Customer Statement Full Width, Product/Invoice ID Dynamic Widths, and Date Notch Behavior Fix",
+      "status": "done",
+      "created_at": "2026-06-29T18:57:00+03:00",
+      "started_at": "2026-06-29T18:58:00+03:00",
+      "completed_at": "2026-06-29T19:15:00+03:00",
+      "report": "agent_pack/reports/150_rearrange_invoice_filters_date_notch_fix_REPORT.md"
     }
   ],
   "change_request": "post_completion_fix_login_layout_finance_balance_notifications_egp_egypt_time_professional_mui",
@@ -1133,5 +1433,7 @@
     "css_policy": "no_inline_no_important_abuse",
     "project_name": "مطبعة حمزة",
     "developer_credit": "Ziad Elsayed CodzHub"
-  }
+  },
+  "last_updated": "2026-06-28T16:30:00+03:00",
+  "latest_change_request": "inventory receipts are stock-only; payment receipt upload/review; notification preview/ignore; partial shipping and returns finalization"
 }

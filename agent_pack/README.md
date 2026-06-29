@@ -30,3 +30,19 @@ You are working on the Hamza Printing Press Bookstore Manager repo. Read `agent_
 - الفواتير كـ مركز أكشنز.
 - تنظيف backend/tests/dead code.
 - final deploy/smoke gate.
+
+
+---
+
+## Inventory/Payments/Notifications Correction Phase — 2026-06-28
+
+Opened current steps 121–145 to correct the latest business rules:
+
+- Book inventory receipts are stock-only, not finance.
+- Payment creation selects outlet then invoice and supports receipt upload for every payment, including partial payments.
+- Payment receipts have a review queue.
+- Dashboard notifications use `معاينة` and `تجاهل` only.
+- Insufficient stock previews route to product/inventory context.
+- Partial shipping selects invoice item quantities.
+- Returns affect stock, outlet return balance/credit, limit, statements, notifications, and exports.
+- No imports and no installments remain allowed.

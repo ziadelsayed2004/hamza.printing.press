@@ -61,7 +61,7 @@ const severityLabels = {
 const statusLabels = {
   'unread': 'غير مقروء',
   'read': 'مقروء',
-  'resolved': 'تم الحل'
+  'resolved': 'متجاهل / مؤرشف'
 };
 
 export const Notifications = () => {
@@ -217,13 +217,14 @@ export const Notifications = () => {
           onChange={(e, newTab) => { setStatusTab(newTab); setPage(1); }}
           indicatorColor="primary"
           textColor="primary"
-          variant="fullWidth"
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab value="all" label="جميع التنبيهات" />
-          <Tab value="unread" label="غير المقروءة" />
-          <Tab value="read" label="المقروءة" />
-          <Tab value="resolved" label="المحلولة / المؤرشفة" />
+          <Tab value="all" label="جميع التنبيهات" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab value="unread" label="غير المقروءة" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab value="read" label="المقروءة" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab value="resolved" label="المتجاهلة / المؤرشفة" sx={{ whiteSpace: 'nowrap' }} />
         </Tabs>
 
         {loading ? (
@@ -288,7 +289,19 @@ export const Notifications = () => {
                         <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'center' }}>
                           {n.action_url && (
                             <Tooltip title="انتقال للصفحة المصدر">
-                              <IconButton size="small" onClick={() => navigate(n.action_url)}>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  const cleanUrl = n.action_url
+                                    .replace(/^\/catalog\/products\/\d+/, '/inventory')
+                                    .replace(/^\/operations\/outlets\/\d+/, '/outlets')
+                                    .replace(/^\/finance\/invoices\/\d+/, '/invoices')
+                                    .replace(/^\/finance\/payments/, '/payments')
+                                    .replace(/^\/finance\/ledger/, '/finance')
+                                    .replace(/^\/operations\/shipments/, '/shipments');
+                                  navigate(cleanUrl);
+                                }}
+                              >
                                 <LaunchIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
@@ -301,7 +314,7 @@ export const Notifications = () => {
                             </Tooltip>
                           )}
                           {n.status !== 'resolved' && (
-                            <Tooltip title="تأكيد حل التنبيه">
+                            <Tooltip title="تجاهل التنبيه">
                               <IconButton size="small" color="success" onClick={() => handleResolve(n.id)}>
                                 <ResolveIcon fontSize="small" />
                               </IconButton>

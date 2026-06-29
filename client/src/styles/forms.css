@@ -11,11 +11,11 @@
 .form-section__title,
 .form-section h3.form-section__title,
 .form-section .MuiTypography-h6.form-section__title {
-  font-size: 1.1rem !important;
-  font-weight: 700 !important;
-  margin-top: 0 !important;
-  margin-bottom: var(--space-3) !important;
-  color: var(--color-text) !important;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: var(--space-3);
+  color: var(--color-text);
 }
 
 .form-section__description {
@@ -92,4 +92,40 @@
     grid-template-columns: 1fr;
     gap: var(--space-4);
   }
+}
+
+/* Ensure inputs don't squash their content or placeholders */
+.MuiInputBase-root {
+  width: 100%;
+}
+
+.MuiInputBase-input {
+  width: 100%;
+  max-width: 100%;
+}
+
+.MuiSelect-select {
+  min-width: 140px;
+}
+
+/* Keep MUI field labels readable for long Arabic filter labels */
+.MuiInputLabel-root,
+.MuiFormLabel-root,
+.MuiOutlinedInput-notchedOutline legend,
+.MuiOutlinedInput-notchedOutline legend>span {
+  white-space: nowrap;
+  width: max-content;
+}
+
+.filter-panel-title {
+  white-space: nowrap;
+  width: max-content;
+}
+
+/* Ensure all inputs and selectors in filter grids have a uniform min-width of 280px to prevent clipping */
+.filter-grid .MuiFormControl-root,
+.filter-grid .MuiTextField-root,
+.filter-grid .MuiAutocomplete-root,
+.filter-grid .MuiInputBase-root {
+  min-width: 280px;
 }

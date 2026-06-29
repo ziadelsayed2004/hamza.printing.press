@@ -12,7 +12,6 @@ async function getFinancialSummary({ startDate = '', endDate = '', outletId = nu
       COALESCE(SUM(i.discount), 0) as totalDiscount,
       COALESCE(SUM(i.subtotal), 0) as totalSubtotal,
       COALESCE(SUM(CASE WHEN i.payment_type = 'deferred' THEN i.total_price ELSE 0 END), 0) as totalDeferredRemaining,
-      0 as totalInstallmentsRemaining,
       COALESCE(SUM(CASE WHEN i.payment_type = 'cash' THEN i.total_price ELSE 0 END), 0) as totalCashSales
     FROM invoices i
     JOIN outlets o ON o.id = i.outlet_id

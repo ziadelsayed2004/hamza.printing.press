@@ -18,12 +18,12 @@
 }
 
 .loading-state-skeleton__title {
-  font-size: 2rem !important;
-  margin-bottom: var(--space-3) !important;
+  font-size: 2rem;
+  margin-bottom: var(--space-3);
 }
 
 .loading-state-skeleton__avatar {
-  margin-bottom: var(--space-3) !important;
+  margin-bottom: var(--space-3);
 }
 
 .loading-state-skeleton__box {

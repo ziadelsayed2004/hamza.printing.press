@@ -384,5 +384,58 @@ describe('Payments API Integration Tests', () => {
         expect(lastEntry).toHaveProperty('running_cash');
       }
     });
+
+    it('should support payment receipt upload, queue retrieval, and review approval', async () => {
+      const staffAgent = request.agent(app);
+      await staffAgent.post('/api/auth/login').send({ username: 'test_pay_api_staff', password: 'password123' });
+
+      const accountantAgent = request.agent(app);
+      await accountantAgent.post('/api/auth/login').send({ username: 'test_pay_api_accountant', password: 'password123' });
+
+      // Create a deferred invoice
+      const invRes = await staffAgent.post('/api/invoices').send({
+        outletId: cairoOutlet.id,
+        paymentType: 'deferred',
+        items: [{ productId: testProduct.id, quantity: 1 }]
+      });
+      expect(invRes.status).toBe(201);
+      const invoice = invRes.body.invoice;
+
+      // Base64 sample receipt data
+      const sampleBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+      // Record payment with receipt
+      const payRes = await staffAgent.post('/api/payments').send({
+        invoiceId: invoice.id,
+        amount: 50.0,
+        paymentMethod: 'cash',
+        paymentDate: new Date().toISOString(),
+        receiptName: 'test_receipt.png',
+        receiptData: sampleBase64
+      });
+      expect(payRes.status).toBe(201);
+      expect(payRes.body.payment.receipt_status).toBe('approved');
+
+      // Verify that invoice payment status updates immediately because payment is auto-approved
+      const invAfterPending = await db.get('SELECT payment_status FROM invoices WHERE id = ?', [invoice.id]);
+      expect(invAfterPending.payment_status).toBe('partially_paid');
+
+      // Get review queue with status=approved
+      const queueRes = await accountantAgent.get('/api/payments/receipts/review-queue?status=approved');
+      expect(queueRes.status).toBe(200);
+      const queuePayment = queueRes.body.find(p => p.id === payRes.body.payment.id);
+      expect(queuePayment).toBeDefined();
+
+      // Get review queue with outletId and invoiceId filter with status=approved
+      const queueFilteredRes = await accountantAgent.get(`/api/payments/receipts/review-queue?status=approved&outletId=${cairoOutlet.id}&invoiceId=${invoice.id}`);
+      expect(queueFilteredRes.status).toBe(200);
+      expect(queueFilteredRes.body.length).toBeGreaterThan(0);
+      expect(queueFilteredRes.body.some(p => p.id === payRes.body.payment.id)).toBe(true);
+
+      // Download/preview receipt
+      const previewRes = await accountantAgent.get(`/api/payments/${payRes.body.payment.id}/receipt`);
+      expect(previewRes.status).toBe(200);
+      expect(previewRes.header['content-type']).toBe('image/png');
+    });
   });
 });

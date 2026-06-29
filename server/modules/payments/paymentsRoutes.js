@@ -42,7 +42,7 @@ router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) 
 
 // 2. POST /api/payments - Record a payment
 router.post('/', requireAuth, checkPermission('payments.create'), auditLog('create_payment', 'payments'), async (req, res) => {
-  const { invoiceId, amount, paymentMethod, paymentDate, referenceNumber = '', notes = '', supplyStatus = 'not_supplied' } = req.body;
+  const { invoiceId, amount, paymentMethod, paymentDate, referenceNumber = '', notes = '', supplyStatus = 'not_supplied', receiptName, receiptData } = req.body;
 
   if (!invoiceId || amount === undefined || !paymentMethod) {
     return res.status(400).json({ error: 'Bad Request', message: 'Invoice ID, amount, and payment method are required.' });
@@ -58,7 +58,9 @@ router.post('/', requireAuth, checkPermission('payments.create'), auditLog('crea
       referenceNumber,
       notes,
       supplyStatus,
-      userId
+      userId,
+      receiptName,
+      receiptData
     });
 
     res.status(201).json({
@@ -71,7 +73,7 @@ router.post('/', requireAuth, checkPermission('payments.create'), auditLog('crea
     if (msg.includes('does not exist')) {
       return res.status(404).json({ error: 'Not Found', message: err.message });
     }
-    if (msg.includes('required') || msg.includes('positive') || msg.includes('exceeds') || msg.includes('fully paid') || msg.includes('supply status')) {
+    if (msg.includes('required') || msg.includes('positive') || msg.includes('exceeds') || msg.includes('fully paid') || msg.includes('supply status') || msg.includes('file type') || msg.includes('size exceeds')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -178,6 +180,85 @@ router.get('/invoice/:invoiceId/metrics', requireAuth, checkPermission('payments
     }
     res.status(200).json(metrics);
   } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 8. GET /api/payments/receipts/review-queue - Get review queue
+router.get('/receipts/review-queue', requireAuth, checkPermission('payments.view'), async (req, res) => {
+  const status = req.query.status || 'pending_review';
+  const outletId = req.query.outletId ? parseInt(req.query.outletId, 10) : null;
+  const invoiceId = req.query.invoiceId ? parseInt(req.query.invoiceId, 10) : null;
+  const recordedBy = req.query.recordedBy ? parseInt(req.query.recordedBy, 10) : null;
+  const startDate = req.query.startDate || '';
+  const endDate = req.query.endDate || '';
+  const minAmount = req.query.minAmount ? parseFloat(req.query.minAmount) : null;
+  const maxAmount = req.query.maxAmount ? parseFloat(req.query.maxAmount) : null;
+
+  try {
+    const list = await paymentsService.getReviewQueue({ 
+      status, 
+      outletId, 
+      invoiceId,
+      recordedBy,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount
+    });
+    res.status(200).json(list);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 9. GET /api/payments/:id/receipt - Download receipt file
+router.get('/:id/receipt', requireAuth, checkPermission('payments.view'), async (req, res) => {
+  const paymentId = parseInt(req.params.id, 10);
+  try {
+    const payment = await paymentsService.getPaymentById(paymentId);
+    if (!payment || !payment.receipt_stored_path) {
+      return res.status(404).json({ error: 'Not Found', message: 'Receipt not found for this payment.' });
+    }
+
+    const fs = require('fs');
+    if (!fs.existsSync(payment.receipt_stored_path)) {
+      return res.status(404).json({ error: 'Not Found', message: 'Receipt file not found on disk.' });
+    }
+
+    res.setHeader('Content-Type', payment.receipt_mime_type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(payment.receipt_original_name)}"`);
+    fs.createReadStream(payment.receipt_stored_path).pipe(res);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 10. POST /api/payments/:id/review - Review receipt
+router.post('/:id/review', requireAuth, checkPermission('payments.create'), auditLog('review_payment_receipt', 'payments'), async (req, res) => {
+  const paymentId = parseInt(req.params.id, 10);
+  const { action, notes = '' } = req.body;
+
+  if (!action || !['approve', 'reject'].includes(action)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Action must be "approve" or "reject".' });
+  }
+
+  try {
+    const userId = req.session.user.id;
+    const result = await paymentsService.reviewPaymentReceipt(paymentId, { action, notes, userId });
+    res.status(200).json({
+      success: true,
+      message: `Payment receipt ${action}d successfully.`,
+      payment: result
+    });
+  } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('does not exist')) {
+      return res.status(404).json({ error: 'Not Found', message: err.message });
+    }
+    if (msg.includes('already')) {
+      return res.status(400).json({ error: 'Bad Request', message: err.message });
+    }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });

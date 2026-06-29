@@ -3,6 +3,34 @@ const pdf = require('html-pdf-node');
 
 const { formatEgyptDateTime, formatCurrencyEGP } = require('../../utils/formatters');
 
+function translatePaymentStatus(status) {
+  switch (status) {
+    case 'paid': return 'مدفوع كلياً';
+    case 'unpaid': return 'مؤجل كلياً';
+    case 'partially_paid': return 'مدفوع جزئياً';
+    case 'cancelled': return 'ملغاة';
+    default: return status || 'غير معروف';
+  }
+}
+
+function translatePaymentType(type) {
+  switch (type) {
+    case 'cash': return 'نقدي';
+    case 'deferred': return 'آجل';
+    default: return type || 'غير معروف';
+  }
+}
+
+function translateShippingStatus(status) {
+  switch (status) {
+    case 'pending': return 'قيد الانتظار';
+    case 'partially_shipped': return 'شحن جزئي';
+    case 'shipped': return 'تم الشحن';
+    case 'delivered': return 'تم التوصيل';
+    default: return status || 'غير معروف';
+  }
+}
+
 /**
  * Format datetime string into readable Arabic format.
  */
@@ -28,82 +56,184 @@ function buildHtmlContent(invoices) {
     <head>
       <meta charset="UTF-8">
       <title>تقرير الفواتير</title>
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
       <style>
+        @page {
+          size: A4;
+          margin: 15mm;
+        }
         body {
-          font-family: 'Arial', 'Microsoft Sans Serif', sans-serif;
+          font-family: 'Tajawal', sans-serif;
           direction: rtl;
           text-align: right;
           background-color: #ffffff;
-          color: #333333;
+          color: #2c3e50;
           margin: 0;
-          padding: 20px;
-          font-size: 14px;
+          padding: 0;
+          font-size: 13px;
+          line-height: 1.5;
         }
         .container {
-          max-width: 800px;
-          margin: 0 auto;
+          width: 100%;
         }
-        .report-header {
-          text-align: center;
-          font-size: 24px;
-          font-weight: bold;
-          margin-bottom: 10px;
-          color: #2b3e50;
+        .report-header-main {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 2px solid #e2e8f0;
         }
-        .divider {
-          border-top: 2px solid #2b3e50;
-          margin-bottom: 25px;
+        .report-title {
+          font-size: 22px;
+          font-weight: 800;
+          color: #1e3a8a;
+          margin: 0;
+        }
+        .report-date {
+          font-size: 11px;
+          color: #64748b;
         }
         .invoice-card {
-          margin-bottom: 40px;
-          padding: 15px;
-          border: 1px solid #e0e0e0;
-          border-radius: 8px;
-          background-color: #fafafa;
+          margin-bottom: 30px;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          background-color: #ffffff;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+          overflow: hidden;
+          page-break-inside: avoid;
         }
-        .invoice-title {
+        .invoice-header {
+          background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+          color: #ffffff;
+          padding: 16px 24px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .invoice-number-title {
           font-size: 18px;
-          font-weight: bold;
-          color: #1e88e5;
-          margin-top: 0;
-          margin-bottom: 15px;
-          border-bottom: 1px dashed #ccc;
-          padding-bottom: 8px;
+          font-weight: 700;
+          margin: 0;
         }
-        .info-table, .items-table {
+        .invoice-body {
+          padding: 24px;
+        }
+        .meta-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+          background-color: #f8fafc;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #f1f5f9;
+        }
+        .meta-item {
+          display: flex;
+          align-items: baseline;
+          font-size: 13px;
+        }
+        .meta-label {
+          font-weight: 700;
+          color: #475569;
+          width: 120px;
+          flex-shrink: 0;
+        }
+        .meta-value {
+          color: #0f172a;
+          flex-grow: 1;
+        }
+        
+        /* Status Badges */
+        .badge {
+          display: inline-block;
+          padding: 3px 10px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 700;
+          text-align: center;
+        }
+        .badge-paid { background-color: #dcfce7; color: #15803d; }
+        .badge-unpaid { background-color: #fee2e2; color: #b91c1c; }
+        .badge-partially { background-color: #fef3c7; color: #d97706; }
+        .badge-cancelled { background-color: #f1f5f9; color: #475569; }
+        
+        .badge-shipping-pending { background-color: #f1f5f9; color: #475569; }
+        .badge-shipping-partial { background-color: #fef3c7; color: #d97706; }
+        .badge-shipping-shipped { background-color: #e0f2fe; color: #0369a1; }
+        .badge-shipping-delivered { background-color: #dcfce7; color: #15803d; }
+
+        .section-title {
+          font-size: 14px;
+          font-weight: 700;
+          color: #1e3a8a;
+          margin-top: 0;
+          margin-bottom: 12px;
+          border-bottom: 1px solid #e2e8f0;
+          padding-bottom: 6px;
+        }
+        
+        .items-table {
           width: 100%;
           border-collapse: collapse;
           margin-bottom: 20px;
         }
-        .info-table td {
-          padding: 6px 12px;
-          border: none;
-          vertical-align: top;
-        }
-        .info-table td.label {
-          font-weight: bold;
-          color: #555555;
-          width: 25%;
-        }
-        .info-table td.value {
-          width: 25%;
-        }
         .items-table th, .items-table td {
-          border: 1px solid #dddddd;
-          padding: 8px 12px;
+          padding: 10px 14px;
           text-align: right;
+          border-bottom: 1px solid #e2e8f0;
         }
         .items-table th {
-          background-color: #f2f2f2;
-          color: #333333;
-          font-weight: bold;
+          background-color: #f1f5f9;
+          color: #334155;
+          font-weight: 700;
+          font-size: 12px;
         }
-        .items-table tr:nth-child(even) {
-          background-color: #ffffff;
+        .items-table tr:last-child td {
+          border-bottom: none;
         }
         .items-table .number-col {
           text-align: left;
           direction: ltr;
+        }
+        
+        .totals-section {
+          display: flex;
+          justify-content: flex-start;
+          margin-top: 16px;
+        }
+        .totals-table {
+          width: 300px;
+          border-collapse: collapse;
+        }
+        .totals-table td {
+          padding: 6px 12px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+        .totals-table tr:last-child td {
+          border-bottom: none;
+        }
+        .totals-label {
+          font-weight: 500;
+          color: #475569;
+        }
+        .totals-value {
+          text-align: left;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .grand-total-row {
+          background-color: #f8fafc;
+          border-top: 2px solid #e2e8f0;
+        }
+        .grand-total-row td {
+          padding: 10px 12px !important;
+          color: #1e3a8a !important;
+          font-size: 14px;
+          font-weight: 800 !important;
         }
         .page-break {
           page-break-before: always;
@@ -112,8 +242,10 @@ function buildHtmlContent(invoices) {
     </head>
     <body>
       <div class="container">
-        <div class="report-header">تقرير الفواتير التفصيلي</div>
-        <div class="divider"></div>
+        <div class="report-header-main">
+          <div class="report-title">تقرير الفواتير التفصيلي</div>
+          <div class="report-date">تاريخ إنشاء التقرير: ${formatDateTime(new Date())}</div>
+        </div>
   `;
 
   invoices.forEach((inv, index) => {
@@ -122,78 +254,128 @@ function buildHtmlContent(invoices) {
     }
 
     const address = [inv.governorate, inv.address_details].filter(Boolean).join(' - ');
+    
+    // Determine payment status badge class
+    let paymentBadgeClass = 'badge-unpaid';
+    if (inv.payment_status === 'paid') paymentBadgeClass = 'badge-paid';
+    if (inv.payment_status === 'partially_paid') paymentBadgeClass = 'badge-partially';
+    if (inv.payment_status === 'cancelled') paymentBadgeClass = 'badge-cancelled';
+
+    // Determine shipping status badge class
+    let shippingBadgeClass = 'badge-shipping-pending';
+    if (inv.shipping_status === 'partially_shipped') shippingBadgeClass = 'badge-shipping-partial';
+    if (inv.shipping_status === 'shipped') shippingBadgeClass = 'badge-shipping-shipped';
+    if (inv.shipping_status === 'delivered') shippingBadgeClass = 'badge-shipping-delivered';
 
     html += `
       <div class="invoice-card">
-        <div class="invoice-title">فاتورة رقم: ${inv.invoice_number}</div>
-        <table class="info-table">
-          <tr>
-            <td class="label">اسم المنفذ:</td>
-            <td class="value">${inv.outlet_name}</td>
-            <td class="label">تاريخ الفاتورة:</td>
-            <td class="value">${formatDateTime(inv.created_at)}</td>
-          </tr>
-          <tr>
-            <td class="label">العنوان:</td>
-            <td class="value">${address || 'غير محدد'}</td>
-            <td class="label">تاريخ الدفع:</td>
-            <td class="value">${formatDateTime(inv.payment_date) || 'N/A'}</td>
-          </tr>
-          <tr>
-            <td class="label">الهاتف:</td>
-            <td class="value">${inv.outlet_phone || 'غير محدد'}</td>
-            <td class="label">حالة الدفع:</td>
-            <td class="value">${inv.payment_status}</td>
-          </tr>
-          <tr>
-            <td class="label">نوع الدفع:</td>
-            <td class="value">${inv.payment_type}</td>
-            <td class="label">حالة الشحن:</td>
-            <td class="value">${inv.shipping_status}</td>
-          </tr>
-          <tr>
-            <td class="label">قيمة الشحن:</td>
-            <td class="value">${formatCurrency(inv.shipping_cost)}</td>
-            <td class="label">الخصم:</td>
-            <td class="value">${formatCurrency(inv.discount)}</td>
-          </tr>
-          <tr>
-            <td class="label" style="color: #2b3e50; font-size: 15px;">الإجمالي الكلي:</td>
-            <td class="value" style="font-weight: bold; color: #d32f2f; font-size: 15px;">${formatCurrency(inv.total_price)}</td>
-            <td class="label">ملاحظات:</td>
-            <td class="value">${inv.notes || 'لا يوجد'}</td>
-          </tr>
-        </table>
+        <div class="invoice-header">
+          <div class="invoice-number-title">فاتورة مبيعات رقم: ${inv.invoice_number}</div>
+          <div style="font-size: 12px; opacity: 0.9;">التاريخ: ${formatDateTime(inv.created_at)}</div>
+        </div>
+        
+        <div class="invoice-body">
+          <div class="section-title">بيانات الفاتورة والعميل</div>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">اسم المنفذ:</span>
+              <span class="meta-value">${inv.outlet_name}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">تاريخ الفاتورة:</span>
+              <span class="meta-value">${formatDateTime(inv.created_at)}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">العنوان:</span>
+              <span class="meta-value">${address || 'غير محدد'}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">تاريخ الدفع:</span>
+              <span class="meta-value">${inv.payment_date ? formatDateTime(inv.payment_date) : 'غير مدفوع'}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">الهاتف:</span>
+              <span class="meta-value">${inv.outlet_phone || 'غير محدد'}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">حالة الدفع:</span>
+              <span class="meta-value">
+                <span class="badge ${paymentBadgeClass}">${translatePaymentStatus(inv.payment_status)}</span>
+              </span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">نوع الدفع:</span>
+              <span class="meta-value">${translatePaymentType(inv.payment_type)}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">حالة الشحن:</span>
+              <span class="meta-value">
+                <span class="badge ${shippingBadgeClass}">${translateShippingStatus(inv.shipping_status)}</span>
+              </span>
+            </div>
+          </div>
 
-        <div style="font-weight: bold; margin-bottom: 10px; color: #2b3e50;">تفاصيل المواد المباعة:</div>
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th style="width: 35%;">اسم الكتاب</th>
-              <th style="width: 25%;">المؤلف</th>
-              <th style="width: 10%; text-align: center;">الكمية</th>
-              <th style="width: 15%; text-align: left;">سعر الوحدة</th>
-              <th style="width: 15%; text-align: left;">الإجمالي</th>
-            </tr>
-          </thead>
-          <tbody>
+          <div class="section-title">تفاصيل المواد المباعة</div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th style="width: 40%;">الكتاب / المنتج</th>
+                <th style="width: 25%;">المؤلف</th>
+                <th style="width: 10%; text-align: center;">الكمية</th>
+                <th style="width: 12%; text-align: left;">سعر الوحدة</th>
+                <th style="width: 13%; text-align: left;">الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>
     `;
 
+    let subtotal = 0;
     inv.items.forEach(item => {
+      const itemTotal = item.total_price || (item.quantity * item.unit_price);
+      subtotal += itemTotal;
       html += `
         <tr>
-          <td>${item.product_title} (${item.product_code})</td>
-          <td>${item.authors || 'غير محدد'}</td>
-          <td style="text-align: center;">${item.quantity}</td>
+          <td style="font-weight: 500;">${item.product_title} <span style="font-size: 10px; color: #64748b; display: block; margin-top: 2px;">كود: ${item.product_code}</span></td>
+          <td style="color: #475569;">${item.authors || 'غير محدد'}</td>
+          <td style="text-align: center; font-weight: bold;">${item.quantity}</td>
           <td class="number-col">${formatCurrency(item.unit_price)}</td>
-          <td class="number-col">${formatCurrency(item.total_price)}</td>
+          <td class="number-col" style="font-weight: bold;">${formatCurrency(itemTotal)}</td>
         </tr>
       `;
     });
 
     html += `
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+
+          <div class="section-title">الملخص المالي للفاتورة</div>
+          <div class="totals-section">
+            <table class="totals-table">
+              <tr>
+                <td class="totals-label">إجمالي المواد:</td>
+                <td class="totals-value">${formatCurrency(subtotal)}</td>
+              </tr>
+              <tr>
+                <td class="totals-label">تكلفة الشحن (+):</td>
+                <td class="totals-value">${formatCurrency(inv.shipping_cost)}</td>
+              </tr>
+              <tr>
+                <td class="totals-label">الخصم (-):</td>
+                <td class="totals-value">${formatCurrency(inv.discount)}</td>
+              </tr>
+              <tr class="grand-total-row">
+                <td class="totals-label">الإجمالي النهائي:</td>
+                <td class="totals-value">${formatCurrency(inv.total_price)}</td>
+              </tr>
+            </table>
+          </div>
+          
+          ${inv.notes ? `
+            <div style="margin-top: 20px; padding: 12px; background-color: #f8fafc; border-right: 4px solid #3b82f6; border-radius: 4px; font-size: 11px; color: #475569;">
+              <strong>ملاحظات:</strong> ${inv.notes}
+            </div>
+          ` : ''}
+        </div>
       </div>
     `;
   });

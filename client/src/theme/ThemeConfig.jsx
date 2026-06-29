@@ -5,6 +5,7 @@ import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import { prefixer } from 'stylis';
 import CssBaseline from '@mui/material/CssBaseline';
+import './ThemeConfig.css';
 
 // Create Emotion cache for RTL
 const cacheRtl = createCache({
@@ -76,7 +77,7 @@ export const ThemeConfig = ({ children }) => {
               divider: '#dadce0',    // Google Standard Divider
             }
             : {
-              // ── Dark Mode: Google Cloud Dark Console ──
+              // ── Dark Mode: Premium Unified Dark Charcoal Theme ──
               primary: {
                 main: '#8ab4f8',     // Google Light Blue
                 light: '#aecbfa',
@@ -86,18 +87,18 @@ export const ThemeConfig = ({ children }) => {
               secondary: {
                 main: '#9aa0a6',     // Google Light Grey
                 light: '#bdc1c6',
-                dark: '#70757a',
+                dark: '#2d2d2d',
                 contrastText: '#202124',
               },
               background: {
-                default: '#121212',  // Google Dark Background
-                paper: '#202124',    // Google Dark Surface/Paper
+                default: '#121212',  // Dark Background
+                paper: '#1e1e1e',    // Sidebar & Card Surface (Charcoal)
               },
               text: {
-                primary: '#e8eaed',  // Google Light Text
-                secondary: '#9aa0a6', // Google Light Secondary Text
+                primary: '#e8eaed',  // Light Text
+                secondary: '#9aa0a6', // Light Secondary Text
               },
-              divider: '#3c4043',    // Google Dark Divider
+              divider: '#3c4043',    // Dark Divider
             }),
         },
         typography: {
@@ -222,6 +223,7 @@ export const ThemeConfig = ({ children }) => {
                 color: mode === 'light' ? '#202124' : '#e8eaed',
                 borderBottom: mode === 'light' ? '1px solid #dadce0' : '1px solid #3c4043',
                 boxShadow: 'none',
+                borderRadius: 0,
               },
             },
           },
@@ -231,6 +233,14 @@ export const ThemeConfig = ({ children }) => {
                 backgroundColor: mode === 'light' ? '#ffffff' : '#202124',
                 borderRight: 'none',
                 borderLeft: 'none',
+                borderRadius: 0,
+              },
+            },
+          },
+          MuiDialog: {
+            styleOverrides: {
+              paper: {
+                borderRadius: 0,
               },
             },
           },
@@ -371,7 +381,7 @@ export const ThemeConfig = ({ children }) => {
       <ColorModeContext.Provider value={colorMode}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <div dir="rtl" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <div dir="rtl" className="theme-root">
             {children}
           </div>
         </ThemeProvider>

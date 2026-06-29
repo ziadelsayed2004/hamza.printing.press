@@ -3,27 +3,27 @@
 }
 
 .breadcrumbs-list {
-  color: var(--color-text-muted) !important;
+  color: var(--color-text-muted);
 }
 
 .breadcrumbs-list .MuiBreadcrumbs-separator {
-  margin-left: var(--space-1) !important;
-  margin-right: var(--space-1) !important;
+  margin-left: var(--space-1);
+  margin-right: var(--space-1);
 }
 
 .breadcrumbs-link {
-  display: flex !important;
-  align-items: center !important;
-  color: inherit !important;
+  display: flex;
+  align-items: center;
+  color: inherit;
 }
 
 .breadcrumbs-home-icon {
-  margin-right: var(--space-1) !important;
-  margin-left: var(--space-1) !important;
-  font-size: 20px !important;
+  margin-right: var(--space-1);
+  margin-left: var(--space-1);
+  font-size: 20px;
 }
 
 .breadcrumbs-current {
-  font-weight: 500 !important;
-  color: var(--color-text) !important;
+  font-weight: 500;
+  color: var(--color-text);
 }

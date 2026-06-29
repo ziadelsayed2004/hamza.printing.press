@@ -179,7 +179,9 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
     items = [],
     paymentAmount = 0,
     paymentSupplyStatus = 'not_supplied',
-    paymentNotes = ''
+    paymentNotes = '',
+    paymentReceiptName = '',
+    paymentReceiptData = ''
   } = req.body;
 
   if (!outletId || !items || items.length === 0) {
@@ -198,7 +200,9 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
       userId,
       paymentAmount,
       paymentSupplyStatus,
-      paymentNotes
+      paymentNotes,
+      paymentReceiptName,
+      paymentReceiptData
     });
 
     res.status(201).json({
@@ -208,7 +212,7 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
     });
   } catch (err) {
     const msg = (err.message || '').toLowerCase();
-    if (msg.includes('required') || msg.includes('insufficient') || msg.includes('not exist') || msg.includes('not active') || msg.includes('negative') || msg.includes('no price') || msg.includes('exceeds')) {
+    if (msg.includes('required') || msg.includes('insufficient') || msg.includes('غير كافٍ') || msg.includes('not exist') || msg.includes('not active') || msg.includes('negative') || msg.includes('no price') || msg.includes('exceeds')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -246,7 +250,7 @@ router.put('/:id', requireAuth, checkPermission('invoices.update'), auditLog('up
     if (msg.includes('does not exist')) {
       return res.status(404).json({ error: 'Not Found', message: err.message });
     }
-    if (msg.includes('required') || msg.includes('insufficient') || msg.includes('not active') || msg.includes('negative') || msg.includes('no price')) {
+    if (msg.includes('required') || msg.includes('insufficient') || msg.includes('غير كافٍ') || msg.includes('not active') || msg.includes('negative') || msg.includes('no price')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

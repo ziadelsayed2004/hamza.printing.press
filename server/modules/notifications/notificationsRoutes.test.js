@@ -29,15 +29,24 @@ describe('Notifications API Integration Tests', () => {
 
     // 2. Clean up table data
     await db.run('DELETE FROM notifications');
+    await db.run('DELETE FROM shipment_items WHERE invoice_item_id IN (SELECT id FROM invoice_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code = "BK-WITHOUT-PRICES")) OR invoice_item_id IN (SELECT id FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")))');
+    await db.run('DELETE FROM shipment_status_history WHERE shipment_id IN (SELECT id FROM shipments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")))');
+    await db.run('DELETE FROM shipments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
+    await db.run('DELETE FROM return_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code = "BK-WITHOUT-PRICES") OR invoice_item_id IN (SELECT id FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")))');
+    await db.run('DELETE FROM returns WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet") OR invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
-    await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
-    await db.run('DELETE FROM finance_ledger_entries WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
+    await db.run('DELETE FROM invoice_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code = "BK-WITHOUT-PRICES") OR invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
-    await db.run('DELETE FROM inventory_transactions WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%")');
+    await db.run('DELETE FROM inventory_transactions WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS"))');
+    await db.run('DELETE FROM inventory_adjustment_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS"))');
     await db.run('DELETE FROM inventory_adjustments WHERE created_by IN (SELECT id FROM users WHERE username LIKE "test_notif_api_%")');
-    await db.run('DELETE FROM product_prices WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%")');
-    await db.run('DELETE FROM products WHERE title LIKE "Test Notification Book%"');
+    await db.run('DELETE FROM inventory_receipt_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS"))');
+    await db.run('DELETE FROM inventory_receipts WHERE created_by IN (SELECT id FROM users WHERE username LIKE "test_notif_api_%")');
+    await db.run('DELETE FROM product_prices WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS")) OR outlet_type_id IN (SELECT id FROM outlet_types WHERE name = "Notif Wholesale")');
+    await db.run('DELETE FROM finance_ledger_entries WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
+    await db.run('DELETE FROM manual_adjustments WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
+    await db.run('DELETE FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS")');
     await db.run('DELETE FROM outlets WHERE name = "Test Notification Outlet"');
     await db.run('DELETE FROM outlet_types WHERE name = "Notif Wholesale"');
     await db.run('DELETE FROM user_roles WHERE user_id IN (SELECT id FROM users WHERE username LIKE "test_notif_api_%")');
@@ -92,15 +101,24 @@ describe('Notifications API Integration Tests', () => {
   afterAll(async () => {
     // Clean test data
     await db.run('DELETE FROM notifications');
+    await db.run('DELETE FROM shipment_items WHERE invoice_item_id IN (SELECT id FROM invoice_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code = "BK-WITHOUT-PRICES")) OR invoice_item_id IN (SELECT id FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")))');
+    await db.run('DELETE FROM shipment_status_history WHERE shipment_id IN (SELECT id FROM shipments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")))');
+    await db.run('DELETE FROM shipments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
+    await db.run('DELETE FROM return_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code = "BK-WITHOUT-PRICES") OR invoice_item_id IN (SELECT id FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")))');
+    await db.run('DELETE FROM returns WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet") OR invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_payments WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoice_status_history WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
-    await db.run('DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
-    await db.run('DELETE FROM finance_ledger_entries WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
+    await db.run('DELETE FROM invoice_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code = "BK-WITHOUT-PRICES") OR invoice_id IN (SELECT id FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet"))');
     await db.run('DELETE FROM invoices WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
-    await db.run('DELETE FROM inventory_transactions WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%")');
+    await db.run('DELETE FROM inventory_transactions WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS"))');
+    await db.run('DELETE FROM inventory_adjustment_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS"))');
     await db.run('DELETE FROM inventory_adjustments WHERE created_by IN (SELECT id FROM users WHERE username LIKE "test_notif_api_%")');
-    await db.run('DELETE FROM product_prices WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%")');
-    await db.run('DELETE FROM products WHERE title LIKE "Test Notification Book%"');
+    await db.run('DELETE FROM inventory_receipt_items WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS"))');
+    await db.run('DELETE FROM inventory_receipts WHERE created_by IN (SELECT id FROM users WHERE username LIKE "test_notif_api_%")');
+    await db.run('DELETE FROM product_prices WHERE product_id IN (SELECT id FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS")) OR outlet_type_id IN (SELECT id FROM outlet_types WHERE name = "Notif Wholesale")');
+    await db.run('DELETE FROM finance_ledger_entries WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
+    await db.run('DELETE FROM manual_adjustments WHERE outlet_id IN (SELECT id FROM outlets WHERE name = "Test Notification Outlet")');
+    await db.run('DELETE FROM products WHERE title LIKE "Test Notification Book%" OR code IN ("BK-WITHOUT-PRICES", "BK-STOCK-LIMITS")');
     await db.run('DELETE FROM outlets WHERE name = "Test Notification Outlet"');
     await db.run('DELETE FROM outlet_types WHERE name = "Notif Wholesale"');
     await db.run('DELETE FROM user_roles WHERE user_id IN (SELECT id FROM users WHERE username LIKE "test_notif_api_%")');
@@ -299,6 +317,57 @@ describe('Notifications API Integration Tests', () => {
       res = await agent.get('/api/notifications');
       let activePriceAlerts = res.body.filter(n => n.category === 'price_missing' && n.source_id === product.id && n.status !== 'resolved');
       expect(activePriceAlerts.length).toBe(0);
+    });
+
+    it('should trigger insufficient stock warning notification when trying to purchase more than available', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_notif_api_admin', password: 'password123' });
+
+      // Create an active product with 5 stock tracked
+      const product = await productsService.createProduct({
+        title: 'Book for stock limits',
+        code: 'BK-STOCK-LIMITS',
+        category: 'Literature',
+        status: 'active',
+        stockPolicy: 'track'
+      });
+      // configure pricing
+      const outletTypes = await db.all("SELECT id FROM outlet_types WHERE status = 'active'");
+      const pricesPayload = outletTypes.map(ot => ({ outletTypeId: ot.id, price: 100.0 }));
+      await agent.put(`/api/product-prices/product/${product.id}`).send({
+        prices: pricesPayload
+      });
+      // seed 5 stock
+      await inventoryService.createTransaction({
+        productId: product.id,
+        transactionType: 'receipt',
+        quantity: 5,
+        referenceType: 'receipt',
+        referenceId: 99999,
+        userId: adminUser.id
+      });
+
+      // Try to create an invoice with quantity 10 (exceeds 5 available)
+      const resInvoice = await agent
+        .post('/api/invoices')
+        .send({
+          outletId: testOutlet.id,
+          discount: 0,
+          shippingCost: 0,
+          paymentType: 'deferred',
+          items: [{ productId: product.id, quantity: 10 }]
+        });
+      expect(resInvoice.status).toBe(400);
+
+      // Verify that insufficient stock notification was triggered
+      const resNotif = await agent.get('/api/notifications?status=unread');
+      const stockAlert = resNotif.body.find(
+        n => n.category === 'stock_low' &&
+        n.severity === 'critical' &&
+        n.message.includes('المخزون غير كافٍ للكتاب') &&
+        n.source_id === product.id
+      );
+      expect(stockAlert).toBeDefined();
     });
 
     it('should trigger collected-not-supplied cash warning notifications when unsupplied balance exceeds 1000 EGP', async () => {

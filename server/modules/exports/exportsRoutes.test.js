@@ -237,7 +237,7 @@ describe('Exports API Integration Tests', () => {
 
     it('should export payment receipts as CSV', async () => {
       const response = await agent.get('/api/exports/payments');
-      verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الفاتورة', 'المبلغ المحصل (ج.م)', 'طريقة الدفع', 'سجلت بواسطة'], [invoice.invoice_number, '100', 'cash']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الفاتورة', 'المبلغ المحصل (ج.م)', 'طريقة الدفع', 'حالة مراجعة الإيصال', 'حالة التوريد للمقر', 'سجلت بواسطة'], [invoice.invoice_number, '100', 'cash']);
     });
 
     it('should export inventory ledger as CSV', async () => {

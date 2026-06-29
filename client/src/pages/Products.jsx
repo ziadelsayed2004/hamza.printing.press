@@ -74,7 +74,7 @@ export const Products = () => {
   const [formCategory, setFormCategory] = useState('');
   const [formStatus, setFormStatus] = useState('active');
   const [formStockPolicy, setFormStockPolicy] = useState('track');
-  const [formAuthorIds, setFormAuthorIds] = useState([]);
+  const [formAuthorId, setFormAuthorId] = useState('');
   const [formPrices, setFormPrices] = useState({}); // { outletTypeId: priceValue }
 
   // Notifications toast state
@@ -152,7 +152,7 @@ export const Products = () => {
     setFormCategory('');
     setFormStatus('active');
     setFormStockPolicy('track');
-    setFormAuthorIds([]);
+    setFormAuthorId('');
     
     // Initialise empty prices for all active outlet types
     const initialPrices = {};
@@ -172,7 +172,7 @@ export const Products = () => {
     setFormCategory(product.category || '');
     setFormStatus(product.status);
     setFormStockPolicy(product.stock_policy || 'track');
-    setFormAuthorIds(product.authors?.map(a => a.id) || []);
+    setFormAuthorId(product.authors?.[0]?.id || '');
     
     // Fetch prices to populate form
     const initialPrices = {};
@@ -217,7 +217,7 @@ export const Products = () => {
       category: formCategory,
       status: formStatus,
       stockPolicy: formStockPolicy,
-      authorIds: formAuthorIds
+      authorIds: formAuthorId ? [formAuthorId] : []
     };
 
     try {
@@ -313,6 +313,7 @@ export const Products = () => {
               placeholder="البحث بالاسم أو الرمز SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              sx={{ minWidth: 280 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -369,7 +370,7 @@ export const Products = () => {
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>الرمز (SKU)</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>العنوان والكتاب</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>التصنيف</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>المؤلفين</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>المؤلف</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>سياسة الجرد</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
@@ -385,7 +386,7 @@ export const Products = () => {
                   </TableCell>
                   <TableCell align="right">
                     {p.authors && p.authors.length > 0 ? (
-                      p.authors.map(a => a.name).join('، ')
+                      p.authors[0].name
                     ) : (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير محدد</Typography>
                     )}
@@ -438,7 +439,7 @@ export const Products = () => {
                 التصنيف: {detailsProduct.category || 'غير محدد'}
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                المؤلفين: {detailsProduct.authors?.map(a => a.name).join('، ') || 'غير محدد'}
+                المؤلف: {detailsProduct.authors?.[0]?.name || 'غير محدد'}
               </Typography>
             </FieldGrid>
             
@@ -527,22 +528,14 @@ export const Products = () => {
                 </Select>
               </FormControl>
               <FormControl fullWidth size="small">
-                <InputLabel id="form-authors-label">المؤلفين المشاركين</InputLabel>
+                <InputLabel id="form-author-label">المؤلف</InputLabel>
                 <Select
-                  labelId="form-authors-label"
-                  multiple
-                  value={formAuthorIds}
-                  label="المؤلفين المشاركين"
-                  onChange={(e) => setFormAuthorIds(e.target.value)}
-                  renderValue={(selected) => (
-                    <Box style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                      {selected.map((val) => {
-                        const author = authorsList.find(a => a.id === val);
-                        return <Chip key={val} label={author ? author.name : val} size="small" />;
-                      })}
-                    </Box>
-                  )}
+                  labelId="form-author-label"
+                  value={formAuthorId}
+                  label="المؤلف"
+                  onChange={(e) => setFormAuthorId(e.target.value)}
                 >
+                  <MenuItem value="">غير محدد</MenuItem>
                   {authorsList.map((a) => (
                     <MenuItem key={a.id} value={a.id}>
                       {a.name}

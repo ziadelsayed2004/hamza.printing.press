@@ -8,6 +8,7 @@ import { FormSection } from '../components/forms/FormSection';
 import { FieldGrid } from '../components/forms/FieldGrid';
 import { FormActions } from '../components/forms/FormActions';
 import EntityDrawer from '../components/EntityDrawer';
+import { EGYPT_GOVERNORATES } from '../constants/governorates';
 import {
   Box,
   Typography,
@@ -47,35 +48,7 @@ import {
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
 
-const egyptGovernorates = [
-  'القاهرة',
-  'الجيزة',
-  'الإسكندرية',
-  'القليوبية',
-  'الدقهلية',
-  'الغربية',
-  'الشرقية',
-  'المنوفية',
-  'البحيرة',
-  'كفر الشيخ',
-  'دمياط',
-  'بورسعيد',
-  'الإسماعيلية',
-  'السويس',
-  'الفيوم',
-  'بني سويف',
-  'المنيا',
-  'أسيوط',
-  'سوهاج',
-  'قنا',
-  'الأقصر',
-  'أسوان',
-  'البحر الأحمر',
-  'الوادي الجديد',
-  'مطروح',
-  'شمال سيناء',
-  'جنوب سيناء'
-];
+
 
 export const Outlets = () => {
   const { hasPermission } = useAuth();
@@ -298,6 +271,7 @@ export const Outlets = () => {
               placeholder="البحث باسم المنفذ أو الهاتف..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              sx={{ minWidth: 280 }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -480,7 +454,7 @@ export const Outlets = () => {
                   label="المحافظة"
                   onChange={(e) => setFormGovernorate(e.target.value)}
                 >
-                  {egyptGovernorates.map((gov) => (
+                  {EGYPT_GOVERNORATES.map((gov) => (
                     <MenuItem key={gov} value={gov}>
                       {gov}
                     </MenuItem>

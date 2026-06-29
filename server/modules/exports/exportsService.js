@@ -228,7 +228,8 @@ async function exportPayments(query = {}) {
   const params = [];
   const filtersApplied = [];
   let sql = `
-    SELECT ip.id, i.invoice_number, ip.amount, ip.payment_method, ip.payment_date, ip.reference_number, ip.notes, u.full_name as recorded_by
+    SELECT ip.id, i.invoice_number, ip.amount, ip.payment_method, ip.payment_date, ip.reference_number, ip.notes, u.full_name as recorded_by,
+           ip.receipt_status, ip.supply_status
     FROM invoice_payments ip
     JOIN invoices i ON i.id = ip.invoice_id
     LEFT JOIN users u ON u.id = ip.recorded_by
@@ -258,16 +259,27 @@ async function exportPayments(query = {}) {
   sql += ` ORDER BY ip.payment_date DESC, ip.created_at DESC`;
 
   const rows = await db.all(sql, params);
-  const formattedRows = rows.map(r => ({
-    ...r,
-    payment_date: formatEgyptDate(r.payment_date)
-  }));
+  const formattedRows = rows.map(r => {
+    let readableReceiptStatus = 'معتمد';
+    if (r.receipt_status === 'pending_review') readableReceiptStatus = 'قيد المراجعة';
+    else if (r.receipt_status === 'rejected') readableReceiptStatus = 'مرفوض';
+
+    let readableSupplyStatus = 'معلق لم يتم التوريد';
+    if (r.supply_status === 'supplied') readableSupplyStatus = 'تم التوريد للمقر';
+
+    return {
+      ...r,
+      payment_date: formatEgyptDate(r.payment_date),
+      receipt_status_ar: readableReceiptStatus,
+      supply_status_ar: readableSupplyStatus
+    };
+  });
 
   return jsonToCsvArabic({
-    title: 'سجل تحصيل مدفوعات العملاء',
+    title: 'سجل تحصيل مدفوعات العملاء ومراجعة الإيصالات',
     filters: filtersApplied,
-    arabicHeaders: ['المعرف', 'رقم الفاتورة', 'المبلغ المحصل (ج.م)', 'طريقة الدفع', 'تاريخ السداد', 'رقم المرجع', 'الملاحظات', 'سجلت بواسطة'],
-    englishKeys: ['id', 'invoice_number', 'amount', 'payment_method', 'payment_date', 'reference_number', 'notes', 'recorded_by'],
+    arabicHeaders: ['المعرف', 'رقم الفاتورة', 'المبلغ المحصل (ج.م)', 'طريقة الدفع', 'تاريخ السداد', 'رقم المرجع', 'حالة مراجعة الإيصال', 'حالة التوريد للمقر', 'الملاحظات', 'سجلت بواسطة'],
+    englishKeys: ['id', 'invoice_number', 'amount', 'payment_method', 'payment_date', 'reference_number', 'receipt_status_ar', 'supply_status_ar', 'notes', 'recorded_by'],
     rows: formattedRows,
     summaryKeys: ['amount']
   });

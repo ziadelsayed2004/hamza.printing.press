@@ -23,6 +23,8 @@ describe('Database helpers', () => {
   });
 
   it('should query outlet types successfully', async () => {
+    await dbHelper.run('INSERT OR IGNORE INTO outlet_types (name, description, status) VALUES (?, ?, ?)', ['Wholesale', 'Wholesale', 'active']);
+    await dbHelper.run('INSERT OR IGNORE INTO outlet_types (name, description, status) VALUES (?, ?, ?)', ['Retail', 'Retail', 'active']);
     const types = await dbHelper.all('SELECT name FROM outlet_types');
     const names = types.map(t => t.name);
     expect(names).toContain('Wholesale');
