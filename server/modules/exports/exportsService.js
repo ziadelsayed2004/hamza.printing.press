@@ -1,5 +1,7 @@
 const db = require('../../db');
 const reportsService = require('../reports/reportsService');
+const ExcelJS = require('exceljs');
+const { formatEgyptDateTime, formatEgyptDate } = require('../../utils/formatters');
 
 /**
  * Escapes CSV values and wraps them in double quotes.
@@ -7,7 +9,6 @@ const reportsService = require('../reports/reportsService');
 function escapeCsvValue(val) {
   if (val === null || val === undefined) return '';
   let stringVal = String(val).trim();
-  // Escape double quotes by doubling them
   stringVal = stringVal.replace(/"/g, '""');
   return `"${stringVal}"`;
 }
@@ -57,12 +58,204 @@ function jsonToCsvArabic({ title, filters = [], arabicHeaders, englishKeys, rows
   return '\uFEFF' + lines.join('\r\n');
 }
 
-const { formatEgyptDateTime, formatEgyptDate } = require('../../utils/formatters');
+/**
+ * Converts a list of JSON objects into a professional styled Excel file using ExcelJS.
+ */
+async function jsonToExcelArabic({ title, filters = [], arabicHeaders, englishKeys, rows, summaryKeys = [] }) {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(title ? title.substring(0, 31) : 'تقرير', {
+    views: [{ RTL: true, showGridLines: true }]
+  });
+
+  let currentRowNum = 1;
+
+  // 1. Title Row
+  if (title) {
+    const titleCell = worksheet.getCell(`A${currentRowNum}`);
+    titleCell.value = title;
+    titleCell.font = { name: 'Segoe UI', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0F172A' } // Slate 900
+    };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells(currentRowNum, 1, currentRowNum, arabicHeaders.length);
+    worksheet.getRow(currentRowNum).height = 42;
+    currentRowNum += 2;
+  }
+
+  // 2. Filters
+  if (filters && filters.length > 0) {
+    const filterCell = worksheet.getCell(`A${currentRowNum}`);
+    filterCell.value = 'الفلاتر المطبقة: ' + filters.join(' | ');
+    filterCell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF475569' } };
+    worksheet.mergeCells(currentRowNum, 1, currentRowNum, arabicHeaders.length);
+    worksheet.getRow(currentRowNum).height = 20;
+    currentRowNum++;
+  }
+
+  currentRowNum++; // spacer
+
+  // 3. Headers
+  const headerRowIndex = currentRowNum;
+  const headerRow = worksheet.getRow(headerRowIndex);
+  headerRow.values = arabicHeaders;
+  headerRow.height = 32;
+  headerRow.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+
+  for (let col = 1; col <= arabicHeaders.length; col++) {
+    const cell = headerRow.getCell(col);
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1E3A8A' } // Deep Navy Blue
+    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      bottom: { style: 'medium', color: { argb: 'FF94A3B8' } },
+      right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
+  }
+  currentRowNum++;
+
+  // 4. Data
+  rows.forEach((row) => {
+    const dataRow = worksheet.getRow(currentRowNum);
+    const rowValues = englishKeys.map(key => {
+      const val = row[key];
+      if (val !== null && val !== undefined && !isNaN(Number(val)) && String(val).trim() !== '' && typeof val !== 'string') {
+        return Number(val);
+      }
+      return val === null || val === undefined ? '' : val;
+    });
+    dataRow.values = rowValues;
+    dataRow.height = 24;
+    dataRow.font = { name: 'Segoe UI', size: 10 };
+
+    for (let col = 1; col <= englishKeys.length; col++) {
+      const cell = dataRow.getCell(col);
+      const key = englishKeys[col - 1];
+      const val = rowValues[col - 1];
+
+      // Smart alignment & formatting based on key name
+      const lowerKey = key.toLowerCase();
+      const isMonetary = lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount') || lowerKey.includes('sales') || lowerKey.includes('paid') || lowerKey.includes('remaining') || lowerKey.includes('limit') || lowerKey.includes('value');
+      const isQuantity = lowerKey.includes('quantity') || lowerKey.includes('count') || lowerKey.includes('copies') || lowerKey.includes('totalbooks') || lowerKey.includes('totalquantity') || lowerKey.includes('totalreceipts') || lowerKey.includes('shipped_quantity');
+
+      if (isMonetary && typeof val === 'number') {
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        cell.numFmt = '#,##0.00" ج.م"';
+      } else if (isQuantity && typeof val === 'number') {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.numFmt = '#,##0';
+      } else if (typeof val === 'number') {
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      } else {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      };
+
+      // Zebra striping
+      if (currentRowNum % 2 === 0) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF8FAFC' } // Slate 50
+        };
+      }
+    }
+    currentRowNum++;
+  });
+
+  // 5. Totals
+  if (summaryKeys && summaryKeys.length > 0 && rows.length > 0) {
+    const totalsRow = worksheet.getRow(currentRowNum);
+    totalsRow.height = 28;
+    totalsRow.font = { name: 'Segoe UI', size: 10, bold: true };
+
+    const totalsValues = englishKeys.map((key, idx) => {
+      if (idx === 0) {
+        return 'الإجمالي الكلي';
+      }
+      if (summaryKeys.includes(key)) {
+        const sum = rows.reduce((acc, r) => acc + (parseFloat(r[key]) || 0), 0);
+        return parseFloat(sum.toFixed(2));
+      }
+      return '';
+    });
+
+    totalsRow.values = totalsValues;
+
+    for (let col = 1; col <= englishKeys.length; col++) {
+      const cell = totalsRow.getCell(col);
+      const key = englishKeys[col - 1];
+      const val = totalsValues[col - 1];
+
+      const lowerKey = key.toLowerCase();
+      const isMonetary = lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount') || lowerKey.includes('sales') || lowerKey.includes('paid') || lowerKey.includes('remaining') || lowerKey.includes('limit') || lowerKey.includes('value');
+      const isQuantity = lowerKey.includes('quantity') || lowerKey.includes('count') || lowerKey.includes('copies') || lowerKey.includes('totalbooks') || lowerKey.includes('totalquantity') || lowerKey.includes('totalreceipts') || lowerKey.includes('shipped_quantity');
+
+      if (isMonetary && typeof val === 'number') {
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+        cell.numFmt = '#,##0.00" ج.م"';
+      } else if (isQuantity && typeof val === 'number') {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.numFmt = '#,##0';
+      } else if (col === 1) {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      } else {
+        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      }
+
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE2E8F0' } // Slate 200
+      };
+      cell.border = {
+        top: { style: 'medium', color: { argb: 'FF94A3B8' } },
+        left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+        bottom: { style: 'double', color: { argb: 'FF94A3B8' } },
+        right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+      };
+    }
+  }
+
+  // Auto-fit column widths
+  worksheet.columns.forEach(column => {
+    let maxLen = 12;
+    column.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+      if (rowNumber >= headerRowIndex && cell.value) {
+        let displayVal = String(cell.value);
+        if (cell.numFmt && cell.numFmt.includes('ج.م') && typeof cell.value === 'number') {
+          displayVal += ' ج.م';
+        }
+        const valueLength = displayVal.length;
+        if (valueLength > maxLen) {
+          maxLen = valueLength;
+        }
+      }
+    });
+    // Add extra padding for Cairo / Segoe UI Arabic fonts which need more room
+    column.width = Math.max(12, Math.min(50, Math.ceil(maxLen * 1.25) + 3));
+  });
+
+  return await workbook.xlsx.writeBuffer();
+}
 
 /**
  * Export products catalog.
  */
-async function exportProducts() {
+async function exportProducts(format = 'xlsx') {
   const sql = `
     SELECT p.id, p.title, p.code, p.category, p.status, p.stock_policy,
            (SELECT GROUP_CONCAT(a.name, ' | ') 
@@ -77,18 +270,24 @@ async function exportProducts() {
     ORDER BY p.title ASC
   `;
   const rows = await db.all(sql);
-  return jsonToCsvArabic({
+  const config = {
     title: 'دليل المنتجات والكتب المسجلة',
     arabicHeaders: ['المعرف', 'الاسم/العنوان', 'الرمز/الكود', 'التصنيف', 'الحالة', 'سياسة المخزون', 'المؤلفون', 'الأسعار بمنافذ التوزيع'],
     englishKeys: ['id', 'title', 'code', 'category', 'status', 'stock_policy', 'authors', 'prices'],
     rows
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
 /**
  * Export product prices matrix.
  */
-async function exportPrices() {
+async function exportPrices(format = 'xlsx') {
   const sql = `
     SELECT pp.id, p.title as product_title, p.code as product_code, ot.name as outlet_type_name, pp.price
     FROM product_prices pp
@@ -97,19 +296,25 @@ async function exportPrices() {
     ORDER BY p.title ASC, ot.name ASC
   `;
   const rows = await db.all(sql);
-  return jsonToCsvArabic({
+  const config = {
     title: 'قائمة أسعار المنتجات حسب فئة المنفذ',
     arabicHeaders: ['المعرف', 'اسم الكتاب', 'رمز الكتاب', 'فئة منفذ التوزيع', 'السعر (ج.م)'],
     englishKeys: ['id', 'product_title', 'product_code', 'outlet_type_name', 'price'],
     rows,
     summaryKeys: ['price']
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
 /**
  * Export authors list.
  */
-async function exportAuthors() {
+async function exportAuthors(format = 'xlsx') {
   const sql = `
     SELECT a.id, a.name, a.phone, a.email, a.status,
            (SELECT GROUP_CONCAT(user_id, ' | ') FROM author_users au WHERE au.author_id = a.id) as user_ids
@@ -117,18 +322,24 @@ async function exportAuthors() {
     ORDER BY a.name ASC
   `;
   const rows = await db.all(sql);
-  return jsonToCsvArabic({
+  const config = {
     title: 'قائمة أسماء وبيانات المؤلفين',
     arabicHeaders: ['المعرف', 'الاسم', 'الهاتف', 'البريد الإلكتروني', 'الحالة', 'معرفات المستخدمين'],
     englishKeys: ['id', 'name', 'phone', 'email', 'status', 'user_ids'],
     rows
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
 /**
  * Export outlets listing.
  */
-async function exportOutlets() {
+async function exportOutlets(format = 'xlsx') {
   const sql = `
     SELECT o.id, o.name, ot.name as outlet_type_name, o.governorate, o.address_details, o.phone, o.credit_limit, o.status, o.notes
     FROM outlets o
@@ -136,19 +347,25 @@ async function exportOutlets() {
     ORDER BY o.name ASC
   `;
   const rows = await db.all(sql);
-  return jsonToCsvArabic({
+  const config = {
     title: 'دليل منافذ البيع ومراكز التوزيع',
     arabicHeaders: ['المعرف', 'اسم منفذ التوزيع', 'الفئة', 'المحافظة', 'تفاصيل العنوان', 'الهاتف', 'الحد الائتماني (ج.م)', 'الحالة', 'ملاحظات'],
     englishKeys: ['id', 'name', 'outlet_type_name', 'governorate', 'address_details', 'phone', 'credit_limit', 'status', 'notes'],
     rows,
     summaryKeys: ['credit_limit']
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
 /**
  * Export invoices list with financial breakdowns.
  */
-async function exportInvoices(query = {}) {
+async function exportInvoices(query = {}, format = 'xlsx') {
   const params = [];
   const filtersApplied = [];
   let sql = `
@@ -205,7 +422,7 @@ async function exportInvoices(query = {}) {
     created_at: formatEgyptDateTime(r.created_at)
   }));
 
-  return jsonToCsvArabic({
+  const config = {
     title: 'سجل مبيعات الفواتير والتحليلات المالية',
     filters: filtersApplied,
     arabicHeaders: [
@@ -218,13 +435,19 @@ async function exportInvoices(query = {}) {
     ],
     rows: formattedRows,
     summaryKeys: ['subtotal', 'discount', 'shipping_cost', 'total_price', 'paid_amount', 'remaining_amount']
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
 /**
  * Export payment receipts history.
  */
-async function exportPayments(query = {}) {
+async function exportPayments(query = {}, format = 'xlsx') {
   const params = [];
   const filtersApplied = [];
   let sql = `
@@ -275,20 +498,26 @@ async function exportPayments(query = {}) {
     };
   });
 
-  return jsonToCsvArabic({
+  const config = {
     title: 'سجل تحصيل مدفوعات العملاء ومراجعة الإيصالات',
     filters: filtersApplied,
     arabicHeaders: ['المعرف', 'رقم الفاتورة', 'المبلغ المحصل (ج.م)', 'طريقة الدفع', 'تاريخ السداد', 'رقم المرجع', 'حالة مراجعة الإيصال', 'حالة التوريد للمقر', 'الملاحظات', 'سجلت بواسطة'],
     englishKeys: ['id', 'invoice_number', 'amount', 'payment_method', 'payment_date', 'reference_number', 'receipt_status_ar', 'supply_status_ar', 'notes', 'recorded_by'],
     rows: formattedRows,
     summaryKeys: ['amount']
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
 /**
  * Export inventory ledger transactions.
  */
-async function exportInventory(query = {}) {
+async function exportInventory(query = {}, format = 'xlsx') {
   const params = [];
   const filtersApplied = [];
   let sql = `
@@ -327,27 +556,30 @@ async function exportInventory(query = {}) {
     created_at: formatEgyptDateTime(r.created_at)
   }));
 
-  return jsonToCsvArabic({
+  const config = {
     title: 'سجل حركات المخزن التفصيلية',
     filters: filtersApplied,
     arabicHeaders: ['المعرف', 'عنوان الكتاب', 'رمز الكتاب', 'نوع الحركة', 'الكمية', 'نوع المستند المرجعي', 'رقم المستند المرجعي', 'سجلت بواسطة', 'تاريخ الحركة'],
     englishKeys: ['id', 'product_title', 'product_code', 'transaction_type', 'quantity', 'reference_type', 'reference_id', 'created_by', 'created_at'],
     rows: formattedRows,
     summaryKeys: ['quantity']
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
-/**
- * Export dynamic report tables based on type.
- */
 const usersService = require('../users/usersService');
 const outletsService = require('../outlets/outletsService');
 const authorsService = require('../authors/authorsService');
 
 /**
- * Export report to CSV.
+ * Export report to CSV / XLSX.
  */
-async function exportReport(reportType, _query = {}, sessionUser = null) {
+async function exportReport(reportType, query = {}, sessionUser = null, format = 'xlsx') {
   let filterOutletIds = null;
   let filterAuthorIds = null;
 
@@ -362,59 +594,67 @@ async function exportReport(reportType, _query = {}, sessionUser = null) {
     }
   }
 
+  let config = {};
+
   if (reportType === 'balances') {
     const rows = await reportsService.getBalancesByOutlet({
       outletIds: filterOutletIds
     });
-    return jsonToCsvArabic({
+    config = {
       title: 'تقرير الأرصدة والمبيعات والتحصيلات لمنافذ التوزيع',
       arabicHeaders: ['معرف المنفذ', 'اسم منفذ التوزيع', 'الفئة', 'المحافظة', 'الحد الائتماني (ج.م)', 'إجمالي المبيعات (ج.م)', 'إجمالي المدفوعات (ج.م)', 'الرصيد المتبقي المستحق (ج.م)'],
       englishKeys: ['outletId', 'outletName', 'outletTypeName', 'governorate', 'creditLimit', 'totalSales', 'totalPaid', 'remainingAmount'],
       rows,
       summaryKeys: ['creditLimit', 'totalSales', 'totalPaid', 'remainingAmount']
-    });
+    };
   } else if (reportType === 'stock') {
     const rows = await reportsService.getStockReport({
       authorIds: filterAuthorIds
     });
-    return jsonToCsvArabic({
+    config = {
       title: 'تقرير جرد المخازن وحركة الكتب',
       arabicHeaders: ['معرف الكتاب', 'عنوان الكتاب', 'رمز الكتاب', 'التصنيف', 'الحالة', 'سياسة المخزون', 'إجمالي الوارد', 'إجمالي المنصرف/المبيعات', 'إجمالي المرتجع', 'إجمالي التسويات', 'الرصيد الحالي بالمخزن'],
       englishKeys: ['productId', 'productTitle', 'productCode', 'category', 'status', 'stockPolicy', 'totalReceived', 'totalSold', 'totalReturned', 'totalAdjusted', 'currentStock'],
       rows,
       summaryKeys: ['totalReceived', 'totalSold', 'totalReturned', 'totalAdjusted', 'currentStock']
-    });
+    };
   } else if (reportType === 'authors') {
     const rows = await reportsService.getAuthorReport({
       authorIds: filterAuthorIds
     });
-    return jsonToCsvArabic({
+    config = {
       title: 'تقرير مبيعات وأرصدة كتب المؤلفين',
       arabicHeaders: ['معرف المؤلف', 'اسم المؤلف', 'الحالة', 'إجمالي عدد الكتب', 'إجمالي المبيعات (ج.م)', 'إجمالي النسخ المباعة', 'الرصيد الحالي بالمخزن'],
       englishKeys: ['authorId', 'authorName', 'status', 'totalBooks', 'totalSales', 'totalCopiesSold', 'currentStock'],
       rows,
       summaryKeys: ['totalBooks', 'totalSales', 'totalCopiesSold', 'currentStock']
-    });
+    };
   } else if (reportType === 'receipts') {
     const rows = await reportsService.getReceiptReport({
       authorIds: filterAuthorIds
     });
-    return jsonToCsvArabic({
+    config = {
       title: 'تقرير توريد الكتب وأذونات الاستلام من الموردين',
       arabicHeaders: ['اسم المورد', 'إجمالي أذونات الاستلام', 'إجمالي الكمية الموردة', 'إجمالي التكلفة الكلية (ج.م)'],
       englishKeys: ['supplierName', 'totalReceipts', 'totalQuantity', 'totalCost'],
       rows,
       summaryKeys: ['totalReceipts', 'totalQuantity', 'totalCost']
-    });
+    };
   } else {
     throw new Error('Unsupported report type');
+  }
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
   }
 }
 
 /**
  * Export returns history.
  */
-async function exportReturns(query = {}) {
+async function exportReturns(query = {}, format = 'xlsx') {
   const params = [];
   const filtersApplied = [];
   let sql = `
@@ -450,20 +690,26 @@ async function exportReturns(query = {}) {
     created_at: formatEgyptDateTime(r.created_at)
   }));
 
-  return jsonToCsvArabic({
+  const config = {
     title: 'سجل مرتجعات مبيعات الفواتير',
     filters: filtersApplied,
     arabicHeaders: ['المعرف', 'رقم إذن المرتجع', 'رقم الفاتورة', 'اسم المنفذ', 'قيمة المرتجع (ج.م)', 'السبب', 'الحالة', 'تاريخ التسجيل'],
     englishKeys: ['id', 'return_number', 'invoice_number', 'outlet_name', 'return_value', 'reason', 'status', 'created_at'],
     rows: formattedRows,
     summaryKeys: ['return_value']
-  });
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
 }
 
 /**
  * Export shipments log.
  */
-async function exportShipments(query = {}) {
+async function exportShipments(query = {}, format = 'xlsx') {
   const params = [];
   const filtersApplied = [];
   let sql = `
@@ -504,14 +750,240 @@ async function exportShipments(query = {}) {
     created_at: formatEgyptDateTime(r.created_at)
   }));
 
-  return jsonToCsvArabic({
+  const config = {
     title: 'سجل شحنات وطرود الكتب الصادرة للمنافذ',
     filters: filtersApplied,
     arabicHeaders: ['المعرف', 'رقم الشحنة', 'رقم الفاتورة', 'اسم المنفذ', 'شركة الشحن', 'رقم التتبع', 'تكلفة الشحن (ج.م)', 'حالة الشحنة', 'تاريخ الشحن'],
     englishKeys: ['id', 'shipment_number', 'invoice_number', 'outlet_name', 'shipping_carrier', 'tracking_number', 'shipping_cost', 'status', 'created_at'],
     rows: formattedRows,
     summaryKeys: ['shipping_cost']
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(config);
+  } else {
+    return await jsonToExcelArabic(config);
+  }
+}
+
+/**
+ * Export invoice items detailed catalog.
+ */
+async function exportInvoiceItems(query = {}, format = 'xlsx') {
+  const params = [];
+  const filtersApplied = [];
+  let sql = `
+    SELECT 
+      ii.id, i.invoice_number, o.name as outlet_name, p.title as product_title, p.code as product_code,
+      ii.quantity, ii.free_quantity, ii.unit_price, ii.total_price, i.created_at
+    FROM invoice_items ii
+    JOIN invoices i ON i.id = ii.invoice_id
+    JOIN outlets o ON o.id = i.outlet_id
+    JOIN products p ON p.id = ii.product_id
+    WHERE 1=1
+  `;
+  if (query.outletId) {
+    sql += ` AND i.outlet_id = ?`;
+    params.push(query.outletId);
+    const outlet = await db.get('SELECT name FROM outlets WHERE id = ?', [query.outletId]);
+    filtersApplied.push(`المنفذ: ${outlet ? outlet.name : query.outletId}`);
+  }
+  if (query.productId) {
+    sql += ` AND ii.product_id = ?`;
+    params.push(query.productId);
+    const product = await db.get('SELECT title FROM products WHERE id = ?', [query.productId]);
+    filtersApplied.push(`المنتج: ${product ? product.title : query.productId}`);
+  }
+  if (query.startDate) {
+    sql += ` AND i.created_at >= ?`;
+    params.push(query.startDate + 'T00:00:00');
+    filtersApplied.push(`من تاريخ: ${query.startDate}`);
+  }
+  if (query.endDate) {
+    sql += ` AND i.created_at <= ?`;
+    params.push(query.endDate + 'T23:59:59');
+    filtersApplied.push(`إلى تاريخ: ${query.endDate}`);
+  }
+  sql += ` ORDER BY i.created_at DESC, ii.id DESC`;
+
+  const rows = await db.all(sql, params);
+  const formattedRows = rows.map(r => ({
+    ...r,
+    created_at: formatEgyptDateTime(r.created_at),
+    billable_quantity: r.quantity - (r.free_quantity || 0)
+  }));
+
+  const configObj = {
+    title: 'سجل حركات بيع أصناف الفواتير التفصيلي',
+    filters: filtersApplied,
+    arabicHeaders: ['معرف السطر', 'رقم الفاتورة', 'اسم المنفذ', 'اسم الكتاب', 'رمز الكتاب', 'الكمية الإجمالية', 'الكمية المجانية', 'الكمية المدفوعة', 'سعر الوحدة (ج.م)', 'الإجمالي للسطر (ج.م)', 'تاريخ الفاتورة'],
+    englishKeys: ['id', 'invoice_number', 'outlet_name', 'product_title', 'product_code', 'quantity', 'free_quantity', 'billable_quantity', 'unit_price', 'total_price', 'created_at'],
+    rows: formattedRows,
+    summaryKeys: ['quantity', 'free_quantity', 'billable_quantity', 'total_price']
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(configObj);
+  } else {
+    return await jsonToExcelArabic(configObj);
+  }
+}
+
+/**
+ * Export shipments courier delivery sheet.
+ */
+async function exportCourierSheet(query = {}, format = 'xlsx') {
+  const params = [];
+  const filtersApplied = [];
+  let sql = `
+    SELECT 
+      si.id as shipment_item_id, s.shipment_number, s.status as shipment_status, i.invoice_number,
+      o.name as outlet_name, o.phone as outlet_phone, o.governorate, o.address_details,
+      p.title as product_title, si.quantity as shipped_quantity, s.shipping_carrier, s.tracking_number,
+      i.payment_status, i.notes as invoice_notes, s.created_at as shipment_date
+    FROM shipment_items si
+    JOIN shipments s ON s.id = si.shipment_id
+    JOIN invoices i ON i.id = s.invoice_id
+    JOIN outlets o ON o.id = i.outlet_id
+    JOIN invoice_items ii ON ii.id = si.invoice_item_id
+    JOIN products p ON p.id = ii.product_id
+    WHERE 1=1
+  `;
+  if (query.outletId) {
+    sql += ` AND i.outlet_id = ?`;
+    params.push(query.outletId);
+    const outlet = await db.get('SELECT name FROM outlets WHERE id = ?', [query.outletId]);
+    filtersApplied.push(`المنفذ: ${outlet ? outlet.name : query.outletId}`);
+  }
+  if (query.status) {
+    sql += ` AND s.status = ?`;
+    params.push(query.status);
+    filtersApplied.push(`حالة الشحنة: ${query.status}`);
+  }
+  if (query.governorate) {
+    sql += ` AND o.governorate = ?`;
+    params.push(query.governorate);
+    filtersApplied.push(`المحافظة: ${query.governorate}`);
+  }
+  if (query.startDate) {
+    sql += ` AND s.created_at >= ?`;
+    params.push(query.startDate + 'T00:00:00');
+    filtersApplied.push(`من تاريخ: ${query.startDate}`);
+  }
+  if (query.endDate) {
+    sql += ` AND s.created_at <= ?`;
+    params.push(query.endDate + 'T23:59:59');
+    filtersApplied.push(`إلى تاريخ: ${query.endDate}`);
+  }
+  sql += ` ORDER BY s.created_at DESC, s.id DESC`;
+
+  const rows = await db.all(sql, params);
+  const formattedRows = rows.map(r => {
+    let statusAr = r.shipment_status;
+    if (r.shipment_status === 'pending') statusAr = 'قيد الانتظار / التجهيز';
+    else if (r.shipment_status === 'shipped') statusAr = 'تم الشحن';
+    else if (r.shipment_status === 'delivered') statusAr = 'تم التسليم للعميل';
+    else if (r.shipment_status === 'cancelled') statusAr = 'ملغاة';
+
+    let payStatusAr = r.payment_status;
+    if (r.payment_status === 'unpaid') payStatusAr = 'آجل / غير مدفوع';
+    else if (r.payment_status === 'partially_paid') payStatusAr = 'مدفوع جزئياً';
+    else if (r.payment_status === 'paid') payStatusAr = 'مدفوع بالكامل';
+
+    return {
+      ...r,
+      shipment_status_ar: statusAr,
+      payment_status_ar: payStatusAr,
+      shipment_date: formatEgyptDateTime(r.shipment_date)
+    };
   });
+
+  const configObj = {
+    title: 'شيت شحن وتوصيل الطلبيات والطرود (Courier Sheet)',
+    filters: filtersApplied,
+    arabicHeaders: [
+      'رقم الشحنة', 'حالة الشحنة', 'رقم الفاتورة', 'العميل/منفذ التوزيع', 'الهاتف', 'المحافظة',
+      'العنوان بالتفصيل', 'اسم الكتاب/المنتج', 'الكمية المشحونة', 'شركة الشحن', 'رقم التتبع',
+      'حالة دفع الفاتورة', 'ملاحظات الفاتورة', 'تاريخ الشحن'
+    ],
+    englishKeys: [
+      'shipment_number', 'shipment_status_ar', 'invoice_number', 'outlet_name', 'outlet_phone', 'governorate',
+      'address_details', 'product_title', 'shipped_quantity', 'shipping_carrier', 'tracking_number',
+      'payment_status_ar', 'invoice_notes', 'shipment_date'
+    ],
+    rows: formattedRows,
+    summaryKeys: ['shipped_quantity']
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(configObj);
+  } else {
+    return await jsonToExcelArabic(configObj);
+  }
+}
+
+/**
+ * Export outlet statement ledger.
+ */
+async function exportOutletStatement(query = {}, format = 'xlsx') {
+  const params = [];
+  const filtersApplied = [];
+  let sql = `
+    SELECT 
+      fle.id, o.name as outlet_name, fle.entry_type, fle.reference_type, fle.reference_id,
+      fle.cash_amount, fle.receivable_amount, fle.notes, fle.created_at
+    FROM finance_ledger_entries fle
+    JOIN outlets o ON o.id = fle.outlet_id
+    WHERE 1=1
+  `;
+  if (query.outletId) {
+    sql += ` AND fle.outlet_id = ?`;
+    params.push(query.outletId);
+    const outlet = await db.get('SELECT name FROM outlets WHERE id = ?', [query.outletId]);
+    filtersApplied.push(`المنفذ: ${outlet ? outlet.name : query.outletId}`);
+  }
+  if (query.startDate) {
+    sql += ` AND fle.created_at >= ?`;
+    params.push(query.startDate + 'T00:00:00');
+    filtersApplied.push(`من تاريخ: ${query.startDate}`);
+  }
+  if (query.endDate) {
+    sql += ` AND fle.created_at <= ?`;
+    params.push(query.endDate + 'T23:59:59');
+    filtersApplied.push(`إلى تاريخ: ${query.endDate}`);
+  }
+  sql += ` ORDER BY fle.created_at DESC, fle.id DESC`;
+
+  const rows = await db.all(sql, params);
+  const formattedRows = rows.map(r => {
+    let typeAr = r.entry_type;
+    if (r.entry_type === 'invoice_created') typeAr = 'إنشاء فاتورة مبيعات';
+    else if (r.entry_type === 'payment_collected') typeAr = 'تحصيل دفعة نقدية';
+    else if (r.entry_type === 'return_created') typeAr = 'تسجيل مرتجع مبيعات';
+    else if (r.entry_type === 'payment_reversed') typeAr = 'إلغاء/عكس دفعة';
+    else if (r.entry_type === 'invoice_cancelled') typeAr = 'إلغاء فاتورة مبيعات';
+
+    return {
+      ...r,
+      entry_type_ar: typeAr,
+      created_at: formatEgyptDateTime(r.created_at)
+    };
+  });
+
+  const configObj = {
+    title: 'كشف حساب الذمم والمعاملات المالية لمنفذ التوزيع',
+    filters: filtersApplied,
+    arabicHeaders: ['المعرف', 'اسم منفذ التوزيع', 'نوع العملية', 'نوع المستند', 'معرف المستند', 'حركة الخزينة/الكاش (ج.م)', 'حركة أرصدة الذمم (ج.م)', 'الملاحظات وبيان العملية', 'تاريخ المعاملة'],
+    englishKeys: ['id', 'outlet_name', 'entry_type_ar', 'reference_type', 'reference_id', 'cash_amount', 'receivable_amount', 'notes', 'created_at'],
+    rows: formattedRows,
+    summaryKeys: ['cash_amount', 'receivable_amount']
+  };
+
+  if (format === 'csv') {
+    return jsonToCsvArabic(configObj);
+  } else {
+    return await jsonToExcelArabic(configObj);
+  }
 }
 
 module.exports = {
@@ -524,5 +996,8 @@ module.exports = {
   exportInventory,
   exportReturns,
   exportShipments,
-  exportReport
+  exportReport,
+  exportInvoiceItems,
+  exportCourierSheet,
+  exportOutletStatement
 };

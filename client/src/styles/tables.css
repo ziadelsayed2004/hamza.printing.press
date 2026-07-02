@@ -73,3 +73,36 @@
   font-size: 1rem;
   margin-top: var(--space-3);
 }
+
+/* Responsive, dynamic scrollable table wrapper */
+.scrollable-table-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  position: relative;
+  scrollbar-width: thin;
+}
+
+.scrollable-table-container table {
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.scrollable-table-container th,
+.scrollable-table-container td {
+  white-space: nowrap;
+}
+
+.scrollable-table-container thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 2;
+}
+
+.main-table-paper {
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 24px;
+}

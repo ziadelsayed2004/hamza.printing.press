@@ -55,12 +55,32 @@ async function updateRolePermissions(roleId, permissionIds) {
   }
 }
 
+/**
+ * Update a role's name and description.
+ */
+async function updateRole(roleId, name, description) {
+  const sql = `UPDATE roles SET name = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+  const result = await db.run(sql, [name.trim(), description, roleId]);
+  return result.changes > 0;
+}
+
+/**
+ * Delete a role by ID.
+ */
+async function deleteRole(roleId) {
+  const sql = `DELETE FROM roles WHERE id = ?`;
+  const result = await db.run(sql, [roleId]);
+  return result.changes > 0;
+}
+
 module.exports = {
   createRole,
   assignPermissionToRole,
   getAllRoles,
   getAllPermissions,
   getRolePermissions,
-  updateRolePermissions
+  updateRolePermissions,
+  updateRole,
+  deleteRole
 };
 

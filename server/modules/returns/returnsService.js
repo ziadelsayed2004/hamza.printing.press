@@ -121,7 +121,17 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
       throw new Error(`Requested return quantity for product "${invoiceItem.product_title}" exceeds the remaining returnable quantity of ${maxReturnable}.`);
     }
 
-    const itemTotalPrice = qty * invoiceItem.unit_price;
+    // Get total value already refunded for this invoice item
+    const refundedValueRow = await db.get(`
+      SELECT COALESCE(SUM(ri.total_price), 0) as val
+      FROM return_items ri
+      JOIN returns r ON r.id = ri.return_id
+      WHERE ri.invoice_item_id = ? AND r.status != 'cancelled'
+    `, [invoiceItemId]);
+
+    const previouslyRefundedValue = refundedValueRow.val;
+    const maxRefundableValue = Math.max(0, invoiceItem.total_price - previouslyRefundedValue);
+    const itemTotalPrice = Math.min(maxRefundableValue, qty * invoiceItem.unit_price);
     totalReturnValue += itemTotalPrice;
 
     validatedItems.push({
@@ -195,6 +205,10 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
       reason.trim() || `مرتجع مبيعات رقم ${returnNumber}`,
       userId
     ]);
+
+    // Recalculate invoice shipping status since items were returned
+    const shipmentsService = require('../shipments/shipmentsService');
+    await shipmentsService.recalculateInvoiceShippingStatus(invoiceId, userId);
 
     await db.exec('COMMIT;');
 

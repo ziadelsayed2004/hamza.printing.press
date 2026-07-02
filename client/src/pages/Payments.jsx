@@ -108,6 +108,7 @@ export const Payments = () => {
   const [payFormNotes, setPayFormNotes] = useState('');
   const [payFormReceiptName, setPayFormReceiptName] = useState('');
   const [payFormReceiptData, setPayFormReceiptData] = useState('');
+  const [payFormSupplyStatus, setPayFormSupplyStatus] = useState('not_supplied');
   const [payFormSubmitting, setPayFormSubmitting] = useState(false);
   const [payFormMetrics, setPayFormMetrics] = useState(null);
   const [payFormMetricsLoading, setPayFormMetricsLoading] = useState(false);
@@ -233,8 +234,9 @@ export const Payments = () => {
     const params = new URLSearchParams(location.search);
     const invId = params.get('invoiceId');
     const act = params.get('action');
+    const amountHint = params.get('amount');
     if (invId && act === 'create') {
-      handleOpenAddPayment(invId);
+      handleOpenAddPayment(invId, amountHint || '');
     }
   }, [location.search]);
 
@@ -375,14 +377,15 @@ export const Payments = () => {
     }
   };
 
-  const handleOpenAddPayment = async (prefilledInvoiceId = '') => {
+  const handleOpenAddPayment = async (prefilledInvoiceId = '', amountHint = '') => {
     setPayFormOutletId('');
     setPayFormInvoiceId(prefilledInvoiceId ? String(prefilledInvoiceId) : '');
-    setPayFormAmount('');
+    setPayFormAmount(amountHint || '');
     setPayFormMethod('cash');
     setPayFormDate(new Date().toISOString().split('T')[0]);
     setPayFormReference('');
     setPayFormNotes('');
+    setPayFormSupplyStatus('not_supplied');
     setPayFormReceiptName('');
     setPayFormReceiptData('');
     setPayFormMetrics(null);
@@ -401,6 +404,9 @@ export const Payments = () => {
           const data = await apiClient.get(`/invoices?outletId=${invoiceDetails.outlet_id}&limit=100`);
           const activeInvoices = data.filter(inv => inv.payment_status !== 'cancelled' && inv.remaining_amount > 0);
           setOutletInvoices(activeInvoices);
+          if (!amountHint) {
+            setPayFormAmount(String(invoiceDetails.remaining_amount));
+          }
         }
       } catch (err) {
         console.error('Failed to prefill invoice details:', err);
@@ -448,15 +454,13 @@ export const Payments = () => {
         paymentDate: payFormDate || undefined,
         referenceNumber: payFormReference,
         notes: payFormNotes,
+        supplyStatus: payFormSupplyStatus,
         receiptName: payFormReceiptName || undefined,
         receiptData: payFormReceiptData || undefined
       });
       showToast('تم تسجيل الدفعة بنجاح وتحديث حالة الفاتورة.');
       setOpenAddPayment(false);
       fetchPayments();
-      if (hasPermission('payments.create')) {
-        fetchReviewQueue();
-      }
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تسجيل الدفعة.', 'error');
@@ -616,8 +620,9 @@ export const Payments = () => {
               </Grid>
               <Grid item xs={12} sm={4} md={3}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>منفذ البيع (Outlet)</InputLabel>
+                  <InputLabel id="filter-outlet-pay-select-label">منفذ البيع (Outlet)</InputLabel>
                   <Select
+                    labelId="filter-outlet-pay-select-label"
                     value={filterOutletId}
                     onChange={(e) => setFilterOutletId(e.target.value)}
                     label="منفذ البيع (Outlet)"
@@ -631,8 +636,9 @@ export const Payments = () => {
               </Grid>
               <Grid item xs={12} sm={4} md={2}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>حالة التوريد</InputLabel>
+                  <InputLabel id="filter-supply-pay-select-label">حالة التوريد</InputLabel>
                   <Select
+                    labelId="filter-supply-pay-select-label"
                     value={filterSupplyStatus}
                     onChange={(e) => setFilterSupplyStatus(e.target.value)}
                     label="حالة التوريد"
@@ -832,16 +838,20 @@ export const Payments = () => {
                     </TableCell>
                     <TableCell>
                       {row.receipt_stored_path ? (
-                        <Button 
-                          size="small" 
-                          variant="text" 
-                          startIcon={<ReceiptIcon fontSize="small" />}
-                          onClick={() => window.open(`/api/payments/${row.id}/receipt`, '_blank')}
-                        >
-                          عرض الإيصال
-                        </Button>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+                          <Chip label="تم رفع الإيصال" color="info" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
+                          <Button 
+                            size="small" 
+                            variant="text" 
+                            startIcon={<ReceiptIcon fontSize="small" />}
+                            onClick={() => window.open(`/api/payments/${row.id}/receipt`, '_blank')}
+                            sx={{ p: 0, minWidth: 0, fontSize: '0.75rem' }}
+                          >
+                            عرض الإيصال
+                          </Button>
+                        </Box>
                       ) : (
-                        <Typography variant="caption" color="textSecondary">لا يوجد</Typography>
+                        <Chip label="لا يوجد إيصال" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem', color: 'text.secondary', borderColor: 'divider' }} />
                       )}
                     </TableCell>
                     <TableCell align="center">
@@ -908,40 +918,6 @@ export const Payments = () => {
       </Paper>
     </>
 
-      {/* ================ REJECT RECEIPT DIALOG ================ */}
-      <Dialog
-        open={rejectDialogOpen}
-        onClose={() => !rejectSubmitting && setRejectDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle sx={{ fontWeight: 'bold', color: 'error.main' }}>
-          رفض إيصال دفع
-        </DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body2" sx={{ mb: 2 }}>
-            برجاء إدخال سبب رفض إيصال الدفع لإخطار المسؤول:
-          </Typography>
-          <TextField
-            fullWidth
-            required
-            label="سبب الرفض"
-            size="small"
-            multiline
-            rows={3}
-            value={rejectNotes}
-            onChange={(e) => setRejectNotes(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button variant="outlined" color="inherit" onClick={() => setRejectDialogOpen(false)} disabled={rejectSubmitting}>
-            إلغاء
-          </Button>
-          <Button variant="contained" color="error" onClick={handleSubmitReject} disabled={rejectSubmitting || !rejectNotes.trim()}>
-            {rejectSubmitting ? 'جاري الحفظ...' : 'تأكيد الرفض'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* ================ ADD PAYMENT Drawer ================ */}
       <EntityDrawer
@@ -963,8 +939,9 @@ export const Payments = () => {
           <FormSection title="تفاصيل الدفعة المالية">
             <Box sx={{ mb: 2 }}>
               <FormControl fullWidth size="small" required>
-                <InputLabel>منفذ البيع (العميل)</InputLabel>
+                <InputLabel id="form-outlet-pay-label">منفذ البيع (العميل)</InputLabel>
                 <Select
+                  labelId="form-outlet-pay-label"
                   value={payFormOutletId}
                   onChange={(e) => handlePayFormOutletChange(e.target.value)}
                   label="منفذ البيع (العميل)"
@@ -978,8 +955,9 @@ export const Payments = () => {
 
             <Box sx={{ mb: 2 }}>
               <FormControl fullWidth size="small" required disabled={!payFormOutletId || loadingInvoices}>
-                <InputLabel>الفاتورة المستهدفة</InputLabel>
+                <InputLabel id="form-target-invoice-label">الفاتورة المستهدفة</InputLabel>
                 <Select
+                  labelId="form-target-invoice-label"
                   value={payFormInvoiceId}
                   onChange={(e) => {
                     setPayFormInvoiceId(e.target.value);
@@ -1076,8 +1054,9 @@ export const Payments = () => {
 
               {/* Payment Method */}
               <FormControl fullWidth size="small" required>
-                <InputLabel>طريقة الدفع</InputLabel>
+                <InputLabel id="form-payment-method-select-label">طريقة الدفع</InputLabel>
                 <Select
+                  labelId="form-payment-method-select-label"
                   value={payFormMethod}
                   onChange={(e) => setPayFormMethod(e.target.value)}
                   label="طريقة الدفع"
@@ -1108,6 +1087,20 @@ export const Payments = () => {
                 value={payFormReference}
                 onChange={(e) => setPayFormReference(e.target.value)}
               />
+
+              {/* Supply Status */}
+              <FormControl fullWidth size="small" required>
+                <InputLabel id="form-pay-supply-status-label">حالة التوريد للخزينة</InputLabel>
+                <Select
+                  labelId="form-pay-supply-status-label"
+                  value={payFormSupplyStatus}
+                  onChange={(e) => setPayFormSupplyStatus(e.target.value)}
+                  label="حالة التوريد للخزينة"
+                >
+                  <MenuItem value="not_supplied">مدفوع فقط (غير مورد بعد)</MenuItem>
+                  <MenuItem value="supplied">مدفوع وتم توريده للخزينة</MenuItem>
+                </Select>
+              </FormControl>
             </FieldGrid>
 
             {/* Notes */}
@@ -1126,7 +1119,7 @@ export const Payments = () => {
             {/* Receipt Upload */}
             <Box sx={{ mt: 2 }}>
               <Typography variant="body2" color="textSecondary" sx={{ mb: 1, fontWeight: 'bold' }}>
-                رفع إيصال أو إثبات الدفع (اختياري - سيخضع للمراجعة والاعتماد)
+                رفع إيصال أو إثبات الدفع (اختياري - سيتم ربطه بالعملية فوراً)
               </Typography>
               <input
                 accept="image/*,application/pdf"
@@ -1309,7 +1302,6 @@ export const Payments = () => {
                       <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>المرجع</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>الإيصال</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>حالة المراجعة</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1332,15 +1324,6 @@ export const Payments = () => {
                             </Button>
                           ) : (
                             '-'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {p.receipt_status === 'pending_review' && <Chip label="قيد المراجعة" color="warning" size="small" />}
-                          {p.receipt_status === 'approved' && <Chip label="معتمد" color="success" size="small" />}
-                          {p.receipt_status === 'rejected' && (
-                            <Tooltip title={p.receipt_review_note || 'تم الرفض بدون ملاحظات'}>
-                              <Chip label="مرفوض" color="error" size="small" />
-                            </Tooltip>
                           )}
                         </TableCell>
                       </TableRow>

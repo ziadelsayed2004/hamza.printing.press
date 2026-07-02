@@ -171,7 +171,7 @@ export const Products = () => {
     setFormCode(product.code);
     setFormCategory(product.category || '');
     setFormStatus(product.status);
-    setFormStockPolicy(product.stock_policy || 'track');
+    setFormStockPolicy(product.stockPolicy || 'track');
     setFormAuthorId(product.authors?.[0]?.id || '');
     
     // Fetch prices to populate form
@@ -186,7 +186,7 @@ export const Products = () => {
       const prices = await apiClient.get(`/product-prices/product/${product.id}`);
       const priceMap = {};
       prices.forEach(p => {
-        priceMap[p.outlet_type_id] = p.price;
+        priceMap[p.outletTypeId] = p.price;
       });
       setFormPrices({
         ...initialPrices,
@@ -392,7 +392,7 @@ export const Products = () => {
                     )}
                   </TableCell>
                   <TableCell align="right">
-                    {p.stock_policy === 'track' ? 'تتبع الكميات' : 'تجاهل الجرد'}
+                    {p.stockPolicy === 'track' ? 'تتبع الكميات' : 'تجاهل الجرد'}
                   </TableCell>
                   <TableCell align="right">
                     <Chip
@@ -461,8 +461,8 @@ export const Products = () => {
                   </TableHead>
                   <TableBody>
                     {detailsPrices.map((pr) => (
-                      <TableRow key={pr.id}>
-                        <TableCell align="right">{pr.outlet_type_name}</TableCell>
+                      <TableRow key={pr.outletTypeId}>
+                        <TableCell align="right">{pr.outletTypeName}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
                           {formatCurrencyEGP(pr.price)}
                         </TableCell>

@@ -219,6 +219,32 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
   }
 });
 
+// 9. PUT /api/invoices/bulk/shipping-status - Bulk update shipping status
+router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.update'), auditLog('bulk_update_shipping_status', 'invoices'), async (req, res) => {
+  const { invoiceIds, shippingStatus } = req.body;
+  if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must be a non-empty array.' });
+  }
+  if (!shippingStatus) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Shipping status is required.' });
+  }
+
+  try {
+    const userId = req.session.user.id;
+    await invoicesService.bulkUpdateShippingStatus({
+      invoiceIds,
+      shippingStatus,
+      userId
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Shipping status updated successfully for selected invoices.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
 // 4. PUT /api/invoices/:id - Update an existing invoice
 router.put('/:id', requireAuth, checkPermission('invoices.update'), auditLog('update_invoice', 'invoices'), async (req, res) => {
   const invoiceId = parseInt(req.params.id, 10);

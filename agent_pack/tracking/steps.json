@@ -4,874 +4,1165 @@
     "slug": "repo_reality_audit",
     "title": "Repo Reality Audit",
     "status": "done",
-    "report": "agent_pack/reports/001_repo_reality_audit_REPORT.md"
+    "report": "agent_pack/reports/001_repo_reality_audit_REPORT.md",
+    "started_at": "2026-06-26T15:25:00+03:00",
+    "completed_at": "2026-06-26T15:27:00+03:00"
   },
   {
     "id": "002",
     "slug": "target_architecture_plan",
     "title": "Target Architecture Plan",
     "status": "done",
-    "report": "agent_pack/reports/002_target_architecture_plan_REPORT.md"
+    "report": "agent_pack/reports/002_target_architecture_plan_REPORT.md",
+    "started_at": "2026-06-26T15:30:00+03:00",
+    "completed_at": "2026-06-26T15:31:00+03:00"
   },
   {
     "id": "003",
     "slug": "repo_structure_bootstrap",
     "title": "Repo Structure Bootstrap",
     "status": "done",
-    "report": "agent_pack/reports/003_repo_structure_bootstrap_REPORT.md"
+    "report": "agent_pack/reports/003_repo_structure_bootstrap_REPORT.md",
+    "started_at": "2026-06-26T15:32:00+03:00",
+    "completed_at": "2026-06-26T15:34:00+03:00"
   },
   {
     "id": "004",
     "slug": "env_config_security_bootstrap",
     "title": "Env Config Security Bootstrap",
     "status": "done",
-    "report": "agent_pack/reports/004_env_config_security_bootstrap_REPORT.md"
+    "report": "agent_pack/reports/004_env_config_security_bootstrap_REPORT.md",
+    "started_at": "2026-06-26T15:34:00+03:00",
+    "completed_at": "2026-06-26T15:38:00+03:00"
   },
   {
     "id": "005",
     "slug": "fresh_database_schema",
     "title": "Fresh Database Schema",
     "status": "done",
-    "report": "agent_pack/reports/005_fresh_database_schema_REPORT.md"
+    "report": "agent_pack/reports/005_fresh_database_schema_REPORT.md",
+    "started_at": "2026-06-26T15:40:00+03:00",
+    "completed_at": "2026-06-26T15:41:00+03:00"
   },
   {
     "id": "006",
     "slug": "database_runner_and_seed",
     "title": "Database Runner And Seed",
     "status": "done",
-    "report": "agent_pack/reports/006_database_runner_and_seed_REPORT.md"
+    "report": "agent_pack/reports/006_database_runner_and_seed_REPORT.md",
+    "started_at": "2026-06-26T15:40:00+03:00",
+    "completed_at": "2026-06-26T15:42:00+03:00"
   },
   {
     "id": "007",
     "slug": "auth_users_roles_schema",
     "title": "Auth Users Roles Schema",
     "status": "done",
-    "report": "agent_pack/reports/007_auth_users_roles_schema_REPORT.md"
+    "report": "agent_pack/reports/007_auth_users_roles_schema_REPORT.md",
+    "started_at": "2026-06-26T15:42:00+03:00",
+    "completed_at": "2026-06-26T15:43:00+03:00"
   },
   {
     "id": "008",
     "slug": "advanced_rbac_middleware",
     "title": "Advanced Rbac Middleware",
     "status": "done",
-    "report": "agent_pack/reports/008_advanced_rbac_middleware_REPORT.md"
+    "report": "agent_pack/reports/008_advanced_rbac_middleware_REPORT.md",
+    "started_at": "2026-06-26T15:43:00+03:00",
+    "completed_at": "2026-06-26T15:44:00+03:00"
   },
   {
     "id": "009",
     "slug": "audit_log_system",
     "title": "Audit Log System",
     "status": "done",
-    "report": "agent_pack/reports/009_audit_log_system_REPORT.md"
+    "report": "agent_pack/reports/009_audit_log_system_REPORT.md",
+    "started_at": "2026-06-26T15:46:00+03:00",
+    "completed_at": "2026-06-26T15:47:00+03:00"
   },
   {
     "id": "010",
     "slug": "auth_api_and_sessions",
     "title": "Auth Api And Sessions",
     "status": "done",
-    "report": "agent_pack/reports/010_auth_api_and_sessions_REPORT.md"
+    "report": "agent_pack/reports/010_auth_api_and_sessions_REPORT.md",
+    "started_at": "2026-06-26T15:48:00+03:00",
+    "completed_at": "2026-06-26T15:49:00+03:00"
   },
   {
     "id": "011",
     "slug": "user_management_api",
     "title": "User Management Api",
     "status": "done",
-    "report": "agent_pack/reports/011_user_management_api_REPORT.md"
+    "report": "agent_pack/reports/011_user_management_api_REPORT.md",
+    "started_at": "2026-06-26T15:58:00+03:00",
+    "completed_at": "2026-06-26T15:59:00+03:00"
   },
   {
     "id": "012",
     "slug": "outlet_types_module",
     "title": "Outlet Types Module",
     "status": "done",
-    "report": "agent_pack/reports/012_outlet_types_module_REPORT.md"
+    "report": "agent_pack/reports/012_outlet_types_module_REPORT.md",
+    "started_at": "2026-06-26T16:00:00+03:00",
+    "completed_at": "2026-06-26T16:01:00+03:00"
   },
   {
     "id": "013",
     "slug": "outlets_module",
     "title": "Outlets Module",
     "status": "done",
-    "report": "agent_pack/reports/013_outlets_module_REPORT.md"
+    "report": "agent_pack/reports/013_outlets_module_REPORT.md",
+    "started_at": "2026-06-26T16:02:00+03:00",
+    "completed_at": "2026-06-26T16:06:00+03:00"
   },
   {
     "id": "014",
     "slug": "authors_module",
     "title": "Authors Module",
     "status": "done",
-    "report": "agent_pack/reports/014_authors_module_REPORT.md"
+    "report": "agent_pack/reports/014_authors_module_REPORT.md",
+    "started_at": "2026-06-26T16:06:00+03:00",
+    "completed_at": "2026-06-26T16:09:00+03:00"
   },
   {
     "id": "015",
     "slug": "products_books_module",
     "title": "Products Books Module",
     "status": "done",
-    "report": "agent_pack/reports/015_products_books_module_REPORT.md"
+    "report": "agent_pack/reports/015_products_books_module_REPORT.md",
+    "started_at": "2026-06-26T16:13:00+03:00",
+    "completed_at": "2026-06-26T16:16:00+03:00"
   },
   {
     "id": "016",
     "slug": "product_prices_by_outlet_type",
     "title": "Product Prices By Outlet Type",
     "status": "done",
-    "report": "agent_pack/reports/016_product_prices_by_outlet_type_REPORT.md"
+    "report": "agent_pack/reports/016_product_prices_by_outlet_type_REPORT.md",
+    "started_at": "2026-06-26T16:17:00+03:00",
+    "completed_at": "2026-06-26T16:20:00+03:00"
   },
   {
     "id": "017",
     "slug": "inventory_ledger_schema",
     "title": "Inventory Ledger Schema",
     "status": "done",
-    "report": "agent_pack/reports/017_inventory_ledger_schema_REPORT.md"
+    "report": "agent_pack/reports/017_inventory_ledger_schema_REPORT.md",
+    "started_at": "2026-06-26T16:20:00+03:00",
+    "completed_at": "2026-06-26T16:23:00+03:00"
   },
   {
     "id": "018",
     "slug": "inventory_receipts_logic",
     "title": "Inventory Receipts Logic",
     "status": "done",
-    "report": "agent_pack/reports/018_inventory_receipts_logic_REPORT.md"
+    "report": "agent_pack/reports/018_inventory_receipts_logic_REPORT.md",
+    "started_at": "2026-06-26T16:30:00+03:00",
+    "completed_at": "2026-06-26T17:22:00+03:00"
   },
   {
     "id": "019",
     "slug": "invoice_schema",
     "title": "Invoice Schema",
     "status": "done",
-    "report": "agent_pack/reports/019_invoice_schema_REPORT.md"
+    "report": "agent_pack/reports/019_invoice_schema_REPORT.md",
+    "started_at": "2026-06-26T17:25:00+03:00",
+    "completed_at": "2026-06-26T17:27:00+03:00"
   },
   {
     "id": "020",
     "slug": "invoice_create_pricing_stock",
     "title": "Invoice Create Pricing Stock",
     "status": "done",
-    "report": "agent_pack/reports/020_invoice_create_pricing_stock_REPORT.md"
+    "report": "agent_pack/reports/020_invoice_create_pricing_stock_REPORT.md",
+    "started_at": "2026-06-26T17:49:00+03:00",
+    "completed_at": "2026-06-26T17:52:00+03:00"
   },
   {
     "id": "021",
     "slug": "payments_cash_deferred_installments",
     "title": "Payments Cash Deferred Installments",
     "status": "done",
-    "report": "agent_pack/reports/021_payments_cash_deferred_installments_REPORT.md"
+    "report": "agent_pack/reports/021_payments_cash_deferred_installments_REPORT.md",
+    "started_at": "2026-06-26T17:53:00+03:00",
+    "completed_at": "2026-06-26T17:55:00+03:00"
   },
   {
     "id": "022",
     "slug": "payment_status_engine",
     "title": "Payment Status Engine",
     "status": "done",
-    "report": "agent_pack/reports/022_payment_status_engine_REPORT.md"
+    "report": "agent_pack/reports/022_payment_status_engine_REPORT.md",
+    "started_at": "2026-06-26T17:59:00+03:00",
+    "completed_at": "2026-06-26T18:01:00+03:00"
   },
   {
     "id": "023",
     "slug": "shipments_partial_model",
     "title": "Shipments Partial Model",
     "status": "done",
-    "report": "agent_pack/reports/023_shipments_partial_model_REPORT.md"
+    "report": "agent_pack/reports/023_shipments_partial_model_REPORT.md",
+    "started_at": "2026-06-26T18:07:00+03:00",
+    "completed_at": "2026-06-26T18:12:00+03:00"
   },
   {
     "id": "024",
     "slug": "filters_search_api",
     "title": "Filters Search Api",
     "status": "done",
-    "report": "agent_pack/reports/024_filters_search_api_REPORT.md"
+    "report": "agent_pack/reports/024_filters_search_api_REPORT.md",
+    "started_at": "2026-06-26T18:26:00+03:00",
+    "completed_at": "2026-06-26T18:31:00+03:00"
   },
   {
     "id": "025",
     "slug": "reports_api",
     "title": "Reports Api",
     "status": "done",
-    "report": "agent_pack/reports/025_reports_api_REPORT.md"
+    "report": "agent_pack/reports/025_reports_api_REPORT.md",
+    "started_at": "2026-06-26T18:34:00+03:00",
+    "completed_at": "2026-06-26T18:37:00+03:00"
   },
   {
     "id": "026",
     "slug": "excel_export_system",
     "title": "Excel Export System",
     "status": "done",
-    "report": "agent_pack/reports/026_excel_export_system_REPORT.md"
+    "report": "agent_pack/reports/026_excel_export_system_REPORT.md",
+    "started_at": "2026-06-26T18:40:00+03:00",
+    "completed_at": "2026-06-26T18:52:00+03:00"
   },
   {
     "id": "027",
     "slug": "excel_import_templates",
     "title": "Excel Import Templates",
     "status": "done",
-    "report": "agent_pack/reports/027_excel_import_templates_REPORT.md"
+    "report": "agent_pack/reports/027_excel_import_templates_REPORT.md",
+    "started_at": "2026-06-26T19:16:00+03:00",
+    "completed_at": "2026-06-26T19:23:00+03:00",
+    "note": "cancelled_obsolete_import_removed"
   },
   {
     "id": "028",
     "slug": "pdf_invoice_reports_cleanup",
     "title": "Pdf Invoice Reports Cleanup",
     "status": "done",
-    "report": "agent_pack/reports/028_pdf_invoice_reports_cleanup_REPORT.md"
+    "report": "agent_pack/reports/028_pdf_invoice_reports_cleanup_REPORT.md",
+    "started_at": "2026-06-26T19:25:00+03:00",
+    "completed_at": "2026-06-26T19:38:00+03:00"
   },
   {
     "id": "029",
     "slug": "react_vite_mui_bootstrap",
     "title": "React Vite Mui Bootstrap",
     "status": "done",
-    "report": "agent_pack/reports/029_react_vite_mui_bootstrap_REPORT.md"
+    "report": "agent_pack/reports/029_react_vite_mui_bootstrap_REPORT.md",
+    "started_at": "2026-06-26T19:41:00+03:00",
+    "completed_at": "2026-06-26T19:50:00+03:00"
   },
   {
     "id": "030",
     "slug": "mui_layout_navigation",
     "title": "Mui Layout Navigation",
     "status": "done",
-    "report": "agent_pack/reports/030_mui_layout_navigation_REPORT.md"
+    "report": "agent_pack/reports/030_mui_layout_navigation_REPORT.md",
+    "started_at": "2026-06-26T19:54:00+03:00",
+    "completed_at": "2026-06-26T20:00:00+03:00"
   },
   {
     "id": "031",
     "slug": "login_users_roles_ui",
     "title": "Login Users Roles Ui",
     "status": "done",
-    "report": "agent_pack/reports/031_login_users_roles_ui_REPORT.md"
+    "report": "agent_pack/reports/031_login_users_roles_ui_REPORT.md",
+    "started_at": "2026-06-26T19:57:00+03:00",
+    "completed_at": "2026-06-26T20:10:00+03:00"
   },
   {
     "id": "032",
     "slug": "products_authors_prices_ui",
     "title": "Products Authors Prices Ui",
     "status": "done",
-    "report": "agent_pack/reports/032_products_authors_prices_ui_REPORT.md"
+    "report": "agent_pack/reports/032_products_authors_prices_ui_REPORT.md",
+    "started_at": "2026-06-26T20:01:00+03:00",
+    "completed_at": "2026-06-26T20:15:00+03:00"
   },
   {
     "id": "033",
     "slug": "outlets_outlet_types_ui",
     "title": "Outlets Outlet Types Ui",
     "status": "done",
-    "report": "agent_pack/reports/033_outlets_outlet_types_ui_REPORT.md"
+    "report": "agent_pack/reports/033_outlets_outlet_types_ui_REPORT.md",
+    "started_at": "2026-06-26T20:04:00+03:00",
+    "completed_at": "2026-06-26T20:18:00+03:00"
   },
   {
     "id": "034",
     "slug": "invoices_ui",
     "title": "Invoices Ui",
     "status": "done",
-    "report": "agent_pack/reports/034_invoices_ui_REPORT.md"
+    "report": "agent_pack/reports/034_invoices_ui_REPORT.md",
+    "started_at": "2026-06-26T20:10:00+03:00",
+    "completed_at": "2026-06-26T20:22:00+03:00"
   },
   {
     "id": "035",
     "slug": "payments_installments_ui",
     "title": "Payments Installments Ui",
     "status": "done",
-    "report": "agent_pack/reports/035_payments_installments_ui_REPORT.md"
+    "report": "agent_pack/reports/035_payments_installments_ui_REPORT.md",
+    "started_at": "2026-06-26T20:13:00+03:00",
+    "completed_at": "2026-06-26T20:30:00+03:00",
+    "note": "cancelled_obsolete_installments_removed"
   },
   {
     "id": "036",
     "slug": "inventory_shipments_ui",
     "title": "Inventory Shipments Ui",
     "status": "done",
-    "report": "agent_pack/reports/036_inventory_shipments_ui_REPORT.md"
+    "report": "agent_pack/reports/036_inventory_shipments_ui_REPORT.md",
+    "started_at": "2026-06-26T20:24:00+03:00",
+    "completed_at": "2026-06-26T20:27:00+03:00"
   },
   {
     "id": "037",
     "slug": "reports_exports_ui",
     "title": "Reports Exports Ui",
     "status": "done",
-    "report": "agent_pack/reports/037_reports_exports_ui_REPORT.md"
+    "report": "agent_pack/reports/037_reports_exports_ui_REPORT.md",
+    "started_at": "2026-06-26T20:30:00+03:00",
+    "completed_at": "2026-06-26T20:33:00+03:00"
   },
   {
     "id": "038",
     "slug": "legacy_ui_deprecation",
     "title": "Legacy Ui Deprecation",
     "status": "done",
-    "report": "agent_pack/reports/038_legacy_ui_deprecation_REPORT.md"
+    "report": "agent_pack/reports/038_legacy_ui_deprecation_REPORT.md",
+    "started_at": "2026-06-26T20:34:00+03:00",
+    "completed_at": "2026-06-26T20:36:00+03:00"
   },
   {
     "id": "039",
     "slug": "test_suite_and_quality_gate",
     "title": "Test Suite And Quality Gate",
     "status": "done",
-    "report": "agent_pack/reports/039_test_suite_and_quality_gate_REPORT.md"
+    "report": "agent_pack/reports/039_test_suite_and_quality_gate_REPORT.md",
+    "started_at": "2026-06-26T20:38:00+03:00",
+    "completed_at": "2026-06-26T20:41:00+03:00"
   },
   {
     "id": "040",
     "slug": "directadmin_deploy_docs_final_verify",
     "title": "Directadmin Deploy Docs Final Verify",
     "status": "done",
-    "report": "agent_pack/reports/040_directadmin_deploy_docs_final_verify_CLOSED_SUPERSEDED.md"
+    "report": "agent_pack/reports/040_directadmin_deploy_docs_final_verify_CLOSED_SUPERSEDED.md",
+    "started_at": null,
+    "completed_at": null,
+    "blocked_reason": "Superseded by new client change request. Final DirectAdmin verification moved to 049 after DB reset, server flattening, and UI redesign.",
+    "note": "closed_superseded_archived_no_execution_required",
+    "closed_at": "2026-06-29T00:00:00+03:00",
+    "closed_reason": "Superseded final gate archived as closed. The active work continued through later steps and is now locked at step 150."
   },
   {
     "id": "041",
     "slug": "fresh_database_reset_super_admin_only",
     "title": "Fresh Database Reset + Super Admin Only",
     "status": "done",
-    "report": "agent_pack/reports/041_fresh_database_reset_super_admin_only_REPORT.md"
+    "report": "agent_pack/reports/041_fresh_database_reset_super_admin_only_REPORT.md",
+    "started_at": "2026-06-26T20:59:00+03:00",
+    "completed_at": "2026-06-26T21:10:00+03:00"
   },
   {
     "id": "042",
     "slug": "flatten_server_structure_no_src",
     "title": "Flatten Server Structure No src",
     "status": "done",
-    "report": "agent_pack/reports/042_flatten_server_structure_no_src_REPORT.md"
+    "report": "agent_pack/reports/042_flatten_server_structure_no_src_REPORT.md",
+    "started_at": "2026-06-26T21:10:00+03:00",
+    "completed_at": "2026-06-26T21:18:00+03:00"
   },
   {
     "id": "043",
     "slug": "remove_old_identity_visual_system",
     "title": "Remove Old Identity + Visual System",
     "status": "done",
-    "report": "agent_pack/reports/043_remove_old_identity_visual_system_REPORT.md"
+    "report": "agent_pack/reports/043_remove_old_identity_visual_system_REPORT.md",
+    "started_at": "2026-06-26T21:20:00+03:00",
+    "completed_at": "2026-06-26T21:23:00+03:00"
   },
   {
     "id": "044",
     "slug": "material_light_dark_theme_overhaul",
     "title": "Material Light/Dark Theme Overhaul",
     "status": "done",
-    "report": "agent_pack/reports/044_material_light_dark_theme_overhaul_REPORT.md"
+    "report": "agent_pack/reports/044_material_light_dark_theme_overhaul_REPORT.md",
+    "started_at": "2026-06-26T21:24:00+03:00",
+    "completed_at": "2026-06-26T21:27:00+03:00"
   },
   {
     "id": "045",
     "slug": "dashboard_redesign_executive_experience",
     "title": "Dashboard Redesign Executive Experience",
     "status": "done",
-    "report": "agent_pack/reports/045_dashboard_redesign_executive_experience_REPORT.md"
+    "report": "agent_pack/reports/045_dashboard_redesign_executive_experience_REPORT.md",
+    "started_at": "2026-06-26T21:28:00+03:00",
+    "completed_at": "2026-06-26T21:31:00+03:00"
   },
   {
     "id": "046",
     "slug": "navigation_information_architecture_polish",
     "title": "Navigation Information Architecture Polish",
     "status": "done",
-    "report": "agent_pack/reports/046_navigation_information_architecture_polish_REPORT.md"
+    "report": "agent_pack/reports/046_navigation_information_architecture_polish_REPORT.md",
+    "started_at": "2026-06-26T21:33:00+03:00",
+    "completed_at": "2026-06-26T21:35:00+03:00"
   },
   {
     "id": "047",
     "slug": "forms_tables_dialog_cleanup_ux",
     "title": "Forms Tables Dialog Cleanup UX",
     "status": "done",
-    "report": "agent_pack/reports/047_forms_tables_dialog_cleanup_ux_REPORT.md"
+    "report": "agent_pack/reports/047_forms_tables_dialog_cleanup_ux_REPORT.md",
+    "started_at": "2026-06-26T21:38:00+03:00",
+    "completed_at": "2026-06-26T21:48:00+03:00"
   },
   {
     "id": "048",
     "slug": "fresh_start_quality_smoke_verification",
     "title": "Fresh Start Quality Smoke Verification",
     "status": "done",
-    "report": "agent_pack/reports/048_fresh_start_quality_smoke_verification_REPORT.md"
+    "report": "agent_pack/reports/048_fresh_start_quality_smoke_verification_REPORT.md",
+    "started_at": "2026-06-26T21:57:00+03:00",
+    "completed_at": "2026-06-26T22:07:00+03:00"
   },
   {
     "id": "049",
     "slug": "directadmin_deploy_docs_final_verify",
     "title": "DirectAdmin Deploy Docs Final Verify",
     "status": "done",
-    "report": "agent_pack/reports/049_directadmin_deploy_docs_final_verify_REPORT.md"
+    "report": "agent_pack/reports/049_directadmin_deploy_docs_final_verify_REPORT.md",
+    "started_at": "2026-06-26T22:01:00+03:00",
+    "completed_at": "2026-06-26T22:11:00+03:00",
+    "note": "superseded_by_current_final"
   },
   {
     "id": "050",
     "slug": "login_session_sidebar_layout_hotfix",
     "title": "Login Session Hydration + Sidebar/Layout Hotfix",
     "status": "done",
-    "report": "agent_pack/reports/050_login_session_sidebar_layout_hotfix_REPORT.md"
+    "report": "agent_pack/reports/050_login_session_sidebar_layout_hotfix_REPORT.md",
+    "started_at": "2026-06-27T00:26:00+03:00",
+    "completed_at": "2026-06-27T00:33:00+03:00"
   },
   {
     "id": "051",
     "slug": "professional_material_shell_rebuild",
     "title": "Professional Material Shell Rebuild",
     "status": "done",
-    "report": "agent_pack/reports/051_professional_material_shell_rebuild_REPORT.md"
+    "report": "agent_pack/reports/051_professional_material_shell_rebuild_REPORT.md",
+    "started_at": "2026-06-27T00:48:00+03:00",
+    "completed_at": "2026-06-27T00:54:00+03:00"
   },
   {
     "id": "052",
     "slug": "egypt_currency_timezone_localization",
     "title": "Egypt Currency + Timezone Localization",
     "status": "done",
-    "report": "agent_pack/reports/052_egypt_currency_timezone_localization_REPORT.md"
+    "report": "agent_pack/reports/052_egypt_currency_timezone_localization_REPORT.md",
+    "started_at": "2026-06-27T00:52:00+03:00",
+    "completed_at": "2026-06-27T00:58:00+03:00"
   },
   {
     "id": "053",
     "slug": "finance_balance_engine_egp",
     "title": "Finance Balance Engine EGP",
     "status": "done",
-    "report": "agent_pack/reports/053_finance_balance_engine_egp_REPORT.md"
+    "report": "agent_pack/reports/053_finance_balance_engine_egp_REPORT.md",
+    "started_at": "2026-06-27T01:00:00+03:00",
+    "completed_at": "2026-06-27T01:14:00+03:00"
   },
   {
     "id": "054",
     "slug": "finance_balance_ui_dashboard_history",
     "title": "Finance Balance UI + Dashboard History",
     "status": "done",
-    "report": "agent_pack/reports/054_finance_balance_ui_dashboard_history_REPORT.md"
+    "report": "agent_pack/reports/054_finance_balance_ui_dashboard_history_REPORT.md",
+    "started_at": "2026-06-27T01:15:00+03:00",
+    "completed_at": "2026-06-27T01:30:00+03:00"
   },
   {
     "id": "055",
     "slug": "notifications_engine_legacy_plus",
     "title": "Notifications Engine Legacy Plus",
     "status": "done",
-    "report": "agent_pack/reports/055_notifications_engine_legacy_plus_REPORT.md"
+    "report": "agent_pack/reports/055_notifications_engine_legacy_plus_REPORT.md",
+    "started_at": "2026-06-27T01:31:00+03:00",
+    "completed_at": "2026-06-27T01:45:00+03:00"
   },
   {
     "id": "056",
     "slug": "notifications_ui_center_badges",
     "title": "Notifications UI Center + Badges",
     "status": "done",
-    "report": "agent_pack/reports/056_notifications_ui_center_badges_REPORT.md"
+    "report": "agent_pack/reports/056_notifications_ui_center_badges_REPORT.md",
+    "started_at": "2026-06-27T01:46:00+03:00",
+    "completed_at": "2026-06-27T02:00:00+03:00"
   },
   {
     "id": "057",
     "slug": "legacy_feature_parity_merge_audit",
     "title": "Legacy Feature Parity Merge Audit",
     "status": "done",
-    "report": "agent_pack/reports/057_legacy_feature_parity_merge_audit_REPORT.md"
+    "report": "agent_pack/reports/057_legacy_feature_parity_merge_audit_REPORT.md",
+    "started_at": "2026-06-27T02:01:00+03:00",
+    "completed_at": "2026-06-27T02:20:00+03:00"
   },
   {
     "id": "058",
     "slug": "dashboard_executive_ops_finance_perfection",
     "title": "Dashboard Executive Ops/Finance Perfection",
     "status": "done",
-    "report": "agent_pack/reports/058_dashboard_executive_ops_finance_perfection_REPORT.md"
+    "report": "agent_pack/reports/058_dashboard_executive_ops_finance_perfection_REPORT.md",
+    "started_at": "2026-06-27T02:21:00+03:00",
+    "completed_at": "2026-06-27T02:40:00+03:00"
   },
   {
     "id": "059",
     "slug": "business_flow_integrity_e2e",
     "title": "Business Flow Integrity E2E",
     "status": "done",
-    "report": "agent_pack/reports/059_business_flow_integrity_e2e_REPORT.md"
+    "report": "agent_pack/reports/059_business_flow_integrity_e2e_REPORT.md",
+    "started_at": "2026-06-27T02:41:00+03:00",
+    "completed_at": "2026-06-27T03:00:00+03:00"
   },
   {
     "id": "060",
     "slug": "final_visual_quality_deploy_gate",
     "title": "Final Visual Quality + Deploy Gate",
     "status": "done",
-    "report": "agent_pack/reports/060_final_visual_quality_deploy_gate_REPORT.md"
+    "report": "agent_pack/reports/060_final_visual_quality_deploy_gate_REPORT.md",
+    "started_at": "2026-06-27T02:19:00+03:00",
+    "completed_at": "2026-06-27T02:25:00+03:00",
+    "note": "superseded_by_current_final"
   },
   {
     "id": "061",
     "slug": "unified_design_system_contract",
     "title": "Unified Design System Contract",
     "status": "done",
-    "report": "agent_pack/reports/061_unified_design_system_contract_REPORT.md"
+    "report": "agent_pack/reports/061_unified_design_system_contract_REPORT.md",
+    "started_at": "2026-06-27T14:30:00+03:00",
+    "completed_at": "2026-06-27T14:46:00+03:00"
   },
   {
     "id": "062",
     "slug": "frontend_style_inventory_line_by_line",
     "title": "Frontend Style Inventory Line By Line",
     "status": "done",
-    "report": "agent_pack/reports/062_frontend_style_inventory_line_by_line_REPORT.md"
+    "report": "agent_pack/reports/062_frontend_style_inventory_line_by_line_REPORT.md",
+    "started_at": "2026-06-27T14:50:00+03:00",
+    "completed_at": "2026-06-27T15:00:00+03:00"
   },
   {
     "id": "063",
     "slug": "css_extraction_no_inline_styles",
     "title": "CSS Extraction No Inline Styles",
     "status": "done",
-    "report": "agent_pack/reports/063_css_extraction_no_inline_styles_REPORT.md"
+    "report": "agent_pack/reports/063_css_extraction_no_inline_styles_REPORT.md",
+    "started_at": "2026-06-27T15:02:00+03:00",
+    "completed_at": "2026-06-27T15:07:00+03:00"
   },
   {
     "id": "064",
     "slug": "rtl_layout_sidebar_no_refresh_fix",
     "title": "RTL Layout Sidebar No Refresh Fix",
     "status": "done",
-    "report": "agent_pack/reports/064_rtl_layout_sidebar_no_refresh_fix_REPORT.md"
+    "report": "agent_pack/reports/064_rtl_layout_sidebar_no_refresh_fix_REPORT.md",
+    "started_at": "2026-06-27T15:08:00+03:00",
+    "completed_at": "2026-06-27T15:11:00+03:00"
   },
   {
     "id": "065",
     "slug": "material_shell_light_dark_perfection",
     "title": "Material Shell Light Dark Perfection",
     "status": "done",
-    "report": "agent_pack/reports/065_material_shell_light_dark_perfection_REPORT.md"
+    "report": "agent_pack/reports/065_material_shell_light_dark_perfection_REPORT.md",
+    "started_at": "2026-06-27T15:12:00+03:00",
+    "completed_at": "2026-06-27T15:13:00+03:00"
   },
   {
     "id": "066",
     "slug": "single_ar_translation_json",
     "title": "Single Arabic Translation JSON",
     "status": "done",
-    "report": "agent_pack/reports/066_single_ar_translation_json_REPORT.md"
+    "report": "agent_pack/reports/066_single_ar_translation_json_REPORT.md",
+    "started_at": "2026-06-27T15:13:30+03:00",
+    "completed_at": "2026-06-27T15:16:00+03:00"
   },
   {
     "id": "067",
     "slug": "forms_fields_labels_spacing_overhaul",
     "title": "Forms Fields Labels Spacing Overhaul",
     "status": "done",
-    "report": "agent_pack/reports/067_forms_fields_labels_spacing_overhaul_REPORT.md"
+    "report": "agent_pack/reports/067_forms_fields_labels_spacing_overhaul_REPORT.md",
+    "started_at": "2026-06-27T15:16:30+03:00",
+    "completed_at": "2026-06-27T15:22:00+03:00"
   },
   {
     "id": "068",
     "slug": "entity_drawers_dialogs_professional_ui",
     "title": "Entity Drawers Dialogs Professional UI",
     "status": "done",
-    "report": "agent_pack/reports/068_entity_drawers_dialogs_professional_ui_REPORT.md"
+    "report": "agent_pack/reports/068_entity_drawers_dialogs_professional_ui_REPORT.md",
+    "started_at": "2026-06-27T15:22:30+03:00",
+    "completed_at": "2026-06-27T15:26:00+03:00"
   },
   {
     "id": "069",
     "slug": "dashboard_command_center_redesign",
     "title": "Dashboard Command Center Redesign",
     "status": "done",
-    "report": "agent_pack/reports/069_dashboard_command_center_redesign_REPORT.md"
+    "report": "agent_pack/reports/069_dashboard_command_center_redesign_REPORT.md",
+    "started_at": "2026-06-27T15:30:30+03:00",
+    "completed_at": "2026-06-27T15:34:00+03:00"
   },
   {
     "id": "070",
     "slug": "author_accounts_invoice_scope",
     "title": "Author Accounts Invoice Scope",
     "status": "done",
-    "report": "agent_pack/reports/070_author_accounts_invoice_scope_REPORT.md"
+    "report": "agent_pack/reports/070_author_accounts_invoice_scope_REPORT.md",
+    "started_at": "2026-06-27T15:35:00+03:00",
+    "completed_at": "2026-06-27T15:40:00+03:00"
   },
   {
     "id": "071",
     "slug": "outlet_accounts_invoice_scope",
     "title": "Outlet Accounts Invoice Scope",
     "status": "done",
-    "report": "agent_pack/reports/071_outlet_accounts_invoice_scope_REPORT.md"
+    "report": "agent_pack/reports/071_outlet_accounts_invoice_scope_REPORT.md",
+    "started_at": "2026-06-27T17:30:00+03:00",
+    "completed_at": "2026-06-27T17:48:00+03:00"
   },
   {
     "id": "072",
     "slug": "balance_finance_ledger_full_reconciliation",
     "title": "Balance Finance Ledger Full Reconciliation",
     "status": "done",
-    "report": "agent_pack/reports/072_balance_finance_ledger_full_reconciliation_REPORT.md"
+    "report": "agent_pack/reports/072_balance_finance_ledger_full_reconciliation_REPORT.md",
+    "started_at": "2026-06-27T17:54:00+03:00",
+    "completed_at": "2026-06-27T18:10:00+03:00"
   },
   {
     "id": "073",
     "slug": "payments_collection_supply_shipping_logic_integrity",
     "title": "Payments Collection Supply Shipping Logic Integrity",
     "status": "done",
-    "report": "agent_pack/reports/073_payments_collection_supply_shipping_logic_integrity_REPORT.md"
+    "report": "agent_pack/reports/073_payments_collection_supply_shipping_logic_integrity_REPORT.md",
+    "started_at": "2026-06-27T18:35:00+03:00",
+    "completed_at": "2026-06-27T18:52:00+03:00"
   },
   {
     "id": "074",
     "slug": "inventory_receipts_stock_ledger_integrity",
     "title": "Inventory Receipts Stock Ledger Integrity",
     "status": "done",
-    "report": "agent_pack/reports/074_inventory_receipts_stock_ledger_integrity_REPORT.md"
+    "report": "agent_pack/reports/074_inventory_receipts_stock_ledger_integrity_REPORT.md",
+    "started_at": "2026-06-27T19:10:00+03:00",
+    "completed_at": "2026-06-27T19:30:00+03:00"
   },
   {
     "id": "075",
     "slug": "notifications_legacy_plus_advanced_rules",
     "title": "Notifications Legacy Plus Advanced Rules",
     "status": "done",
-    "report": "agent_pack/reports/075_notifications_legacy_plus_advanced_rules_REPORT.md"
+    "report": "agent_pack/reports/075_notifications_legacy_plus_advanced_rules_REPORT.md",
+    "started_at": "2026-06-27T19:32:00+03:00",
+    "completed_at": "2026-06-27T19:45:00+03:00"
   },
   {
     "id": "076",
     "slug": "pricing_outlets_products_end_to_end",
     "title": "Pricing Outlets Products E2E",
     "status": "done",
-    "report": "agent_pack/reports/076_pricing_outlets_products_end_to_end_REPORT.md"
+    "report": "agent_pack/reports/076_pricing_outlets_products_end_to_end_REPORT.md",
+    "started_at": "2026-06-27T19:54:00+03:00",
+    "completed_at": "2026-06-27T20:00:00+03:00"
   },
   {
     "id": "077",
     "slug": "legacy_feature_parity_deep_audit",
     "title": "Legacy Feature Parity Deep Audit",
     "status": "done",
-    "report": "agent_pack/reports/077_legacy_feature_parity_deep_audit_REPORT.md"
+    "report": "agent_pack/reports/077_legacy_feature_parity_deep_audit_REPORT.md",
+    "started_at": "2026-06-27T20:05:00+03:00",
+    "completed_at": "2026-06-27T20:18:00+03:00"
   },
   {
     "id": "078",
     "slug": "style_quality_gate_script",
     "title": "Style Quality Gate Script",
     "status": "done",
-    "report": "agent_pack/reports/078_style_quality_gate_script_REPORT.md"
+    "report": "agent_pack/reports/078_style_quality_gate_script_REPORT.md",
+    "started_at": "2026-06-27T20:19:00+03:00",
+    "completed_at": "2026-06-27T20:30:00+03:00"
   },
   {
     "id": "079",
     "slug": "visual_regression_manual_qa_pack",
     "title": "Visual Regression Manual QA Pack",
     "status": "done",
-    "report": "agent_pack/reports/079_visual_regression_manual_qa_pack_REPORT.md"
+    "report": "agent_pack/reports/079_visual_regression_manual_qa_pack_REPORT.md",
+    "started_at": "2026-06-27T20:33:00+03:00",
+    "completed_at": "2026-06-27T20:38:00+03:00"
   },
   {
     "id": "080",
     "slug": "final_business_design_deploy_gate",
     "title": "Former Final Business Design Deploy Gate — Held Until Step 095",
     "status": "done",
-    "report": "agent_pack/reports/080_final_business_design_deploy_gate_CLOSED_SUPERSEDED.md"
+    "report": "agent_pack/reports/080_final_business_design_deploy_gate_CLOSED_SUPERSEDED.md",
+    "blocked_reason": "Final gate moved to 095 after new finance/import/style corrections.",
+    "note": "closed_superseded_archived_no_execution_required",
+    "closed_at": "2026-06-29T00:00:00+03:00",
+    "closed_reason": "Superseded final gate archived as closed. The active work continued through later steps and is now locked at step 150."
   },
   {
     "id": "081",
     "slug": "finance_supply_model_purge_installments",
     "title": "Finance Supply Model Purge Installments",
     "status": "done",
-    "report": "agent_pack/reports/081_finance_supply_model_purge_installments_REPORT.md"
+    "report": "agent_pack/reports/081_finance_supply_model_purge_installments_REPORT.md",
+    "started_at": "2026-06-27T20:42:00+03:00",
+    "completed_at": "2026-06-27T20:56:00+03:00"
   },
   {
     "id": "082",
     "slug": "remove_excel_import_pipeline_export_only",
     "title": "Remove Excel Import Pipeline Export Only",
     "status": "done",
-    "report": "agent_pack/reports/082_remove_excel_import_pipeline_export_only_REPORT.md"
+    "report": "agent_pack/reports/082_remove_excel_import_pipeline_export_only_REPORT.md",
+    "started_at": "2026-06-27T21:31:00+03:00",
+    "completed_at": "2026-06-27T21:36:00+03:00"
   },
   {
     "id": "083",
     "slug": "invoice_builder_owned_dynamic_workflow",
     "title": "Invoice Builder Owned Dynamic Workflow",
     "status": "done",
-    "report": "agent_pack/reports/083_invoice_builder_owned_dynamic_workflow_REPORT.md"
+    "report": "agent_pack/reports/083_invoice_builder_owned_dynamic_workflow_REPORT.md",
+    "started_at": "2026-06-27T21:38:00+03:00",
+    "completed_at": "2026-06-27T21:48:00+03:00"
   },
   {
     "id": "084",
     "slug": "partial_shipping_by_invoice_items",
     "title": "Partial Shipping By Invoice Items",
     "status": "done",
-    "report": "agent_pack/reports/084_partial_shipping_by_invoice_items_REPORT.md"
+    "report": "agent_pack/reports/084_partial_shipping_by_invoice_items_REPORT.md",
+    "started_at": "2026-06-27T21:59:00+03:00",
+    "completed_at": "2026-06-27T22:04:00+03:00"
   },
   {
     "id": "085",
     "slug": "supply_remittance_finance_ui",
     "title": "Supply Remittance Finance Ui",
     "status": "done",
-    "report": "agent_pack/reports/085_supply_remittance_finance_ui_REPORT.md"
+    "report": "agent_pack/reports/085_supply_remittance_finance_ui_REPORT.md",
+    "started_at": "2026-06-27T22:05:00+03:00",
+    "completed_at": "2026-06-27T22:12:00+03:00"
   },
   {
     "id": "086",
     "slug": "professional_exports_arabic_reports",
     "title": "Professional Exports Arabic Reports",
     "status": "done",
-    "report": "agent_pack/reports/086_professional_exports_arabic_reports_REPORT.md"
+    "report": "agent_pack/reports/086_professional_exports_arabic_reports_REPORT.md",
+    "started_at": "2026-06-27T22:19:00+03:00",
+    "completed_at": "2026-06-27T22:28:00+03:00"
   },
   {
     "id": "087",
     "slug": "css_cascade_no_important_refactor",
     "title": "Css Cascade No Important Refactor",
     "status": "done",
-    "report": "agent_pack/reports/087_css_cascade_no_important_refactor_REPORT.md"
+    "report": "agent_pack/reports/087_css_cascade_no_important_refactor_REPORT.md",
+    "started_at": "2026-06-27T22:29:00+03:00",
+    "completed_at": "2026-06-27T22:35:00+03:00"
   },
   {
     "id": "088",
     "slug": "mui_library_style_conflict_cleanup",
     "title": "Mui Library Style Conflict Cleanup",
     "status": "done",
-    "report": "agent_pack/reports/088_mui_library_style_conflict_cleanup_REPORT.md"
+    "report": "agent_pack/reports/088_mui_library_style_conflict_cleanup_REPORT.md",
+    "started_at": "2026-06-27T22:36:00+03:00",
+    "completed_at": "2026-06-27T22:41:00+03:00"
   },
   {
     "id": "089",
     "slug": "legacy_parity_enhancement_not_reduction",
     "title": "Legacy Parity Enhancement Not Reduction",
     "status": "done",
-    "report": "agent_pack/reports/089_legacy_parity_enhancement_not_reduction_REPORT.md"
+    "report": "agent_pack/reports/089_legacy_parity_enhancement_not_reduction_REPORT.md",
+    "started_at": "2026-06-27T22:42:00+03:00",
+    "completed_at": "2026-06-27T22:51:00+03:00"
   },
   {
     "id": "090",
     "slug": "end_to_end_business_chain_verification",
     "title": "End To End Business Chain Verification",
     "status": "done",
-    "report": "agent_pack/reports/090_end_to_end_business_chain_verification_REPORT.md"
+    "report": "agent_pack/reports/090_end_to_end_business_chain_verification_REPORT.md",
+    "started_at": "2026-06-27T22:53:00+03:00",
+    "completed_at": "2026-06-27T23:21:00+03:00"
   },
   {
     "id": "091",
     "slug": "permissions_for_finance_supply_shipping_exports",
     "title": "Permissions For Finance Supply Shipping Exports",
     "status": "done",
-    "report": "agent_pack/reports/091_permissions_for_finance_supply_shipping_exports_REPORT.md"
+    "report": "agent_pack/reports/091_permissions_for_finance_supply_shipping_exports_REPORT.md",
+    "started_at": "2026-06-27T23:29:00+03:00",
+    "completed_at": "2026-06-27T23:32:00+03:00"
   },
   {
     "id": "092",
     "slug": "reports_finance_statement_polish",
     "title": "Reports Finance Statement Polish",
     "status": "done",
-    "report": "agent_pack/reports/092_reports_finance_statement_polish_REPORT.md"
+    "report": "agent_pack/reports/092_reports_finance_statement_polish_REPORT.md",
+    "started_at": "2026-06-27T23:37:00+03:00",
+    "completed_at": "2026-06-27T23:50:00+03:00"
   },
   {
     "id": "093",
     "slug": "full_code_logic_dead_feature_audit",
     "title": "Full Code Logic Dead Feature Audit",
     "status": "done",
-    "report": "agent_pack/reports/093_full_code_logic_dead_feature_audit_REPORT.md"
+    "report": "agent_pack/reports/093_full_code_logic_dead_feature_audit_REPORT.md",
+    "started_at": "2026-06-27T23:51:00+03:00",
+    "completed_at": "2026-06-27T23:54:00+03:00"
   },
   {
     "id": "094",
     "slug": "visual_design_regression_cleanup_no_overrides",
     "title": "Visual Design Regression Cleanup No Overrides",
     "status": "done",
-    "report": "agent_pack/reports/094_visual_design_regression_cleanup_no_overrides_REPORT.md"
+    "report": "agent_pack/reports/094_visual_design_regression_cleanup_no_overrides_REPORT.md",
+    "started_at": "2026-06-27T23:55:00+03:00",
+    "completed_at": "2026-06-27T23:58:00+03:00"
   },
   {
     "id": "095",
     "slug": "final_unified_quality_gate",
     "title": "Final Unified Quality Gate",
     "status": "done",
-    "report": "agent_pack/reports/095_final_unified_quality_gate_REPORT.md"
+    "report": "agent_pack/reports/095_final_unified_quality_gate_REPORT.md",
+    "started_at": "2026-06-28T00:04:00+03:00",
+    "completed_at": "2026-06-28T00:07:00+03:00",
+    "note": "superseded_by_current_final"
   },
   {
     "id": "096",
     "slug": "agent_pack_unified_cleanup_and_obsolete_purge",
     "title": "Agent Pack Unified Cleanup + Obsolete Purge",
     "status": "done",
-    "report": "agent_pack/reports/096_agent_pack_unified_cleanup_and_obsolete_purge_REPORT.md"
+    "report": "agent_pack/reports/096_agent_pack_unified_cleanup_and_obsolete_purge_REPORT.md",
+    "started_at": "2026-06-28T00:32:00+03:00",
+    "completed_at": "2026-06-28T00:36:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "097",
     "slug": "latest_repo_deep_style_logic_audit",
     "title": "Latest Repo Deep Style + Logic Audit",
     "status": "done",
-    "report": "agent_pack/reports/097_latest_repo_deep_style_logic_audit_REPORT.md"
+    "report": "agent_pack/reports/097_latest_repo_deep_style_logic_audit_REPORT.md",
+    "started_at": "2026-06-28T00:37:00+03:00",
+    "completed_at": "2026-06-28T00:40:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "098",
     "slug": "material_css_architecture_no_important_rebuild",
     "title": "Material CSS Architecture No-Important Rebuild",
     "status": "done",
-    "report": "agent_pack/reports/098_material_css_architecture_no_important_rebuild_REPORT.md"
+    "report": "agent_pack/reports/098_material_css_architecture_no_important_rebuild_REPORT.md",
+    "started_at": "2026-06-28T00:41:00+03:00",
+    "completed_at": "2026-06-28T00:50:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "099",
     "slug": "rtl_fields_labels_alignment_global_fix",
     "title": "RTL Fields Labels Alignment Global Fix",
     "status": "done",
-    "report": "agent_pack/reports/099_rtl_fields_labels_alignment_global_fix_REPORT.md"
+    "report": "agent_pack/reports/099_rtl_fields_labels_alignment_global_fix_REPORT.md",
+    "started_at": "2026-06-28T00:54:00+03:00",
+    "completed_at": "2026-06-28T01:05:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "100",
     "slug": "sidebar_topbar_layout_final_fix",
     "title": "Sidebar + Topbar Layout Final Fix",
     "status": "done",
-    "report": "agent_pack/reports/100_sidebar_topbar_layout_final_fix_REPORT.md"
+    "report": "agent_pack/reports/100_sidebar_topbar_layout_final_fix_REPORT.md",
+    "started_at": "2026-06-28T01:38:00+03:00",
+    "completed_at": "2026-06-28T01:42:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "101",
     "slug": "side_drawers_dialogs_unified_for_all_entities",
     "title": "Unified Side Drawers/Dialogs for All Entities",
     "status": "done",
-    "report": "agent_pack/reports/101_side_drawers_dialogs_unified_for_all_entities_REPORT.md"
+    "report": "agent_pack/reports/101_side_drawers_dialogs_unified_for_all_entities_REPORT.md",
+    "started_at": "2026-06-28T01:43:59+03:00",
+    "completed_at": "2026-06-28T01:55:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "102",
     "slug": "invoice_builder_final_owned_workflow",
     "title": "Invoice Builder Final Owned Workflow",
     "status": "done",
-    "report": "agent_pack/reports/102_invoice_builder_final_owned_workflow_REPORT.md"
+    "report": "agent_pack/reports/102_invoice_builder_final_owned_workflow_REPORT.md",
+    "started_at": "2026-06-28T02:04:00+03:00",
+    "completed_at": "2026-06-28T02:12:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "103",
     "slug": "invoice_list_actions_pay_supply_ship_return",
     "title": "Invoice List Actions: Pay, Supply, Ship, Return",
     "status": "done",
-    "report": "agent_pack/reports/103_invoice_list_actions_pay_supply_ship_return_REPORT.md"
+    "report": "agent_pack/reports/103_invoice_list_actions_pay_supply_ship_return_REPORT.md",
+    "started_at": "2026-06-28T02:22:00+03:00",
+    "completed_at": "2026-06-28T02:30:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "104",
     "slug": "finance_model_final_no_installments_with_supply",
     "title": "Finance Model Final No-Installments With Supply",
     "status": "done",
-    "report": "agent_pack/reports/104_finance_model_final_no_installments_with_supply_REPORT.md"
+    "report": "agent_pack/reports/104_finance_model_final_no_installments_with_supply_REPORT.md",
+    "started_at": "2026-06-28T02:32:00+03:00",
+    "completed_at": "2026-06-28T02:48:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "105",
     "slug": "payment_supply_remittance_ui_and_permissions",
     "title": "Payment Supply/Remittance UI + Permissions",
     "status": "done",
-    "report": "agent_pack/reports/105_payment_supply_remittance_ui_and_permissions_REPORT.md"
+    "report": "agent_pack/reports/105_payment_supply_remittance_ui_and_permissions_REPORT.md",
+    "started_at": "2026-06-28T02:52:00+03:00",
+    "completed_at": "2026-06-28T03:04:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "106",
     "slug": "partial_shipping_invoice_items_final_logic",
     "title": "Partial Shipping by Invoice Items Final Logic",
     "status": "done",
-    "report": "agent_pack/reports/106_partial_shipping_invoice_items_final_logic_REPORT.md"
+    "report": "agent_pack/reports/106_partial_shipping_invoice_items_final_logic_REPORT.md",
+    "started_at": "2026-06-28T03:12:00+03:00",
+    "completed_at": "2026-06-28T03:18:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "107",
     "slug": "returns_refunds_outlet_return_balance",
     "title": "Returns/Refunds + Outlet Return Balance",
     "status": "done",
-    "report": "agent_pack/reports/107_returns_refunds_outlet_return_balance_REPORT.md"
+    "report": "agent_pack/reports/107_returns_refunds_outlet_return_balance_REPORT.md",
+    "started_at": "2026-06-28T03:22:00+03:00",
+    "completed_at": "2026-06-28T03:32:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "108",
     "slug": "outlet_balance_limit_engine_with_returns",
     "title": "Outlet Balance + Limit Engine With Returns",
     "status": "done",
-    "report": "agent_pack/reports/108_outlet_balance_limit_engine_with_returns_REPORT.md"
+    "report": "agent_pack/reports/108_outlet_balance_limit_engine_with_returns_REPORT.md",
+    "started_at": "2026-06-28T03:35:00+03:00",
+    "completed_at": "2026-06-28T04:45:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "109",
     "slug": "notifications_actions_legacy_plus_final",
     "title": "Notifications + Actions Legacy Plus Final",
     "status": "done",
-    "report": "agent_pack/reports/109_notifications_actions_legacy_plus_final_REPORT.md"
+    "report": "agent_pack/reports/109_notifications_actions_legacy_plus_final_REPORT.md",
+    "started_at": "2026-06-28T04:45:00+03:00",
+    "completed_at": "2026-06-28T05:30:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "110",
     "slug": "inventory_receipts_sales_returns_reconciliation",
     "title": "Inventory Receipts/Sales/Returns Reconciliation",
     "status": "done",
-    "report": "agent_pack/reports/110_inventory_receipts_sales_returns_reconciliation_REPORT.md"
+    "report": "agent_pack/reports/110_inventory_receipts_sales_returns_reconciliation_REPORT.md",
+    "started_at": "2026-06-28T05:35:00+03:00",
+    "completed_at": "2026-06-28T06:15:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "111",
     "slug": "professional_exports_only_final",
     "title": "Professional Exports Only Final",
     "status": "done",
-    "report": "agent_pack/reports/111_professional_exports_only_final_REPORT.md"
+    "report": "agent_pack/reports/111_professional_exports_only_final_REPORT.md",
+    "started_at": "2026-06-28T06:15:00+03:00",
+    "completed_at": "2026-06-28T07:10:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "112",
     "slug": "backend_dead_code_filter_and_tests_cleanup",
     "title": "Backend Dead Code Filter + Tests Cleanup",
     "status": "done",
-    "report": "agent_pack/reports/112_backend_dead_code_filter_and_tests_cleanup_REPORT.md"
+    "report": "agent_pack/reports/112_backend_dead_code_filter_and_tests_cleanup_REPORT.md",
+    "started_at": "2026-06-28T07:10:00+03:00",
+    "completed_at": "2026-06-28T07:55:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "113",
     "slug": "frontend_page_css_component_split_cleanup",
     "title": "Frontend Page CSS + Component Split Cleanup",
     "status": "done",
-    "report": "agent_pack/reports/113_frontend_page_css_component_split_cleanup_REPORT.md"
+    "report": "agent_pack/reports/113_frontend_page_css_component_split_cleanup_REPORT.md",
+    "started_at": "2026-06-28T07:55:00+03:00",
+    "completed_at": "2026-06-28T08:35:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "114",
     "slug": "author_and_outlet_accounts_scope_final",
     "title": "Author + Outlet Accounts Scope Final",
     "status": "done",
-    "report": "agent_pack/reports/114_author_and_outlet_accounts_scope_final_REPORT.md"
+    "report": "agent_pack/reports/114_author_and_outlet_accounts_scope_final_REPORT.md",
+    "started_at": "2026-06-28T08:35:00+03:00",
+    "completed_at": "2026-06-28T09:20:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "115",
     "slug": "reports_dashboard_finance_command_center_final",
     "title": "Reports/Dashboard Finance Command Center Final",
     "status": "done",
-    "report": "agent_pack/reports/115_reports_dashboard_finance_command_center_final_REPORT.md"
+    "report": "agent_pack/reports/115_reports_dashboard_finance_command_center_final_REPORT.md",
+    "started_at": "2026-06-28T09:20:00+03:00",
+    "completed_at": "2026-06-28T09:55:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "116",
     "slug": "end_to_end_business_flows_automation",
     "title": "End-to-End Business Flows Automation",
     "status": "done",
-    "report": "agent_pack/reports/116_end_to_end_business_flows_automation_REPORT.md"
+    "report": "agent_pack/reports/116_end_to_end_business_flows_automation_REPORT.md",
+    "started_at": "2026-06-28T09:55:00+03:00",
+    "completed_at": "2026-06-28T10:15:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "117",
     "slug": "visual_material_regression_full_app_pass",
     "title": "Visual Material Regression Full App Pass",
     "status": "done",
-    "report": "agent_pack/reports/117_visual_material_regression_full_app_pass_REPORT.md"
+    "report": "agent_pack/reports/117_visual_material_regression_full_app_pass_REPORT.md",
+    "started_at": "2026-06-28T10:15:00+03:00",
+    "completed_at": "2026-06-28T10:45:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "118",
     "slug": "security_rbac_audit_for_new_actions",
     "title": "Security/RBAC Audit for New Actions",
     "status": "done",
-    "report": "agent_pack/reports/118_security_rbac_audit_for_new_actions_REPORT.md"
+    "report": "agent_pack/reports/118_security_rbac_audit_for_new_actions_REPORT.md",
+    "started_at": "2026-06-28T12:55:00+03:00",
+    "completed_at": "2026-06-28T13:10:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "119",
     "slug": "final_codebase_cleanup_build_test_gate",
     "title": "Final Codebase Cleanup + Build/Test Gate",
     "status": "done",
-    "report": "agent_pack/reports/119_final_codebase_cleanup_build_test_gate_REPORT.md"
+    "report": "agent_pack/reports/119_final_codebase_cleanup_build_test_gate_REPORT.md",
+    "started_at": "2026-06-28T13:10:00+03:00",
+    "completed_at": "2026-06-28T13:20:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "120",
     "slug": "final_directadmin_delivery_smoke_gate",
     "title": "Final DirectAdmin Delivery Smoke Gate",
     "status": "done",
-    "report": "agent_pack/reports/120_final_directadmin_delivery_smoke_gate_REPORT.md"
+    "report": "agent_pack/reports/120_final_directadmin_delivery_smoke_gate_REPORT.md",
+    "started_at": "2026-06-28T13:20:00+03:00",
+    "completed_at": "2026-06-28T13:30:00+03:00",
+    "created_at": "2026-06-27T21:30:00+03:00"
   },
   {
     "id": "121",
     "slug": "business_terms_inventory_receipts_not_finance",
     "title": "Business Terms: Inventory Receipts Are Stock Only",
     "status": "done",
-    "report": "agent_pack/reports/121_business_terms_inventory_receipts_not_finance_REPORT.md"
+    "report": "agent_pack/reports/121_business_terms_inventory_receipts_not_finance_REPORT.md",
+    "started_at": "2026-06-28T14:15:00+03:00",
+    "completed_at": "2026-06-28T14:21:00+03:00",
+    "created_at": "2026-06-28T16:30:00+03:00"
   },
   {
     "id": "122",
     "slug": "inventory_receipts_stock_only_backend_ui_cleanup",
     "title": "Inventory Receipts Stock-Only Backend/UI Cleanup",
     "status": "done",
-    "report": "agent_pack/reports/122_inventory_receipts_stock_only_backend_ui_cleanup_REPORT.md"
+    "report": "agent_pack/reports/122_inventory_receipts_stock_only_backend_ui_cleanup_REPORT.md",
+    "started_at": "2026-06-28T15:46:00+03:00",
+    "completed_at": "2026-06-28T15:52:00+03:00",
+    "created_at": "2026-06-28T16:30:00+03:00"
   },
   {
     "id": "123",
     "slug": "notifications_home_actions_preview_ignore",
     "title": "Home Notifications Actions: Preview + Ignore",
     "status": "done",
-    "report": "agent_pack/reports/123_notifications_home_actions_preview_ignore_REPORT.md"
+    "report": "agent_pack/reports/123_notifications_home_actions_preview_ignore_REPORT.md",
+    "started_at": "2026-06-28T15:54:00+03:00",
+    "completed_at": "2026-06-28T16:40:00+03:00",
+    "created_at": "2026-06-28T16:30:00+03:00"
   },
   {
     "id": "124",
     "slug": "insufficient_stock_notification_routing_arabic",
     "title": "Insufficient Stock Notification Routing + Arabic Copy",
     "status": "done",
-    "report": "agent_pack/reports/124_insufficient_stock_notification_routing_arabic_REPORT.md"
+    "report": "agent_pack/reports/124_insufficient_stock_notification_routing_arabic_REPORT.md",
+    "started_at": "2026-06-28T16:51:00+03:00",
+    "completed_at": "2026-06-28T17:00:00+03:00",
+    "created_at": "2026-06-28T16:30:00+03:00"
   },
   {
     "id": "125",
     "slug": "payment_flow_select_outlet_invoice_receipt_upload",
     "title": "Payment Flow: Select Outlet + Invoice + Receipt Upload",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T17:05:00+03:00",
+    "completed_at": "2026-06-28T17:15:00+03:00",
     "report": "agent_pack/reports/125_payment_flow_select_outlet_invoice_receipt_upload_REPORT.md"
   },
   {
@@ -879,6 +1170,9 @@
     "slug": "payment_receipts_storage_review_queue",
     "title": "Payment Receipts Storage + Review Queue",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T17:20:00+03:00",
+    "completed_at": "2026-06-28T17:28:00+03:00",
     "report": "agent_pack/reports/126_payment_receipts_storage_review_queue_REPORT.md"
   },
   {
@@ -886,6 +1180,9 @@
     "slug": "partial_payment_receipts_history",
     "title": "Partial Payment Receipts + History",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T17:28:00+03:00",
+    "completed_at": "2026-06-28T17:31:00+03:00",
     "report": "agent_pack/reports/127_partial_payment_receipts_history_REPORT.md"
   },
   {
@@ -893,6 +1190,9 @@
     "slug": "payment_status_final_three_states_ui_backend",
     "title": "Final Payment Status: Deferred / Partial / Full",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T17:33:00+03:00",
+    "completed_at": "2026-06-28T17:38:00+03:00",
     "report": "agent_pack/reports/128_payment_status_final_three_states_ui_backend_REPORT.md"
   },
   {
@@ -900,6 +1200,9 @@
     "slug": "financial_collection_review_no_book_supply_conflict",
     "title": "Financial Collection Review Without Book-Supply Conflict",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T17:39:00+03:00",
+    "completed_at": "2026-06-28T17:42:00+03:00",
     "report": "agent_pack/reports/129_financial_collection_review_no_book_supply_conflict_REPORT.md"
   },
   {
@@ -907,6 +1210,9 @@
     "slug": "invoice_actions_pay_receipt_ship_return_from_list",
     "title": "Invoice List Actions: Pay/Receipt, Ship, Return",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T17:43:00+03:00",
+    "completed_at": "2026-06-28T17:46:00+03:00",
     "report": "agent_pack/reports/130_invoice_actions_pay_receipt_ship_return_from_list_REPORT.md"
   },
   {
@@ -914,6 +1220,9 @@
     "slug": "partial_shipping_item_quantity_picker_recheck",
     "title": "Partial Shipping Item Quantity Picker Recheck",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T18:15:00+03:00",
+    "completed_at": "2026-06-28T18:25:00+03:00",
     "report": "agent_pack/reports/131_partial_shipping_item_quantity_picker_recheck_REPORT.md"
   },
   {
@@ -921,6 +1230,9 @@
     "slug": "returns_flow_items_stock_outlet_credit",
     "title": "Returns Flow: Items, Stock, Outlet Credit",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:05:00+03:00",
+    "completed_at": "2026-06-28T20:10:00+03:00",
     "report": "agent_pack/reports/132_returns_flow_items_stock_outlet_credit_REPORT.md"
   },
   {
@@ -928,6 +1240,9 @@
     "slug": "outlet_statement_balance_with_returns_receipts",
     "title": "Outlet Statement: Balances, Returns, Receipts",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:10:00+03:00",
+    "completed_at": "2026-06-28T20:12:00+03:00",
     "report": "agent_pack/reports/133_outlet_statement_balance_with_returns_receipts_REPORT.md"
   },
   {
@@ -935,6 +1250,9 @@
     "slug": "dashboard_notifications_finance_inventory_rebuild",
     "title": "Dashboard Notifications + Finance/Inventory Rebuild",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:18:00+03:00",
+    "completed_at": "2026-06-28T20:22:00+03:00",
     "report": "agent_pack/reports/134_dashboard_notifications_finance_inventory_rebuild_REPORT.md"
   },
   {
@@ -942,6 +1260,9 @@
     "slug": "backend_cleanup_cancelled_terms_deadcode",
     "title": "Backend Cleanup: Cancelled Terms + Dead Code",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:24:00+03:00",
+    "completed_at": "2026-06-28T20:27:00+03:00",
     "report": "agent_pack/reports/135_backend_cleanup_cancelled_terms_deadcode_REPORT.md"
   },
   {
@@ -949,6 +1270,9 @@
     "slug": "frontend_payment_shipping_return_drawer_unification",
     "title": "Frontend Drawer Unification: Payment/Shipping/Return",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:28:00+03:00",
+    "completed_at": "2026-06-28T20:33:00+03:00",
     "report": "agent_pack/reports/136_frontend_payment_shipping_return_drawer_unification_REPORT.md"
   },
   {
@@ -956,6 +1280,9 @@
     "slug": "permissions_audit_for_receipts_returns_shipping",
     "title": "Permissions Audit for Receipts/Returns/Shipping",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:36:00+03:00",
+    "completed_at": "2026-06-28T20:39:00+03:00",
     "report": "agent_pack/reports/137_permissions_audit_for_receipts_returns_shipping_REPORT.md"
   },
   {
@@ -963,6 +1290,9 @@
     "slug": "professional_exports_receipts_returns_statements",
     "title": "Professional Exports: Receipts, Returns, Statements",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:39:00+03:00",
+    "completed_at": "2026-06-28T20:42:00+03:00",
     "report": "agent_pack/reports/138_professional_exports_receipts_returns_statements_REPORT.md"
   },
   {
@@ -970,6 +1300,9 @@
     "slug": "end_to_end_receipt_shipping_return_stock_verification",
     "title": "E2E Verification: Receipt + Shipping + Return + Stock",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:44:00+03:00",
+    "completed_at": "2026-06-28T20:49:00+03:00",
     "report": "agent_pack/reports/139_end_to_end_receipt_shipping_return_stock_verification_REPORT.md"
   },
   {
@@ -977,6 +1310,9 @@
     "slug": "final_style_logic_gate_no_regression",
     "title": "Final Style/Logic Gate No Regression",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:50:00+03:00",
+    "completed_at": "2026-06-28T20:52:00+03:00",
     "report": "agent_pack/reports/140_final_style_logic_gate_no_regression_REPORT.md"
   },
   {
@@ -984,6 +1320,9 @@
     "slug": "notification_preview_routes_smoke_matrix",
     "title": "Notification Preview Routes Smoke Matrix",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T20:55:00+03:00",
+    "completed_at": "2026-06-28T20:58:00+03:00",
     "report": "agent_pack/reports/141_notification_preview_routes_smoke_matrix_REPORT.md"
   },
   {
@@ -991,6 +1330,9 @@
     "slug": "payment_receipt_attachment_security_storage",
     "title": "Payment Receipt Attachment Security + Storage",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T21:03:00+03:00",
+    "completed_at": "2026-06-28T21:09:00+03:00",
     "report": "agent_pack/reports/142_payment_receipt_attachment_security_storage_REPORT.md"
   },
   {
@@ -998,6 +1340,9 @@
     "slug": "invoice_creation_payment_receipt_dynamic_ux",
     "title": "Invoice Creation + Payment Receipt Dynamic UX",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T21:31:00+03:00",
+    "completed_at": "2026-06-28T21:40:00+03:00",
     "report": "agent_pack/reports/143_invoice_creation_payment_receipt_dynamic_ux_REPORT.md"
   },
   {
@@ -1005,6 +1350,9 @@
     "slug": "legacy_parity_final_after_new_corrections",
     "title": "Legacy Parity Final After New Corrections",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T21:47:00+03:00",
+    "completed_at": "2026-06-28T21:53:00+03:00",
     "report": "agent_pack/reports/144_legacy_parity_final_after_new_corrections_REPORT.md"
   },
   {
@@ -1012,6 +1360,9 @@
     "slug": "final_directadmin_delivery_after_corrections",
     "title": "Final DirectAdmin Delivery After Corrections",
     "status": "done",
+    "created_at": "2026-06-28T16:30:00+03:00",
+    "started_at": "2026-06-28T21:55:00+03:00",
+    "completed_at": "2026-06-28T21:57:00+03:00",
     "report": "agent_pack/reports/145_final_directadmin_delivery_after_corrections_REPORT.md"
   },
   {
@@ -1019,6 +1370,9 @@
     "slug": "dashboard_roles_layout_export_cleanup",
     "title": "User Form Dropdowns, Placeholder Min-Widths, Layout Polish, & Dummy Data Purge",
     "status": "done",
+    "created_at": "2026-06-28T22:00:00+03:00",
+    "started_at": "2026-06-28T22:05:00+03:00",
+    "completed_at": "2026-06-28T22:20:00+03:00",
     "report": "agent_pack/reports/146_dashboard_roles_layout_export_cleanup_REPORT.md"
   },
   {
@@ -1026,6 +1380,9 @@
     "slug": "payment_receipt_instant_approval_filters_cost_cleanup",
     "title": "Payment Receipt Instant Approval, Redesigned Invoice Filters, Supply Cost Removal, and Full Returns Shortcut",
     "status": "done",
+    "created_at": "2026-06-28T23:20:00+03:00",
+    "started_at": "2026-06-28T23:22:00+03:00",
+    "completed_at": "2026-06-28T23:35:00+03:00",
     "report": "agent_pack/reports/147_payment_receipt_instant_approval_filters_cost_cleanup_REPORT.md"
   },
   {
@@ -1033,6 +1390,9 @@
     "slug": "invoice_filters_translation_terminology_cleanup",
     "title": "Invoice Filters Layout Restore, Stock Error Translation, Supply Alert MUI Styling, and Terminology Simplification",
     "status": "done",
+    "created_at": "2026-06-28T23:45:00+03:00",
+    "started_at": "2026-06-28T23:50:00+03:00",
+    "completed_at": "2026-06-29T00:15:00+03:00",
     "report": "agent_pack/reports/148_invoice_filters_translation_terminology_cleanup_REPORT.md"
   },
   {
@@ -1040,6 +1400,9 @@
     "slug": "drawer_exports_roles_permissions",
     "title": "Finance Drawer Conversion, Exports Redesign, Input Widths Fix, Breadcrumbs translation, and Roles Translation",
     "status": "done",
+    "created_at": "2026-06-29T12:00:00+03:00",
+    "started_at": "2026-06-29T12:10:00+03:00",
+    "completed_at": "2026-06-29T13:40:00+03:00",
     "report": "agent_pack/reports/149_drawer_exports_roles_permissions_REPORT.md"
   },
   {
@@ -1047,6 +1410,99 @@
     "slug": "rearrange_invoice_filters_date_notch_fix",
     "title": "Invoice Filters Grid Rearrangement, Customer Statement Full Width, Product/Invoice ID Dynamic Widths, and Date Notch Behavior Fix",
     "status": "done",
+    "created_at": "2026-06-29T18:57:00+03:00",
+    "started_at": "2026-06-29T18:58:00+03:00",
+    "completed_at": "2026-06-29T19:15:00+03:00",
     "report": "agent_pack/reports/150_rearrange_invoice_filters_date_notch_fix_REPORT.md"
+  },
+  {
+    "id": "151",
+    "slug": "post_locked_ultra_deep_repo_audit_scope_contract",
+    "title": "Post-Locked Ultra Deep Repo Audit + Scope Contract",
+    "status": "done",
+    "report": "agent_pack/reports/151_post_locked_ultra_deep_repo_audit_scope_contract_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T01:02:00+03:00",
+    "completed_at": "2026-07-01T01:06:00+03:00"
+  },
+  {
+    "id": "152",
+    "slug": "invoice_actions_handoff_to_payment_shipping_returns",
+    "title": "Invoice Actions Handoff to Payments, Shipping, and Returns",
+    "status": "done",
+    "report": "agent_pack/reports/152_invoice_actions_handoff_to_payment_shipping_returns_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T01:09:00+03:00",
+    "completed_at": "2026-07-01T01:13:00+03:00"
+  },
+  {
+    "id": "153",
+    "slug": "payments_receipts_upload_list_no_review_flow",
+    "title": "Payments + Receipt Upload/List Polish Without Review Flow",
+    "status": "done",
+    "report": "agent_pack/reports/153_payments_receipts_upload_list_no_review_flow_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T01:14:00+03:00",
+    "completed_at": "2026-07-01T01:20:00+03:00"
+  },
+  {
+    "id": "154",
+    "slug": "shipping_partial_items_delivery_workflow",
+    "title": "Shipping Partial Items + Shipped/Delivered Workflow",
+    "status": "done",
+    "report": "agent_pack/reports/154_shipping_partial_items_delivery_workflow_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T01:21:00+03:00",
+    "completed_at": "2026-07-01T01:26:00+03:00"
+  },
+  {
+    "id": "155",
+    "slug": "invoice_free_items_returns_recalculation_engine",
+    "title": "Invoice Free Items + Full/Partial Returns Recalculation Engine",
+    "status": "done",
+    "report": "agent_pack/reports/155_invoice_free_items_returns_recalculation_engine_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T01:33:00+03:00",
+    "completed_at": "2026-07-01T01:49:00+03:00"
+  },
+  {
+    "id": "156",
+    "slug": "professional_excel_exports_filter_center_courier_sheets",
+    "title": "Professional Excel Export Center + Courier Sheets",
+    "status": "done",
+    "report": "agent_pack/reports/156_professional_excel_exports_filter_center_courier_sheets_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T01:51:00+03:00",
+    "completed_at": "2026-07-01T02:01:00+03:00"
+  },
+  {
+    "id": "157",
+    "slug": "invoice_drawers_details_responsive_material_polish",
+    "title": "Invoice Drawers/Details Responsive Material UI Polish",
+    "status": "done",
+    "report": "agent_pack/reports/157_invoice_drawers_details_responsive_material_polish_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T14:30:00+03:00",
+    "completed_at": "2026-07-01T14:40:00+03:00"
+  },
+  {
+    "id": "158",
+    "slug": "custom_roles_permissions_advanced_rbac",
+    "title": "Custom Roles + Advanced Permissions RBAC",
+    "status": "done",
+    "report": "agent_pack/reports/158_custom_roles_permissions_advanced_rbac_REPORT.md",
+    "created_at": "2026-06-29T02:30:00+03:00",
+    "started_at": "2026-07-01T14:45:00+03:00",
+    "completed_at": "2026-07-01T15:00:00+03:00"
+  },
+  {
+    "id": "159",
+    "slug": "invoice_creation_receipt_upload_item_card_layout",
+    "title": "Invoice Creation Receipt Upload + Item Card Responsive Layout",
+    "status": "done",
+    "report": "agent_pack/reports/159_invoice_creation_receipt_upload_item_card_layout_REPORT.md",
+    "created_at": "2026-07-01T15:30:00+03:00",
+    "started_at": "2026-07-01T15:35:00+03:00",
+    "completed_at": "2026-07-01T15:48:00+03:00"
   }
 ]

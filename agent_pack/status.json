@@ -3,8 +3,8 @@
   "created_at": "2026-06-26 12:20",
   "mode": "unified_current_pack_no_versions",
   "deployment_strategy": "single_node_monolith_directadmin",
-  "total_steps": 150,
-  "current_step": null,
+  "total_steps": 159,
+  "current_step": "159",
   "steps": [
     {
       "id": "001",
@@ -1421,13 +1421,103 @@
       "started_at": "2026-06-29T18:58:00+03:00",
       "completed_at": "2026-06-29T19:15:00+03:00",
       "report": "agent_pack/reports/150_rearrange_invoice_filters_date_notch_fix_REPORT.md"
+    },
+    {
+      "id": "151",
+      "slug": "post_locked_ultra_deep_repo_audit_scope_contract",
+      "title": "Post-Locked Ultra Deep Repo Audit + Scope Contract",
+      "status": "done",
+      "report": "agent_pack/reports/151_post_locked_ultra_deep_repo_audit_scope_contract_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T01:02:00+03:00",
+      "completed_at": "2026-07-01T01:06:00+03:00"
+    },
+    {
+      "id": "152",
+      "slug": "invoice_actions_handoff_to_payment_shipping_returns",
+      "title": "Invoice Actions Handoff to Payments, Shipping, and Returns",
+      "status": "done",
+      "report": "agent_pack/reports/152_invoice_actions_handoff_to_payment_shipping_returns_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T01:09:00+03:00",
+      "completed_at": "2026-07-01T01:13:00+03:00"
+    },
+    {
+      "id": "153",
+      "slug": "payments_receipts_upload_list_no_review_flow",
+      "title": "Payments + Receipt Upload/List Polish Without Review Flow",
+      "status": "done",
+      "report": "agent_pack/reports/153_payments_receipts_upload_list_no_review_flow_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T01:14:00+03:00",
+      "completed_at": "2026-07-01T01:20:00+03:00"
+    },
+    {
+      "id": "154",
+      "slug": "shipping_partial_items_delivery_workflow",
+      "title": "Shipping Partial Items + Shipped/Delivered Workflow",
+      "status": "done",
+      "report": "agent_pack/reports/154_shipping_partial_items_delivery_workflow_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T01:21:00+03:00",
+      "completed_at": "2026-07-01T01:26:00+03:00"
+    },
+    {
+      "id": "155",
+      "slug": "invoice_free_items_returns_recalculation_engine",
+      "title": "Invoice Free Items + Full/Partial Returns Recalculation Engine",
+      "status": "done",
+      "report": "agent_pack/reports/155_invoice_free_items_returns_recalculation_engine_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T01:33:00+03:00",
+      "completed_at": "2026-07-01T01:49:00+03:00"
+    },
+    {
+      "id": "156",
+      "slug": "professional_excel_exports_filter_center_courier_sheets",
+      "title": "Professional Excel Export Center + Courier Sheets",
+      "status": "done",
+      "report": "agent_pack/reports/156_professional_excel_exports_filter_center_courier_sheets_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T01:51:00+03:00",
+      "completed_at": "2026-07-01T02:01:00+03:00"
+    },
+    {
+      "id": "157",
+      "slug": "invoice_drawers_details_responsive_material_polish",
+      "title": "Invoice Drawers/Details Responsive Material UI Polish",
+      "status": "done",
+      "report": "agent_pack/reports/157_invoice_drawers_details_responsive_material_polish_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T14:30:00+03:00",
+      "completed_at": "2026-07-01T14:40:00+03:00"
+    },
+    {
+      "id": "158",
+      "slug": "custom_roles_permissions_advanced_rbac",
+      "title": "Custom Roles + Advanced Permissions RBAC",
+      "status": "done",
+      "report": "agent_pack/reports/158_custom_roles_permissions_advanced_rbac_REPORT.md",
+      "created_at": "2026-06-29T02:30:00+03:00",
+      "started_at": "2026-07-01T14:45:00+03:00",
+      "completed_at": "2026-07-01T15:00:00+03:00"
+    },
+    {
+      "id": "159",
+      "slug": "invoice_creation_receipt_upload_item_card_layout",
+      "title": "Invoice Creation Receipt Upload + Item Card Responsive Layout",
+      "status": "done",
+      "report": "agent_pack/reports/159_invoice_creation_receipt_upload_item_card_layout_REPORT.md",
+      "created_at": "2026-07-01T15:30:00+03:00",
+      "started_at": "2026-07-01T15:35:00+03:00",
+      "completed_at": "2026-07-01T15:48:00+03:00"
     }
   ],
   "change_request": "post_completion_fix_login_layout_finance_balance_notifications_egp_egypt_time_professional_mui",
-  "last_updated_at": "2026-06-28T13:30:00+03:00",
+  "last_updated_at": "2026-07-01T15:37:00+03:00",
   "client_name": "مطبعة حمزة",
   "developer": "Ziad Elsayed CodzHub",
-  "updated_at": "2026-06-28T13:30:00+03:00",
+  "updated_at": "2026-07-01T15:37:00+03:00",
   "active_corrections": {
     "no_installments": true,
     "no_imports": true,
@@ -1436,12 +1526,21 @@
     "partial_shipping_by_invoice_items": true,
     "css_policy": "no_inline_no_important_abuse",
     "project_name": "مطبعة حمزة",
-    "developer_credit": "Ziad Elsayed CodzHub"
+    "developer_credit": "Ziad Elsayed CodzHub",
+    "payment_from_invoice_redirects_to_payments": true,
+    "receipts_upload_only_no_review_flow": true,
+    "shipping_status_flow_complete": true,
+    "free_invoice_items_supported": "completed_step_155",
+    "returns_recalculation_full_partial": "completed_step_155",
+    "professional_excel_exports": "completed_step_156",
+    "invoice_drawers_details_polish": "completed_step_157",
+    "custom_roles_creation": "completed_step_158",
+    "invoice_creation_layout_receipts": "completed_step_159"
   },
-  "last_updated": "2026-06-28T16:30:00+03:00",
-  "latest_change_request": "inventory receipts are stock-only; payment receipt upload/review; notification preview/ignore; partial shipping and returns finalization",
-  "pack_state": "locked_no_open_steps",
-  "locked_at": "2026-06-29T00:00:00+03:00",
-  "last_known_completed_step": "150",
-  "next_step_policy": "Do not execute or invent steps. If the user asks for a new change, add a new step after 150 and then run exactly one step."
+  "last_updated": "2026-07-01T15:48:00+03:00",
+  "latest_change_request": "invoice actions handoff to payments/shipping/returns; receipt upload no review flow; professional Excel exports with courier sheets; free invoice items; robust returns recalculation; custom roles and permissions; responsive Material UI polish",
+  "pack_state": "completed",
+  "locked_at": null,
+  "last_known_completed_step": "159",
+  "next_step_policy": "Execute the lowest-number open/pending step only, then update tracking, write a report, run verification, and stop."
 }

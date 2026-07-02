@@ -51,7 +51,8 @@ import {
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 
 const roleTranslations = {
@@ -96,15 +97,23 @@ const permissionTranslations = {
   'invoices.update': { name: 'تعديل الفواتير', desc: 'تعديل بيانات الفواتير المعلقة قبل الترحيل.' },
   'invoices.cancel': { name: 'إلغاء الفواتير', desc: 'إلغاء فواتير البيع الصادرة وعكس تأثيرها.' },
   'invoices.export': { name: 'تصدير فواتير', desc: 'تنزيل فواتير المبيعات كملفات خارجية.' },
+  'invoices.pay': { name: 'تسجيل سداد الفواتير', desc: 'سداد المقدار المالي للفواتير وإغلاقها كمدفوعة.' },
+  'invoices.ship': { name: 'شحن الفواتير وتوليد طرود', desc: 'إنشاء شحنات توصيل وربطها بأصناف ومواد الفواتير.' },
+  'invoices.return': { name: 'تسجيل مرتجعات الفواتير', desc: 'إنشاء وإثبات حركات مرتجعات جزئية أو كلية على الفاتورة.' },
   'payments.view': { name: 'عرض المقبوضات والدفعات', desc: 'استعراض سجل حركات المقبوضات وسداد الفواتير.' },
   'payments.create': { name: 'تسجيل مقبوضات جديدة', desc: 'إدخال دفعات سداد نقدية أو بنكية لصالح الفواتير.' },
   'payments.reverse': { name: 'إلغاء وعكس المقبوضات', desc: 'عكس حركة المقبوضات وإرجاع المديونية للفاتورة.' },
+  'payments.receipt.view': { name: 'عرض إيصالات السداد المرفوعة', desc: 'استعراض وعرض صور ملفات إيصالات السداد الورقية.' },
+  'payments.receipt.upload': { name: 'رفع إيصالات السداد', desc: 'تحميل وإرفاق إيصالات سداد الدفعات إلكترونياً.' },
   'inventory.view': { name: 'عرض المخزون وواردات الكتب', desc: 'استعراض رصيد المخازن الحالي وحركات الوارد.' },
   'inventory.receipts.create': { name: 'تسجيل واردات مخزن', desc: 'إدخال شحنات كتب واردة جديدة للمستودع لزيادة الرصيد.' },
   'inventory.adjustments.create': { name: 'تسجيل تسوية جرد', desc: 'إجراء تعديلات جردية يدوية للمخزون (عجز/زيادة).' },
   'shipments.view': { name: 'عرض الشحنات والطرود', desc: 'متابعة سجل شحن الفواتير وحالات التوصيل.' },
   'shipments.create': { name: 'إنشاء شحنات جديدة', desc: 'شحن الفواتير وتوليد طرود شحن للمنافذ.' },
-  'shipments.update': { name: 'تحديث حالة الشحن', desc: 'تحديث حالات الشحنات (شحن جزئي، تم التوصيل، إلخ).' },
+  'shipments.update': { name: 'تحديث حالة الشحن واللوجستيات', desc: 'تعديل بيانات وحالات الشحنات والموزعين.' },
+  'shipments.deliver': { name: 'تأكيد تسليم الشحنات والطرود', desc: 'تحديث وتأكيد وصول الشحنات للمنافذ كـ Delivered.' },
+  'returns.view': { name: 'عرض سجل المرتجعات المالي', desc: 'استعراض وتصفح حركات مرتجعات الكتب المعتمدة.' },
+  'returns.create': { name: 'تسجيل وإقرار مرتجعات كتب', desc: 'إثبات مرتجعات الكتب وإرجاعها للمخزن مع ضبط الحسابات.' },
   'reports.view': { name: 'عرض التقارير المتقدمة', desc: 'استعراض الرسوم البيانية والملخصات الإدارية المجمعة.' },
   'reports.export': { name: 'تصدير التقارير', desc: 'استخراج وتصدير التقارير بصيغ Excel أو PDF.' },
   'exports.run': { name: 'تصدير البيانات لقاعدة البيانات', desc: 'استخراج الجداول الأساسية كملفات CSV.' },
@@ -125,10 +134,59 @@ const permissionTranslations = {
 const translateRoleName = (name) => roleTranslations[name] || name;
 const translatePermission = (name) => permissionTranslations[name] || { name, desc: '' };
 
+const permissionGroupHeaderStyles = {
+  fontWeight: 'bold',
+  mb: 1,
+  borderBottom: '1px solid',
+  borderColor: 'divider',
+  pb: 0.5
+};
+
 export const Users = () => {
   const { user: currentUser, hasPermission } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   
+  const SYSTEM_ROLES = ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user', 'author', 'outlet', 'visitor', 'assistant'];
+
+  const permissionGroups = [
+    {
+      title: 'إدارة المستخدمين والأدوار',
+      perms: ['users.view', 'users.create', 'users.update', 'users.disable', 'users.archive', 'roles.manage', 'permissions.manage']
+    },
+    {
+      title: 'الفواتير والمبيعات',
+      perms: ['invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export', 'invoices.pay', 'invoices.ship', 'invoices.return']
+    },
+    {
+      title: 'المدفوعات والمقبوضات',
+      perms: ['payments.view', 'payments.create', 'payments.reverse', 'payments.receipt.view', 'payments.receipt.upload', 'payments.mark_supplied', 'payments.supply_batch']
+    },
+    {
+      title: 'الشحن والخدمات اللوجستية',
+      perms: ['shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver']
+    },
+    {
+      title: 'المرتجعات',
+      perms: ['returns.view', 'returns.create']
+    },
+    {
+      title: 'المخازن والمخزون',
+      perms: ['inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create']
+    },
+    {
+      title: 'البيانات الأساسية (الكتب، المؤلفين، المنافذ)',
+      perms: ['products.view', 'products.create', 'products.update', 'products.delete', 'product_prices.view', 'product_prices.update', 'outlet_types.view', 'outlet_types.manage', 'outlets.view', 'outlets.create', 'outlets.update', 'outlets.disable', 'authors.view', 'authors.create', 'authors.update']
+    },
+    {
+      title: 'التقارير والتصدير والتدقيق والمستندات',
+      perms: ['reports.view', 'reports.export', 'exports.run', 'audit.view']
+    },
+    {
+      title: 'إعدادات النظام والنسخ الاحتياطي',
+      perms: ['settings.update', 'backup.create', 'backup.restore']
+    }
+  ];
+
   // Loading & Notification state
   const [loading, setLoading] = useState(true);
   const [toastMsg, setToastMsg] = useState('');
@@ -161,9 +219,14 @@ export const Users = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [userIdToArchive, setUserIdToArchive] = useState(null);
 
-  // Permissions Matrix state
-  const [selectedMatrixRoleId, setSelectedMatrixRoleId] = useState('');
-  const [matrixPermissions, setMatrixPermissions] = useState([]); // array of permission IDs
+  // Role Designer state
+  const [openRoleDrawer, setOpenRoleDrawer] = useState(false);
+  const [roleModalMode, setRoleModalMode] = useState('create'); // 'create' or 'edit'
+  const [roleFormId, setRoleFormId] = useState(null);
+  const [roleFormName, setRoleFormName] = useState('');
+  const [roleFormDescription, setRoleFormDescription] = useState('');
+  const [roleFormPermissions, setRoleFormPermissions] = useState([]); // array of permission IDs
+  const [permissionSearch, setPermissionSearch] = useState('');
 
   // Fetch initial data
   const fetchData = async () => {
@@ -180,13 +243,6 @@ export const Users = () => {
         
         const permsData = await apiClient.get('/users/permissions');
         setPermissionsList(permsData);
-
-        if (rolesData.length > 0 && !selectedMatrixRoleId) {
-          setSelectedMatrixRoleId(rolesData[0].id);
-          // Set checked permissions for the first role
-          const rolePerms = permsData.filter(p => rolesData[0].permissions.includes(p.name)).map(p => p.id);
-          setMatrixPermissions(rolePerms);
-        }
       }
     } catch (err) {
       console.error(err);
@@ -208,6 +264,10 @@ export const Users = () => {
   // User creation/editing handler
   const handleUserSubmit = async (e) => {
     e.preventDefault();
+    if (formRoles.length === 0) {
+      showToast('يجب اختيار دور وظيفي واحد على الأقل للمستخدم.', 'error');
+      return;
+    }
     if (modalMode === 'create' && (!formUsername || !formPassword || !formFullName)) {
       showToast('يرجى تعبئة كافة الحقول المطلوبة.', 'error');
       return;
@@ -293,41 +353,82 @@ export const Users = () => {
     }
   };
 
-  // Role permissions matrix selection
-  const handleMatrixRoleChange = (roleId) => {
-    setSelectedMatrixRoleId(roleId);
-    const targetRole = rolesList.find(r => r.id === roleId);
-    if (targetRole) {
-      const activePermIds = permissionsList
-        .filter(p => targetRole.permissions.includes(p.name))
-        .map(p => p.id);
-      setMatrixPermissions(activePermIds);
-    }
+  // Role designer creation opener
+  const handleOpenCreateRole = () => {
+    setRoleModalMode('create');
+    setRoleFormId(null);
+    setRoleFormName('');
+    setRoleFormDescription('');
+    setRoleFormPermissions([]);
+    setPermissionSearch('');
+    setOpenRoleDrawer(true);
   };
 
-  // Toggle permission checkbox
-  const handleToggleMatrixPermission = (permId) => {
-    if (matrixPermissions.includes(permId)) {
-      setMatrixPermissions(matrixPermissions.filter(id => id !== permId));
-    } else {
-      setMatrixPermissions([...matrixPermissions, permId]);
-    }
+  // Role designer edit opener
+  const handleOpenEditRole = (role) => {
+    setRoleModalMode('edit');
+    setRoleFormId(role.id);
+    setRoleFormName(role.name);
+    setRoleFormDescription(role.description || '');
+    setPermissionSearch('');
+    
+    // Map permission names to IDs
+    const activePermIds = permissionsList
+      .filter(p => role.permissions.includes(p.name))
+      .map(p => p.id);
+    setRoleFormPermissions(activePermIds);
+    setOpenRoleDrawer(true);
   };
 
-  // Save role permissions changes
-  const handleSaveMatrixPermissions = async () => {
+  // Submit role form handler
+  const handleRoleFormSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!roleFormName) {
+      showToast('اسم الدور الوظيفي مطلوب.', 'error');
+      return;
+    }
+
     try {
-      await apiClient.post(`/users/roles/${selectedMatrixRoleId}/permissions`, {
-        permissionIds: matrixPermissions
-      });
-      showToast('تم حفظ الصلاحيات للأدوار بنجاح.');
-      
-      // Reload roles definitions
-      const rolesData = await apiClient.get('/users/roles');
-      setRolesList(rolesData);
+      if (roleModalMode === 'create') {
+        await apiClient.post('/users/roles', {
+          name: roleFormName.trim(),
+          description: roleFormDescription,
+          permissionIds: roleFormPermissions
+        });
+        showToast('تم إنشاء الدور الوظيفي بنجاح.');
+      } else {
+        if (SYSTEM_ROLES.includes(roleFormName)) {
+          // If system role, only permissions are modifiable
+          await apiClient.post(`/users/roles/${roleFormId}/permissions`, {
+            permissionIds: roleFormPermissions
+          });
+        } else {
+          await apiClient.put(`/users/roles/${roleFormId}`, {
+            name: roleFormName.trim(),
+            description: roleFormDescription,
+            permissionIds: roleFormPermissions
+          });
+        }
+        showToast('تم تحديث الدور الوظيفي بنجاح.');
+      }
+      setOpenRoleDrawer(false);
+      fetchData();
     } catch (err) {
       console.error(err);
-      showToast(err.message || 'فشل حفظ الصلاحيات.', 'error');
+      showToast(err.message || 'فشل حفظ الدور الوظيفي.', 'error');
+    }
+  };
+
+  // Safe delete role handler
+  const handleDeleteRole = async (roleId) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا الدور الوظيفي نهائياً؟')) return;
+    try {
+      await apiClient.delete(`/users/roles/${roleId}`);
+      showToast('تم حذف الدور الوظيفي بنجاح.');
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل حذف الدور الوظيفي.', 'error');
     }
   };
 
@@ -486,69 +587,71 @@ export const Users = () => {
         </Box>
       )}
 
-      {/* Tab 1: Permissions Matrix */}
+      {/* Tab 1: Permissions Matrix (Role Designer) */}
       {tabValue === 1 && hasPermission('roles.manage') && (
         <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel id="select-role-label">اختر الدور الوظيفي</InputLabel>
-              <Select
-                labelId="select-role-label"
-                value={selectedMatrixRoleId}
-                label="اختر الدور الوظيفي"
-                onChange={(e) => handleMatrixRoleChange(e.target.value)}
-              >
-                {rolesList.map((r) => (
-                  <MenuItem key={r.id} value={r.id}>
-                    {translateRoleName(r.name)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+              الأدوار الوظيفية المسجلة وصلاحياتها بالخلفية
+            </Typography>
             <Button
               variant="contained"
               color="secondary"
-              startIcon={<SaveIcon />}
-              onClick={handleSaveMatrixPermissions}
+              startIcon={<AddIcon />}
+              onClick={handleOpenCreateRole}
               sx={{ fontWeight: 'bold' }}
             >
-              حفظ تغييرات الصلاحيات
+              إنشاء دور وظيفي جديد
             </Button>
           </Box>
 
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>
-            حدد الصلاحيات الممنوحة لهذا الدور:
-          </Typography>
-
-          <Grid container spacing={2}>
-            {permissionsList.map((p) => {
-              const isChecked = matrixPermissions.includes(p.id);
-              return (
-                <Grid item xs={12} sm={6} md={4} key={p.id}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={isChecked}
-                        onChange={() => handleToggleMatrixPermission(p.id)}
-                      />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {translatePermission(p.name).name}
-                        </Typography>
-                        {(translatePermission(p.name).desc || p.description) && (
-                          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                            {translatePermission(p.name).desc || p.description}
-                          </Typography>
-                        )}
-                      </Box>
-                    }
-                  />
-                </Grid>
-              );
-            })}
-          </Grid>
+          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+            <Table size="small">
+              <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+                <TableRow>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم الدور الوظيفي</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوصف</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>نوع الدور</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>عدد الصلاحيات الممنوحة</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {rolesList.map((r) => {
+                  const isSystem = SYSTEM_ROLES.includes(r.name);
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>{translateRoleName(r.name)}</TableCell>
+                      <TableCell align="right">{r.description || 'لا يوجد وصف متاح لهذا الدور'}</TableCell>
+                      <TableCell align="right">
+                        <Chip
+                          label={isSystem ? 'أساسي (System)' : 'مخصص (Custom)'}
+                          color={isSystem ? 'default' : 'secondary'}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Chip label={r.permissions?.length || 0} size="small" color="primary" />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                          <IconButton color="primary" onClick={() => handleOpenEditRole(r)} title="تعديل وصلاحيات">
+                            <EditIcon />
+                          </IconButton>
+                          {!isSystem && (
+                            <IconButton color="error" onClick={() => handleDeleteRole(r.id)} title="حذف">
+                              <DeleteIcon />
+                            </IconButton>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Paper>
       )}
 
@@ -664,6 +767,174 @@ export const Users = () => {
         severity="error"
         confirmText="أرشفة"
       />
+
+      {/* Role Editor Drawer */}
+      <EntityDrawer
+        open={openRoleDrawer}
+        onClose={() => setOpenRoleDrawer(false)}
+        title={roleModalMode === 'create' ? 'إنشاء دور وظيفي جديد' : `تعديل وصلاحيات الدور: ${translateRoleName(roleFormName)}`}
+        size="large"
+        actions={
+          <>
+            <Button onClick={() => setOpenRoleDrawer(false)} variant="outlined">إلغاء</Button>
+            <Button onClick={handleRoleFormSubmit} variant="contained" color="secondary">حفظ التغييرات</Button>
+          </>
+        }
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <FormSection title="بيانات الدور الوظيفي">
+            <FieldGrid columns={2}>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label="اسم الدور بالإنجليزية"
+                value={roleFormName}
+                onChange={(e) => setRoleFormName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                disabled={roleModalMode === 'edit' && SYSTEM_ROLES.includes(roleFormName)}
+                inputProps={{ className: 'ltr-value' }}
+                helperText="مثال: custom_auditor (أحرف صغيرة وأرقام وشرطة سفلية)"
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="وصف الدور الوظيفي"
+                value={roleFormDescription}
+                onChange={(e) => setRoleFormDescription(e.target.value)}
+                disabled={roleModalMode === 'edit' && SYSTEM_ROLES.includes(roleFormName) && roleFormName === 'super_admin'}
+              />
+            </FieldGrid>
+          </FormSection>
+
+          <Divider />
+
+          <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                مصفوفة الصلاحيات التفصيلية
+              </Typography>
+              <TextField
+                size="small"
+                placeholder="البحث في الصلاحيات..."
+                value={permissionSearch}
+                onChange={(e) => setPermissionSearch(e.target.value)}
+                sx={{ width: 250 }}
+              />
+            </Box>
+
+            {permissionGroups.map((group, gIdx) => {
+              const filteredGroupPerms = permissionsList.filter(p => {
+                if (!group.perms.includes(p.name)) return false;
+                const translation = translatePermission(p.name);
+                const labelText = (translation.name + ' ' + (translation.desc || p.description || '') + ' ' + p.name).toLowerCase();
+                return labelText.includes(permissionSearch.toLowerCase());
+              });
+
+              if (filteredGroupPerms.length === 0) return null;
+
+              return (
+                <Box key={gIdx} sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="primary.main" sx={permissionGroupHeaderStyles}>
+                    {group.title}
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {filteredGroupPerms.map((p) => {
+                      const isChecked = roleFormPermissions.includes(p.id);
+                      const isSuperAdminLock = roleFormName === 'super_admin';
+                      return (
+                        <Grid item xs={12} sm={6} md={4} key={p.id}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={isChecked || isSuperAdminLock}
+                                onChange={() => {
+                                  if (isSuperAdminLock) return;
+                                  if (roleFormPermissions.includes(p.id)) {
+                                    setRoleFormPermissions(roleFormPermissions.filter(id => id !== p.id));
+                                  } else {
+                                    setRoleFormPermissions([...roleFormPermissions, p.id]);
+                                  }
+                                }}
+                                disabled={isSuperAdminLock}
+                              />
+                            }
+                            label={
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {translatePermission(p.name).name}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.75rem', lineHeight: 1.2 }}>
+                                  {translatePermission(p.name).desc || p.description}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
+              );
+            })}
+
+            {(() => {
+              const allGroupedPerms = new Set(permissionGroups.flatMap(g => g.perms));
+              const uncategorizedPerms = permissionsList.filter(p => {
+                if (allGroupedPerms.has(p.name)) return false;
+                const translation = translatePermission(p.name);
+                const labelText = (translation.name + ' ' + (translation.desc || p.description || '') + ' ' + p.name).toLowerCase();
+                return labelText.includes(permissionSearch.toLowerCase());
+              });
+
+              if (uncategorizedPerms.length === 0) return null;
+
+              return (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="primary.main" sx={permissionGroupHeaderStyles}>
+                    صلاحيات أخرى غير تصنيفية
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {uncategorizedPerms.map((p) => {
+                      const isChecked = roleFormPermissions.includes(p.id);
+                      const isSuperAdminLock = roleFormName === 'super_admin';
+                      return (
+                        <Grid item xs={12} sm={6} md={4} key={p.id}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                checked={isChecked || isSuperAdminLock}
+                                onChange={() => {
+                                  if (isSuperAdminLock) return;
+                                  if (roleFormPermissions.includes(p.id)) {
+                                    setRoleFormPermissions(roleFormPermissions.filter(id => id !== p.id));
+                                  } else {
+                                    setRoleFormPermissions([...roleFormPermissions, p.id]);
+                                  }
+                                }}
+                                disabled={isSuperAdminLock}
+                              />
+                            }
+                            label={
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {translatePermission(p.name).name}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontSize: '0.75rem', lineHeight: 1.2 }}>
+                                  {translatePermission(p.name).desc || p.description}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </Grid>
+                      );
+                    })}
+                  </Grid>
+                </Box>
+              );
+            })()}
+          </Box>
+        </Box>
+      </EntityDrawer>
 
       {/* Snackbar alerts */}
       <Snackbar

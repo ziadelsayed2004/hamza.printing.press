@@ -22,6 +22,29 @@ describe('Exports API Integration Tests', () => {
   let invoice;
 
   const cleanup = async () => {
+    // Delete shipment records
+    await db.run(`
+      DELETE FROM shipment_items 
+      WHERE shipment_id IN (
+        SELECT id FROM shipments 
+        WHERE invoice_id IN (
+          SELECT id FROM invoices 
+          WHERE outlet_id IN (
+            SELECT id FROM outlets WHERE name = "Test Cairo Export Outlet"
+          )
+        )
+      )
+    `);
+    await db.run(`
+      DELETE FROM shipments 
+      WHERE invoice_id IN (
+        SELECT id FROM invoices 
+        WHERE outlet_id IN (
+          SELECT id FROM outlets WHERE name = "Test Cairo Export Outlet"
+        )
+      )
+    `);
+
     // 1. Delete receipts
     await db.run(`
       DELETE FROM inventory_receipt_items 
@@ -172,6 +195,16 @@ describe('Exports API Integration Tests', () => {
       paymentDate: new Date().toISOString(),
       userId: adminUser.id
     });
+
+    // 10. Create shipment for exports courier sheet testing
+    const shipmentsService = require('../shipments/shipmentsService');
+    await shipmentsService.createShipment({
+      invoiceId: invoice.id,
+      shippingCarrier: 'Test Carrier',
+      trackingNumber: 'TRK-EXP-123',
+      items: [{ invoiceItemId: invoice.items[0].id, quantity: 1 }],
+      userId: adminUser.id
+    });
   });
 
   afterAll(async () => {
@@ -211,53 +244,76 @@ describe('Exports API Integration Tests', () => {
     };
 
     it('should export products catalog as CSV', async () => {
-      const response = await agent.get('/api/exports/products');
+      const response = await agent.get('/api/exports/products').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'الاسم/العنوان', 'الرمز/الكود', 'التصنيف', 'المؤلفون', 'الأسعار بمنافذ التوزيع'], ['Test Export Book 1', 'T-EXP-BK1', 'Test Export Author']);
     });
 
     it('should export product prices matrix as CSV', async () => {
-      const response = await agent.get('/api/exports/prices');
+      const response = await agent.get('/api/exports/prices').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'اسم الكتاب', 'رمز الكتاب', 'فئة منفذ التوزيع', 'السعر (ج.م)'], ['Test Export Book 1', 'T-EXP-BK1', 'Cairo Export Wholesale', '120']);
     });
 
     it('should export authors list as CSV', async () => {
-      const response = await agent.get('/api/exports/authors');
+      const response = await agent.get('/api/exports/authors').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'الاسم', 'الهاتف', 'البريد الإلكتروني', 'الحالة', 'معرفات المستخدمين'], ['Test Export Author']);
     });
 
     it('should export outlets listing as CSV', async () => {
-      const response = await agent.get('/api/exports/outlets');
+      const response = await agent.get('/api/exports/outlets').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'اسم منفذ التوزيع', 'الفئة', 'المحافظة', 'الحد الائتماني (ج.م)'], ['Test Cairo Export Outlet', 'Cairo Export Wholesale', 'Cairo', '50000']);
     });
 
     it('should export invoices list as CSV', async () => {
-      const response = await agent.get('/api/exports/invoices');
+      const response = await agent.get('/api/exports/invoices').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الفاتورة', 'اسم المنفذ', 'المجموع الكلي (ج.م)', 'المبلغ المدفوع (ج.م)', 'المبلغ المتبقي (ج.م)'], [invoice.invoice_number, 'Test Cairo Export Outlet', '240', '100', '140']);
     });
 
     it('should export payment receipts as CSV', async () => {
-      const response = await agent.get('/api/exports/payments');
+      const response = await agent.get('/api/exports/payments').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الفاتورة', 'المبلغ المحصل (ج.م)', 'طريقة الدفع', 'حالة مراجعة الإيصال', 'حالة التوريد للمقر', 'سجلت بواسطة'], [invoice.invoice_number, '100', 'cash']);
     });
 
     it('should export inventory ledger as CSV', async () => {
-      const response = await agent.get('/api/exports/inventory');
+      const response = await agent.get('/api/exports/inventory').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'عنوان الكتاب', 'رمز الكتاب', 'نوع الحركة', 'الكمية'], ['Test Export Book 1', 'T-EXP-BK1', 'receipt', '10']);
     });
 
     it('should export dynamic report balance sheets as CSV', async () => {
-      const response = await agent.get('/api/exports/reports').query({ type: 'balances' });
+      const response = await agent.get('/api/exports/reports').query({ type: 'balances', format: 'csv' });
       verifyCsvHeadersAndContent(response, ['معرف المنفذ', 'اسم منفذ التوزيع', 'الفئة', 'المحافظة', 'الحد الائتماني (ج.م)', 'إجمالي المبيعات (ج.م)', 'إجمالي المدفوعات (ج.م)', 'الرصيد المتبقي المستحق (ج.م)'], ['Test Cairo Export Outlet', 'Cairo Export Wholesale', '240', '100', '140']);
     });
 
     it('should export returns history as CSV', async () => {
-      const response = await agent.get('/api/exports/returns');
+      const response = await agent.get('/api/exports/returns').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'رقم إذن المرتجع', 'رقم الفاتورة', 'اسم المنفذ', 'قيمة المرتجع (ج.م)', 'السبب', 'الحالة'], ['سجل مرتجعات مبيعات الفواتير']);
     });
 
     it('should export shipments log as CSV', async () => {
-      const response = await agent.get('/api/exports/shipments');
+      const response = await agent.get('/api/exports/shipments').query({ format: 'csv' });
       verifyCsvHeadersAndContent(response, ['المعرف', 'رقم الشحنة', 'رقم الفاتورة', 'اسم المنفذ', 'شركة الشحن', 'رقم التتبع', 'تكلفة الشحن (ج.م)', 'حالة الشحنة'], ['سجل شحنات وطرود الكتب الصادرة للمنافذ']);
+    });
+
+    it('should export invoice items detailed as CSV', async () => {
+      const response = await agent.get('/api/exports/invoice-items').query({ format: 'csv' });
+      verifyCsvHeadersAndContent(response, ['معرف السطر', 'رقم الفاتورة', 'اسم المنفذ', 'الكمية الإجمالية', 'الإجمالي للسطر (ج.م)'], [invoice.invoice_number, 'Test Cairo Export Outlet']);
+    });
+
+    it('should export courier sheet as CSV', async () => {
+      const response = await agent.get('/api/exports/courier-sheet').query({ format: 'csv' });
+      verifyCsvHeadersAndContent(response, ['رقم الشحنة', 'العميل/منفذ التوزيع', 'العنوان بالتفصيل', 'الكمية المشحونة'], ['Test Cairo Export Outlet', 'Cairo']);
+    });
+
+    it('should export outlet statement as CSV', async () => {
+      const response = await agent.get('/api/exports/outlet-statement').query({ format: 'csv' });
+      verifyCsvHeadersAndContent(response, ['اسم منفذ التوزيع', 'نوع العملية', 'حركة الخزينة/الكاش (ج.م)', 'الملاحظات وبيان العملية'], ['Test Cairo Export Outlet']);
+    });
+
+    it('should export products as XLSX by default', async () => {
+      const response = await agent.get('/api/exports/products');
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      expect(response.headers['content-disposition']).toContain('.xlsx');
+      expect(response.body).toBeDefined();
     });
 
     it('should fail with 400 for unsupported report types', async () => {

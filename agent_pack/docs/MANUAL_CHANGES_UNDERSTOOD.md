@@ -41,3 +41,41 @@
 - تحويل storage path من hardcoded Windows path إلى config.
 - تصفير style gate المتبقي.
 - توحيد أزرار الإشعار إلى معاينة/تجاهل في كل الواجهات.
+
+
+---
+
+# Open Scope 151–158 Addendum
+
+## Invoice actions
+
+- Invoice list/details payment action must redirect to `/payments` with selected outlet/invoice and open the payment creation form there.
+- The invoice page must not silently create payment records.
+- Invoice page actions may deep-link to shipping and returns workflows with the selected invoice.
+
+## Payment receipts
+
+- Receipt upload belongs to the Payments workflow.
+- Receipts are uploaded and displayed/downloadable; they are not reviewed by a queue in the UI.
+- Existing review backend artifacts should not drive UX unless future explicit scope asks for it.
+
+## Free books / complimentary quantities
+
+- Invoice lines may contain free quantity.
+- Physical quantity affects stock.
+- Billable quantity affects money.
+- Details, exports, and PDFs must show free quantity separately.
+
+## Returns recalculation
+
+- Full and partial returns must update stock, finance ledger, outlet statement, and remaining exposure.
+- Return credit must never exceed the billable amount eligible for return.
+
+## Exports
+
+- Exports must become filter-first and professional.
+- Courier sheets are required for shipping/delivery operations.
+
+## Custom roles
+
+- Users must be able to create and manage roles, not only assign predefined roles.

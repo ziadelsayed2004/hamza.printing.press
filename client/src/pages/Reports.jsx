@@ -239,15 +239,15 @@ export const Reports = () => {
     setReceiptSearch('');
   };
 
-  const handleExportCSV = (type) => {
+  const handleExportExcel = (type) => {
     if (!hasPermission('exports.run')) {
       showToast('ليس لديك صلاحية تصدير البيانات', 'error');
       return;
     }
-    // We can directly navigate to the API CSV export route
+    // We can directly navigate to the API Excel export route
     const exportUrl = `/api/exports/reports?type=${type}`;
     window.open(exportUrl, '_blank');
-    showToast('بدأ تحميل ملف التصدير...', 'info');
+    showToast('بدأ تحميل تقرير Excel...', 'info');
   };
 
   return (
@@ -527,7 +527,7 @@ export const Reports = () => {
       <TabPanel value={tab} index={1}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>أرصدة وذمم الفروع ومنافذ البيع</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportCSV('balances')}>
+          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('balances')}>
             تصدير كملف Excel
           </Button>
         </Box>
@@ -627,7 +627,7 @@ export const Reports = () => {
       <TabPanel value={tab} index={4}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تقرير المخزون التفصيلي للكتب والمنتجات</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportCSV('stock')}>
+          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('stock')}>
             تصدير كملف Excel
           </Button>
         </Box>
@@ -671,7 +671,7 @@ export const Reports = () => {
       <TabPanel value={tab} index={5}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تقرير مبيعات وأرصدة المؤلفين</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportCSV('authors')}>
+          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('authors')}>
             تصدير كملف Excel
           </Button>
         </Box>
@@ -715,7 +715,7 @@ export const Reports = () => {
       <TabPanel value={tab} index={6}>
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>سجل توريدات الموردين وكمياتها</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportCSV('receipts')}>
+          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('receipts')}>
             تصدير كملف Excel
           </Button>
         </Box>

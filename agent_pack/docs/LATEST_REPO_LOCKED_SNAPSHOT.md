@@ -175,3 +175,15 @@ node scripts/style_quality_gate.js
 3. حدث `status.json` و `TASK_BOARD.md`.
 4. شغل خطوة واحدة فقط بنفس البرومبت الموحد.
 5. لا ترجع V2/V3 ولا تعمل Agent Pack جديد.
+
+
+---
+
+# Reopened Scope After Locked Snapshot
+
+The pack was previously locked after Step 150. A new explicit user request reopened the unified pack with Steps 151–158.
+
+- Step 151 is open.
+- Steps 152–158 are pending.
+- This is not a V2/V3 pack; it is the same unified pack continuing after the locked state.
+- The new source of truth for this phase is `agent_pack/docs/OPEN_SCOPE_151_158_ULTRA_DEEP_PLAN.md`.

@@ -2,11 +2,11 @@
 
 ## Pack status
 
-**الحالة الحالية:** مقفول حتى آخر تعديل مرفوع.  
-**لا توجد خطوات open أو pending.**  
-**آخر خطوة مكتملة:** 150 — `rearrange_invoice_filters_date_notch_fix`.
+**الحالة الحالية:** مكتمل تماماً.  
+**الخطوة المفتوحة الحالية:** لا يوجد (تم الانتهاء).  
+**آخر خطوة مكتملة:** 159 — `invoice_creation_receipt_upload_item_card_layout`.
 
-أي تعديل جديد لاحقاً يبدأ من Step 151 داخل نفس الـ Agent Pack الموحد.
+أي تعديل جديد لاحقاً يتبع نفس الـ Agent Pack الموحد.
 
 ## Current source of truth
 
@@ -169,3 +169,17 @@
 | 148 | `invoice_filters_translation_terminology_cleanup` | done | Invoice Filters Layout Restore, Stock Error Translation, Supply Alert MUI Styling, and Terminology Simplification |
 | 149 | `drawer_exports_roles_permissions` | done | Finance Drawer Conversion, Exports Redesign, Input Widths Fix, Breadcrumbs translation, and Roles Translation |
 | 150 | `rearrange_invoice_filters_date_notch_fix` | done | Invoice Filters Grid Rearrangement, Customer Statement Full Width, Product/Invoice ID Dynamic Widths, and Date Notch Behavior Fix |
+
+## Open Scope 151–158 — Invoice Actions, Payments, Shipping, Returns, Exports, RBAC
+
+| Step | Slug | Status | Title |
+|---:|---|---|---|
+| 151 | `post_locked_ultra_deep_repo_audit_scope_contract` | done | Post-Locked Ultra Deep Repo Audit + Scope Contract |
+| 152 | `invoice_actions_handoff_to_payment_shipping_returns` | done | Invoice Actions Handoff to Payments, Shipping, and Returns |
+| 153 | `payments_receipts_upload_list_no_review_flow` | done | Payments + Receipt Upload/List Polish Without Review Flow |
+| 154 | `shipping_partial_items_delivery_workflow` | done | Shipping Partial Items + Shipped/Delivered Workflow |
+| 155 | `invoice_free_items_returns_recalculation_engine` | done | Invoice Free Items + Full/Partial Returns Recalculation Engine |
+| 156 | `professional_excel_exports_filter_center_courier_sheets` | done | Professional Excel Export Center + Courier Sheets |
+| 157 | `invoice_drawers_details_responsive_material_polish` | done | Invoice Drawers/Details Responsive Material UI Polish |
+| 158 | `custom_roles_permissions_advanced_rbac` | done | Custom Roles + Advanced Permissions RBAC |
+| 159 | `invoice_creation_receipt_upload_item_card_layout` | done | Invoice Creation Receipt Upload + Item Card Responsive Layout |

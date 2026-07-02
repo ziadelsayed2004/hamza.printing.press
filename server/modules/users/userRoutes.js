@@ -4,6 +4,7 @@ const usersService = require('./usersService');
 const rolesService = require('../roles/rolesService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+const db = require('../../db');
 
 // 1. GET /api/users/permissions - List all permissions in the system
 router.get('/permissions', requireAuth, checkPermission('roles.manage'), async (req, res) => {
@@ -44,6 +45,92 @@ router.post('/roles/:roleId/permissions', requireAuth, checkPermission('roles.ma
     res.status(200).json({
       success: true,
       message: 'Role permissions updated successfully.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// POST /api/users/roles - Create a new custom role
+router.post('/roles', requireAuth, checkPermission('roles.manage'), auditLog('create_role', 'roles'), async (req, res) => {
+  const { name, description, permissionIds } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Role name is required.' });
+  }
+  try {
+    const allRoles = await rolesService.getAllRoles();
+    if (allRoles.some(r => r.name.toLowerCase() === name.trim().toLowerCase())) {
+      return res.status(409).json({ error: 'Conflict', message: 'Role name is already taken.' });
+    }
+    const role = await rolesService.createRole(name, description);
+    if (Array.isArray(permissionIds) && permissionIds.length > 0) {
+      await rolesService.updateRolePermissions(role.id, permissionIds);
+    }
+    res.status(201).json({
+      success: true,
+      message: 'Role created successfully.',
+      role
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// PUT /api/users/roles/:roleId - Update a custom role and its permissions
+router.put('/roles/:roleId', requireAuth, checkPermission('roles.manage'), auditLog('update_role', 'roles'), async (req, res) => {
+  const { roleId } = req.params;
+  const { name, description, permissionIds } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Role name is required.' });
+  }
+
+  const SYSTEM_ROLES = ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user', 'author', 'outlet', 'visitor', 'assistant'];
+  try {
+    const allRoles = await rolesService.getAllRoles();
+    const targetRole = allRoles.find(r => r.id === parseInt(roleId, 10));
+    if (!targetRole) {
+      return res.status(404).json({ error: 'Not Found', message: 'Role not found.' });
+    }
+    if (SYSTEM_ROLES.includes(targetRole.name)) {
+      return res.status(403).json({ error: 'Forbidden', message: 'System roles cannot be modified.' });
+    }
+
+    await rolesService.updateRole(roleId, name, description);
+    if (Array.isArray(permissionIds)) {
+      await rolesService.updateRolePermissions(roleId, permissionIds);
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Role updated successfully.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// DELETE /api/users/roles/:roleId - Delete a custom role safely
+router.delete('/roles/:roleId', requireAuth, checkPermission('roles.manage'), auditLog('delete_role', 'roles'), async (req, res) => {
+  const { roleId } = req.params;
+  const SYSTEM_ROLES = ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user', 'author', 'outlet', 'visitor', 'assistant'];
+  try {
+    const allRoles = await rolesService.getAllRoles();
+    const targetRole = allRoles.find(r => r.id === parseInt(roleId, 10));
+    if (!targetRole) {
+      return res.status(404).json({ error: 'Not Found', message: 'Role not found.' });
+    }
+    if (SYSTEM_ROLES.includes(targetRole.name)) {
+      return res.status(403).json({ error: 'Forbidden', message: 'System roles cannot be deleted.' });
+    }
+
+    const usersWithRole = await db.all('SELECT user_id FROM user_roles WHERE role_id = ?', [roleId]);
+    if (usersWithRole.length > 0) {
+      return res.status(400).json({ error: 'Bad Request', message: 'Cannot delete a role currently assigned to active users.' });
+    }
+
+    await rolesService.deleteRole(roleId);
+    res.status(200).json({
+      success: true,
+      message: 'Role deleted successfully.'
     });
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

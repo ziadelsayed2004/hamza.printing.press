@@ -55,15 +55,18 @@ async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
       WHERE ri.invoice_item_id = ? AND r.status != 'cancelled'
     `, [item.id]);
     const returnedQty = returnedRow.qty;
-    const targetQty = Math.max(0, item.quantity - returnedQty);
+    const activeShippedQty = Math.max(0, shippedQty - returnedQty);
+    const activeDeliveredQty = Math.max(0, deliveredQty - returnedQty);
+    const activeAllocatedQty = Math.max(0, allocatedQty - returnedQty);
+    const targetQty = item.quantity;
 
-    if (deliveredQty < targetQty) {
+    if (activeDeliveredQty < targetQty) {
       allDelivered = false;
     }
-    if (shippedQty < targetQty) {
+    if (activeShippedQty < targetQty) {
       allShipped = false;
     }
-    if (allocatedQty > 0) {
+    if (activeAllocatedQty > 0) {
       anyAllocated = true;
     }
   }
@@ -388,6 +391,7 @@ async function getRemainingShippableItems(invoiceId) {
     `, [item.invoice_item_id]);
 
     item.shipped_quantity = allocatedRow.qty;
+    item.returned_quantity = returnedRow.qty;
     item.remaining_quantity = Math.max(0, item.ordered_quantity - allocatedRow.qty - returnedRow.qty);
   }
 

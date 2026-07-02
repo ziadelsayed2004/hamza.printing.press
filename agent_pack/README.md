@@ -17,3 +17,7 @@ Locked after Step 150. No open/pending executable steps exist.
 ## Future work
 
 When the user requests a new change, add a new step after 150 inside this same pack. Do not create V2/V3 and do not split the pack.
+
+## Active open scope
+
+Steps 151–158 are now open/pending for invoice actions, payments receipts, shipping, returns, exports, Material UI polish, and custom RBAC. Use the unified runner prompt and execute one step per run.

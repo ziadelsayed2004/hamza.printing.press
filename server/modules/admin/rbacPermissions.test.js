@@ -127,7 +127,7 @@ describe('RBAC Permissions Integration Tests (Finance, Supply, Shipping, Exports
     it('should ALLOW running exports for authorized user', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/login').send({ username: authorizedUser.username, password: 'password123' });
-      const res = await agent.get('/api/exports/products');
+      const res = await agent.get('/api/exports/products?format=csv');
       expect(res.status).toBe(200);
       expect(res.header['content-type']).toContain('text/csv');
     });

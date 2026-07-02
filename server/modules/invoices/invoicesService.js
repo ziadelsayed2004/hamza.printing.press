@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const inventoryService = require('../inventory/inventoryService');
 const notificationsService = require('../notifications/notificationsService');
+const config = require('../../config');
 
 
 /**
@@ -57,8 +58,7 @@ async function createInvoice({
   let receiptStatusForPayment = 'approved';
 
   if (paymentReceiptData && paymentReceiptName) {
-    const storageDir = path.resolve('D:/Projects/BookStore Manager/storage');
-    const receiptsDir = path.join(storageDir, 'receipts');
+    const receiptsDir = path.join(config.uploadsDir, 'receipts');
     if (!fs.existsSync(receiptsDir)) {
       fs.mkdirSync(receiptsDir, { recursive: true });
     }
@@ -100,8 +100,16 @@ async function createInvoice({
     for (const item of items) {
       const { productId, quantity } = item;
       const qty = parseInt(quantity, 10);
+      const freeQty = parseInt(item.freeQuantity || item.free_quantity, 10) || 0;
+
       if (!productId || isNaN(qty) || qty <= 0) {
         throw new Error('Valid Product ID and a positive quantity are required for all items');
+      }
+      if (freeQty < 0) {
+        throw new Error('Free quantity cannot be negative');
+      }
+      if (freeQty > qty) {
+        throw new Error('Free quantity cannot exceed physical quantity');
       }
 
       const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
@@ -135,12 +143,14 @@ async function createInvoice({
         }
       }
 
-      const itemTotalPrice = qty * unitPrice;
+      const billableQty = qty - freeQty;
+      const itemTotalPrice = billableQty * unitPrice;
       subtotal += itemTotalPrice;
 
       validatedItems.push({
         productId,
         quantity: qty,
+        freeQuantity: freeQty,
         unitPrice,
         totalPrice: itemTotalPrice,
         stockPolicy: product.stock_policy
@@ -199,10 +209,10 @@ async function createInvoice({
     // Save items & create stock transactions
     for (const item of validatedItems) {
       const itemSql = `
-        INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, total_price)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO invoice_items (invoice_id, product_id, quantity, free_quantity, unit_price, total_price)
+        VALUES (?, ?, ?, ?, ?, ?)
       `;
-      await db.run(itemSql, [invoiceId, item.productId, item.quantity, item.unitPrice, item.totalPrice]);
+      await db.run(itemSql, [invoiceId, item.productId, item.quantity, item.freeQuantity, item.unitPrice, item.totalPrice]);
 
       if (item.stockPolicy === 'track') {
         await inventoryService.createTransaction({
@@ -571,7 +581,7 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
  */
 async function getInvoiceById(id) {
   const sql = `
-    SELECT i.*, o.name as outlet_name, o.outlet_type_id, u.full_name as user_full_name
+    SELECT i.*, o.name as outlet_name, o.outlet_type_id, o.governorate, o.address_details, o.phone, u.full_name as user_full_name
     FROM invoices i
     JOIN outlets o ON o.id = i.outlet_id
     LEFT JOIN users u ON u.id = i.created_by
@@ -621,9 +631,47 @@ async function getInvoiceById(id) {
     ORDER BY ip.payment_date ASC
   `, [id]);
 
+  const shipments = await db.all(`
+    SELECT s.*, u.full_name as user_full_name
+    FROM shipments s
+    LEFT JOIN users u ON u.id = s.created_by
+    WHERE s.invoice_id = ?
+    ORDER BY s.created_at DESC
+  `, [id]);
+
+  for (const shipment of shipments) {
+    shipment.items = await db.all(`
+      SELECT si.*, p.title as product_title, p.code as product_code
+      FROM shipment_items si
+      JOIN invoice_items ii ON ii.id = si.invoice_item_id
+      JOIN products p ON p.id = ii.product_id
+      WHERE si.shipment_id = ?
+    `, [shipment.id]);
+  }
+
+  const returns = await db.all(`
+    SELECT r.*, u.full_name as user_full_name
+    FROM returns r
+    LEFT JOIN users u ON u.id = r.created_by
+    WHERE r.invoice_id = ?
+    ORDER BY r.created_at DESC
+  `, [id]);
+
+  for (const ret of returns) {
+    ret.items = await db.all(`
+      SELECT ri.*, p.title as product_title, p.code as product_code
+      FROM return_items ri
+      JOIN invoice_items ii ON ii.id = ri.invoice_item_id
+      JOIN products p ON p.id = ii.product_id
+      WHERE ri.return_id = ?
+    `, [ret.id]);
+  }
+
   invoice.items = items;
   invoice.history = history;
   invoice.payments = payments;
+  invoice.shipments = shipments;
+  invoice.returns = returns;
 
   return invoice;
 }
@@ -837,10 +885,70 @@ async function cancelInvoice(invoiceId, userId) {
   }
 }
 
+/**
+ * Bulk update shipping status for a list of invoices.
+ */
+async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) {
+  if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+    throw new Error('Invoice IDs must be a non-empty array.');
+  }
+  const allowedStatuses = ['pending', 'partially_shipped', 'shipped', 'delivered'];
+  if (!allowedStatuses.includes(shippingStatus)) {
+    throw new Error(`Invalid shipping status: ${shippingStatus}`);
+  }
+
+  // Begin Transaction
+  await db.exec('BEGIN TRANSACTION;');
+
+  try {
+    for (const invoiceId of invoiceIds) {
+      const invoice = await db.get('SELECT shipping_status, invoice_number, outlet_id FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) {
+        throw new Error(`Invoice with ID ${invoiceId} does not exist`);
+      }
+      
+      if (shippingStatus !== invoice.shipping_status) {
+        await db.run('UPDATE invoices SET shipping_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [shippingStatus, invoiceId]);
+        
+        await db.run(`
+          INSERT INTO invoice_status_history (invoice_id, status_type, old_status, new_status, changed_by, notes)
+          VALUES (?, 'shipping', ?, ?, ?, ?)
+        `, [invoiceId, invoice.shipping_status, shippingStatus, userId, 'Bulk shipping status update.']);
+
+        // Handle partial shipment notification
+        try {
+          if (shippingStatus === 'partially_shipped') {
+            await notificationsService.createOrUpdateNotification({
+              category: 'shipment_partial',
+              severity: 'warning',
+              title: 'شحنة جزئية للفاتورة',
+              message: `تم شحن الفاتورة رقم ${invoice.invoice_number} شحناً جزئياً.`,
+              source_type: 'invoice',
+              source_id: invoiceId,
+              dedupe_key: `shipment_partial:${invoiceId}`,
+              action_url: `/operations/shipments`
+            });
+          } else {
+            await notificationsService.resolveNotificationByDedupeKey(`shipment_partial:${invoiceId}`);
+          }
+        } catch (e) {
+          console.error('Error triggering partial shipment notification check inside bulk update:', e);
+        }
+      }
+    }
+
+    await db.exec('COMMIT;');
+  } catch (err) {
+    await db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
 module.exports = {
   createInvoice,
   updateInvoice,
   getInvoiceById,
   getInvoices,
-  cancelInvoice
+  cancelInvoice,
+  bulkUpdateShippingStatus
 };

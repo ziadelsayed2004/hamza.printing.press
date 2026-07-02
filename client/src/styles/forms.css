@@ -129,3 +129,129 @@
 .filter-grid .MuiInputBase-root {
   min-width: 280px;
 }
+
+/* Invoice Creator Item Card Styles */
+.invoice-item-card {
+  padding: 20px;
+  margin-bottom: 16px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.invoice-item-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.invoice-item-field {
+  width: 40%;
+}
+
+.invoice-item-spacer {
+  width: 5%;
+}
+
+.invoice-item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.invoice-item-stock-error {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-top: 8px;
+}
+
+/* Minimal Invoice Summary Card */
+.invoice-summary-card {
+  padding: 20px;
+  max-width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-top: 24px;
+  margin-right: auto;
+}
+
+.invoice-summary-card-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+}
+
+.invoice-summary-breakdown {
+  width: 65%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invoice-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.invoice-summary-callout {
+  width: 30%;
+  padding: 16px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.invoice-summary-callout-label {
+  display: block;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+.invoice-summary-callout-value {
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 1.3rem;
+  color: var(--color-primary);
+}
+
+@media (max-width: 600px) {
+  .invoice-summary-card {
+    width: 100%;
+  }
+
+  .invoice-summary-card-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .invoice-summary-breakdown {
+    width: 100%;
+  }
+
+  .invoice-summary-callout {
+    width: 100%;
+  }
+}
+
+.receipt-upload-container {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}

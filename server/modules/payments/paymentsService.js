@@ -1,6 +1,7 @@
 const db = require('../../db');
 const notificationsService = require('../notifications/notificationsService');
 const auditService = require('../audit/auditService');
+const config = require('../../config');
 
 
 /**
@@ -79,8 +80,7 @@ async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, re
   if (receiptData) {
     const fs = require('fs');
     const path = require('path');
-    const storageDir = path.resolve('D:/Projects/BookStore Manager/storage');
-    const receiptsDir = path.join(storageDir, 'receipts');
+    const receiptsDir = path.join(config.uploadsDir, 'receipts');
     if (!fs.existsSync(receiptsDir)) {
       fs.mkdirSync(receiptsDir, { recursive: true });
     }
