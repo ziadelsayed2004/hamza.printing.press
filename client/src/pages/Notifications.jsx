@@ -232,9 +232,9 @@ export const Notifications = () => {
             <LoadingState message="جاري تحميل التنبيهات..." />
           </Box>
         ) : (
-          <TableContainer>
+          <TableContainer className="scrollable-table-container">
             <Table sx={{ minWidth: 650 }} aria-label="notifications table">
-              <TableHead sx={{ backgroundColor: 'action.hover' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell sx={{ textAlign: 'right', fontWeight: 'bold' }} width={80}>الأهمية</TableCell>
                   <TableCell sx={{ textAlign: 'right', fontWeight: 'bold' }} width={120}>التصنيف</TableCell>

@@ -37,7 +37,9 @@ import {
   Search as SearchIcon,
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
+  Book as BookIcon
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -67,9 +69,31 @@ export const Authors = () => {
   // Form fields
   const [formName, setFormName] = useState('');
   const [formPhone, setFormPhone] = useState('');
-  const [formEmail, setFormEmail] = useState('');
   const [formStatus, setFormStatus] = useState('active');
   const [formUserId, setFormUserId] = useState('');
+
+  // Author Detail Drawer States
+  const [openDetailDrawer, setOpenDetailDrawer] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedAuthorDetail, setSelectedAuthorDetail] = useState(null);
+  const [authorBooks, setAuthorBooks] = useState([]);
+
+  const handleOpenDetail = async (author) => {
+    setDetailLoading(true);
+    setOpenDetailDrawer(true);
+    setSelectedAuthorDetail(author);
+    setAuthorBooks([]);
+    try {
+      const booksData = await apiClient.get(`/authors/${author.id}/books`);
+      setAuthorBooks(booksData);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تحميل كتب المؤلف.', 'error');
+      setOpenDetailDrawer(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const fetchAuthors = async () => {
     setLoading(true);
@@ -106,7 +130,6 @@ export const Authors = () => {
     setSelectedAuthor(null);
     setFormName('');
     setFormPhone('');
-    setFormEmail('');
     setFormStatus('active');
     setFormUserId('');
     setOpenModal(true);
@@ -117,7 +140,6 @@ export const Authors = () => {
     setSelectedAuthor(author);
     setFormName(author.name);
     setFormPhone(author.phone || '');
-    setFormEmail(author.email || '');
     setFormStatus(author.status);
     setFormUserId(author.user_id || '');
     setOpenModal(true);
@@ -133,7 +155,6 @@ export const Authors = () => {
     const payload = {
       name: formName,
       phone: formPhone,
-      email: formEmail,
       status: formStatus,
       userId: formUserId ? parseInt(formUserId, 10) : null
     };
@@ -180,7 +201,6 @@ export const Authors = () => {
       await apiClient.put(`/authors/${author.id}`, {
         name: author.name,
         phone: author.phone,
-        email: author.email,
         userId: author.user_id,
         status: targetStatus
       });
@@ -257,40 +277,41 @@ export const Authors = () => {
       {authors.length === 0 ? (
         <EmptyState title="لا يوجد مؤلفين" description="لم نتمكن من العثور على أي مؤلفين مسجلين يطابقون شروط البحث." />
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer className="scrollable-table-container" component={Paper} sx={{ overflowX: 'auto', width: '100%' }}>
           <Table>
-            <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+            <TableHead>
               <TableRow>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم المؤلف</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>رقم الهاتف</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>البريد الإلكتروني</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحساب المرتبط</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم المؤلف</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>رقم الهاتف</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحساب المرتبط</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {authors.map((author) => (
-                <TableRow key={author.id}>
-                  <TableCell align="right" sx={{ fontWeight: 500 }}>{author.name}</TableCell>
-                  <TableCell align="right">{author.phone || '-'}</TableCell>
-                  <TableCell align="right">{author.email || '-'}</TableCell>
-                  <TableCell align="right">
+                <TableRow key={author.id} hover>
+                  <TableCell align="center" sx={{ fontWeight: 500 }}>{author.name}</TableCell>
+                  <TableCell align="center">{author.phone || '-'}</TableCell>
+                  <TableCell align="center">
                     {author.linked_username ? (
                       <Chip label={author.linked_username} size="small" color="primary" variant="outlined" />
                     ) : (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير مرتبط</Typography>
                     )}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="center">
                     <Chip
                       label={author.status === 'active' ? 'نشط' : 'معطل'}
                       color={author.status === 'active' ? 'success' : 'error'}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1 }}>
+                      <IconButton color="warning" onClick={() => handleOpenDetail(author)} title="عرض التفاصيل والكتب">
+                        <VisibilityIcon />
+                      </IconButton>
                       {hasPermission('authors.update') && (
                         <IconButton color="primary" onClick={() => handleOpenEditModal(author)} title="تعديل">
                           <EditIcon />
@@ -350,15 +371,6 @@ export const Authors = () => {
                 onChange={(e) => setFormPhone(e.target.value)}
                 inputProps={{ className: 'ltr-value' }}
               />
-              <TextField
-                fullWidth
-                size="small"
-                type="email"
-                label="البريد الإلكتروني"
-                value={formEmail}
-                onChange={(e) => setFormEmail(e.target.value)}
-                inputProps={{ className: 'ltr-value' }}
-              />
               <FormControl fullWidth size="small">
                 <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
                 <Select
@@ -390,6 +402,68 @@ export const Authors = () => {
             </FieldGrid>
           </FormSection>
         </form>
+      </EntityDrawer>
+
+      {/* ══════ AUTHOR DETAILS DRAWER ══════ */}
+      <EntityDrawer
+        open={openDetailDrawer}
+        onClose={() => setOpenDetailDrawer(false)}
+        title={selectedAuthorDetail ? `تفاصيل سجل المؤلف: ${selectedAuthorDetail.name}` : 'جاري تحميل التفاصيل...'}
+        subtitle={selectedAuthorDetail ? `الهاتف: ${selectedAuthorDetail.phone || 'غير مسجل'}` : ''}
+        size="medium"
+        loading={detailLoading}
+        actions={
+          <Button onClick={() => setOpenDetailDrawer(false)} variant="outlined">
+            إغلاق
+          </Button>
+        }
+      >
+        {selectedAuthorDetail && (
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.dark' }}>
+              الكتب والمؤلفات المرتبطة بالمؤلف ({authorBooks.length})
+            </Typography>
+
+            {authorBooks.length > 0 ? (
+              <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto', width: '100%' }}>
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableRow>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم الكتاب</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكود</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>السعر الحالي</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>المخزون الحالي</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {authorBooks.map((book) => (
+                      <TableRow key={book.id} hover>
+                        <TableCell align="center" sx={{ fontWeight: 500 }}>{book.title}</TableCell>
+                        <TableCell align="center" sx={{ fontFamily: 'monospace' }}>{book.code || '—'}</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                          {book.retail_price ? `${book.retail_price} ج.م` : 'مجاني/هدية'}
+                        </TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold', color: book.stock > 0 ? 'success.main' : 'error.main' }}>
+                          {book.stock}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={book.status === 'active' ? 'نشط' : 'معطل'}
+                            color={book.status === 'active' ? 'success' : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <EmptyState title="لا توجد كتب مرتبطة" description="لم يتم ربط أي كتب بهذا المؤلف حالياً في النظام." />
+            )}
+          </Box>
+        )}
       </EntityDrawer>
 
       {/* Confirmation Dialog */}

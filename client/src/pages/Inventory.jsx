@@ -379,13 +379,13 @@ export const Inventory = () => {
           </Alert>
         )}
 
-        <Paper sx={{ overflow: 'hidden' }}>
+        <Paper className="main-table-paper">
           {stockLoading ? (
             <LoadingState message="جاري تحميل ملخص المخزون..." />
           ) : stockData.length === 0 ? (
             <EmptyState title="لا يوجد بيانات مخزون" description="لم يتم العثور على منتجات نشطة أو لا توجد حركات." />
           ) : (
-            <TableContainer sx={{ maxHeight: 550 }}>
+            <TableContainer className="scrollable-table-container" sx={{ maxHeight: 550 }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
@@ -464,13 +464,13 @@ export const Inventory = () => {
           </Grid>
         </Grid>
 
-        <Paper sx={{ overflow: 'hidden' }}>
+        <Paper className="main-table-paper">
           {txLoading ? (
             <LoadingState message="جاري تحميل سجل الحركات..." />
           ) : txData.length === 0 ? (
             <EmptyState title="لا يوجد حركات مسجلة" description="لم يتم تسجيل أي حركة مخزنية بعد." />
           ) : (
-            <TableContainer sx={{ maxHeight: 550 }}>
+            <TableContainer className="scrollable-table-container" sx={{ maxHeight: 550 }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
@@ -530,7 +530,7 @@ export const Inventory = () => {
 
       {/* ── TAB 2: Receipts ── */}
       <TabPanel value={tab} index={2}>
-        <Paper sx={{ overflow: 'hidden' }}>
+        <Paper className="main-table-paper">
           {receiptsLoading ? (
             <LoadingState message="جاري تحميل أذونات استلام المخزون..." />
           ) : receipts.length === 0 ? (
@@ -541,7 +541,7 @@ export const Inventory = () => {
               onAction={hasPermission('inventory.receipts.create') ? handleOpenCreateReceipt : undefined}
             />
           ) : (
-            <TableContainer sx={{ maxHeight: 550 }}>
+            <TableContainer className="scrollable-table-container" sx={{ maxHeight: 550 }}>
               <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
@@ -688,9 +688,9 @@ export const Inventory = () => {
               <Alert severity="info" sx={{ mb: 2 }}>{receiptDetail.notes}</Alert>
             )}
             {receiptDetail.items && receiptDetail.items.length > 0 && (
-              <TableContainer component={Paper}>
+              <TableContainer className="scrollable-table-container" component={Paper} variant="outlined">
                 <Table size="small">
-                  <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                  <TableHead>
                     <TableRow>
                       <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>

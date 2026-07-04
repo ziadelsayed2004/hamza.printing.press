@@ -428,6 +428,10 @@ describe('Shipments API Integration Tests', () => {
       });
       const freshInvoiceItemId = freshInvoice.items[0].id;
 
+      // Set invoice shipping_status to shipped to satisfy return rules
+      const db = require('../../db');
+      await db.run("UPDATE invoices SET shipping_status = 'shipped' WHERE id = ?", [freshInvoice.id]);
+
       // Create a return of 3 items for this invoice
       await returnsService.createReturn({
         invoiceId: freshInvoice.id,

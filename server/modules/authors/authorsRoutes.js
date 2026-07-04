@@ -65,7 +65,7 @@ router.get('/:id', requireAuth, checkPermission('authors.view'), async (req, res
 
 // 3. POST /api/authors - Create a new author
 router.post('/', requireAuth, checkPermission('authors.create'), auditLog('create_author', 'authors'), async (req, res) => {
-  const { name, phone = '', email = '', status = 'active', userId = null } = req.body;
+  const { name, phone = '', status = 'active', userId = null } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'Bad Request', message: 'Author name is required.' });
@@ -80,7 +80,7 @@ router.post('/', requireAuth, checkPermission('authors.create'), auditLog('creat
       }
     }
 
-    const newAuthor = await authorsService.createAuthor({ name, phone, email, status, userId });
+    const newAuthor = await authorsService.createAuthor({ name, phone, status, userId });
     res.status(201).json({
       success: true,
       message: 'Author created successfully.',
@@ -94,7 +94,7 @@ router.post('/', requireAuth, checkPermission('authors.create'), auditLog('creat
 // 4. PUT /api/authors/:id - Update an existing author
 router.put('/:id', requireAuth, checkPermission('authors.update'), auditLog('update_author', 'authors'), async (req, res) => {
   const authorId = parseInt(req.params.id, 10);
-  const { name, phone = '', email = '', status = 'active', userId = null } = req.body;
+  const { name, phone = '', status = 'active', userId = null } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'Bad Request', message: 'Author name is required.' });
@@ -114,7 +114,7 @@ router.put('/:id', requireAuth, checkPermission('authors.update'), auditLog('upd
       }
     }
 
-    await authorsService.updateAuthor(authorId, { name, phone, email, status, userId });
+    await authorsService.updateAuthor(authorId, { name, phone, status, userId });
     const updatedAuthor = await authorsService.findById(authorId);
 
     res.status(200).json({

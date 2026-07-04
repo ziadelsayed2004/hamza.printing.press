@@ -47,17 +47,9 @@ async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
     `, [item.id]);
     const allocatedQty = allocatedRow.qty;
 
-    // 4. Returned quantity
-    const returnedRow = await db.get(`
-      SELECT COALESCE(SUM(ri.quantity), 0) as qty
-      FROM return_items ri
-      JOIN returns r ON r.id = ri.return_id
-      WHERE ri.invoice_item_id = ? AND r.status != 'cancelled'
-    `, [item.id]);
-    const returnedQty = returnedRow.qty;
-    const activeShippedQty = Math.max(0, shippedQty - returnedQty);
-    const activeDeliveredQty = Math.max(0, deliveredQty - returnedQty);
-    const activeAllocatedQty = Math.max(0, allocatedQty - returnedQty);
+    const activeShippedQty = shippedQty;
+    const activeDeliveredQty = deliveredQty;
+    const activeAllocatedQty = allocatedQty;
     const targetQty = item.quantity;
 
     if (activeDeliveredQty < targetQty) {
@@ -155,15 +147,7 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
       WHERE si.invoice_item_id = ? AND s.status != 'cancelled'
     `, [invoiceItemId]);
 
-    // Calculate returned quantity
-    const returnedRow = await db.get(`
-      SELECT COALESCE(SUM(ri.quantity), 0) as qty
-      FROM return_items ri
-      JOIN returns r ON r.id = ri.return_id
-      WHERE ri.invoice_item_id = ? AND r.status != 'cancelled'
-    `, [invoiceItemId]);
-
-    const remainingQty = Math.max(0, invoiceItem.quantity - allocatedRow.qty - returnedRow.qty);
+    const remainingQty = Math.max(0, invoiceItem.quantity - allocatedRow.qty);
     if (qty > remainingQty) {
       throw new Error(`Requested shipment quantity for product "${invoiceItem.product_title}" exceeds the remaining unshipped quantity of ${remainingQty}.`);
     }
@@ -304,8 +288,12 @@ async function getShipments({ limit = 50, offset = 0, invoiceId = null, status =
   }
 
   if (status) {
-    sql += ` AND s.status = ?`;
-    params.push(status);
+    if (status === 'delivered') {
+      sql += ` AND s.status IN ('shipped', 'delivered')`;
+    } else {
+      sql += ` AND s.status = ?`;
+      params.push(status);
+    }
   }
 
   if (outletIds && outletIds.length > 0) {

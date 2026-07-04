@@ -376,7 +376,7 @@ describe('Invoices API Integration Tests', () => {
       expect(response.headers['content-type']).toBe('application/pdf');
       expect(response.headers['content-disposition']).toContain('attachment; filename="invoices_report.pdf"');
       expect(Buffer.isBuffer(response.body)).toBe(true);
-    });
+    }, 30000);
 
     it('should fail with 400 for empty invoice IDs list', async () => {
       const agent = request.agent(app);

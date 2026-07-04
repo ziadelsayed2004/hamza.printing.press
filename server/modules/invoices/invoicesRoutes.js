@@ -171,6 +171,7 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
 // 3. POST /api/invoices - Create a new invoice
 router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('create_invoice', 'invoices'), async (req, res) => {
   const {
+    invoiceNumber = '',
     outletId,
     discount = 0,
     shippingCost = 0,
@@ -191,6 +192,7 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
   try {
     const userId = req.session.user.id;
     const invoice = await invoicesService.createInvoice({
+      invoiceNumber,
       outletId,
       discount,
       shippingCost,

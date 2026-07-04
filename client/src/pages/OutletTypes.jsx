@@ -33,7 +33,8 @@ import {
 import {
   Edit as EditIcon,
   Add as AddIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -57,6 +58,29 @@ export const OutletTypes = () => {
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formStatus, setFormStatus] = useState('active');
+
+  // Outlet Type Detail Drawer States
+  const [openDetailDrawer, setOpenDetailDrawer] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [selectedTypeDetail, setSelectedTypeDetail] = useState(null);
+  const [typeOutlets, setTypeOutlets] = useState([]);
+
+  const handleOpenDetail = async (type) => {
+    setDetailLoading(true);
+    setOpenDetailDrawer(true);
+    setSelectedTypeDetail(type);
+    setTypeOutlets([]);
+    try {
+      const outletsData = await apiClient.get(`/outlets?outletTypeId=${type.id}&limit=200`);
+      setTypeOutlets(outletsData);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تحميل منافذ هذه الفئة.', 'error');
+      setOpenDetailDrawer(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   // Notifications Toast State
   const [toastMsg, setToastMsg] = useState('');
@@ -177,41 +201,44 @@ export const OutletTypes = () => {
       {types.length === 0 ? (
         <EmptyState title="لا توجد فئات منافذ" description="لم يتم تسجيل أي فئات منافذ توزيع في النظام بعد." />
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer className="scrollable-table-container" component={Paper} sx={{ overflowX: 'auto', width: '100%' }}>
           <Table>
-            <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+            <TableHead>
               <TableRow>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم الفئة</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوصف والبيانات الإضافية</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم الفئة</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الوصف والبيانات الإضافية</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {types.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell align="right" sx={{ fontWeight: 500 }}>{item.name}</TableCell>
-                  <TableCell align="right">{item.description || '-'}</TableCell>
-                  <TableCell align="right">
+                <TableRow key={item.id} hover>
+                  <TableCell align="center" sx={{ fontWeight: 500 }}>{item.name}</TableCell>
+                  <TableCell align="center">{item.description || '-'}</TableCell>
+                  <TableCell align="center">
                     <Chip
                       label={item.status === 'active' ? 'نشط' : 'معطل'}
                       color={item.status === 'active' ? 'success' : 'error'}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    {hasPermission('outlet_types.manage') ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                        <IconButton color="primary" onClick={() => handleOpenEditModal(item)} title="تعديل">
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton color="error" onClick={() => handleDeleteType(item.id)} title="حذف">
-                          <DeleteIcon />
-                        </IconButton>
-                      </Box>
-                    ) : (
-                      '-'
-                    )}
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1 }}>
+                      <IconButton color="warning" onClick={() => handleOpenDetail(item)} title="عرض التفاصيل والمنافذ">
+                        <VisibilityIcon />
+                      </IconButton>
+                      {hasPermission('outlet_types.manage') && (
+                        <>
+                          <IconButton color="primary" onClick={() => handleOpenEditModal(item)} title="تعديل">
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton color="error" onClick={() => handleDeleteType(item.id)} title="حذف">
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -267,6 +294,68 @@ export const OutletTypes = () => {
             </FieldGrid>
           </FormSection>
         </form>
+      </EntityDrawer>
+
+      {/* ══════ OUTLET TYPE DETAILS DRAWER ══════ */}
+      <EntityDrawer
+        open={openDetailDrawer}
+        onClose={() => setOpenDetailDrawer(false)}
+        title={selectedTypeDetail ? `تفاصيل الفئة: ${selectedTypeDetail.name}` : 'جاري تحميل التفاصيل...'}
+        subtitle={selectedTypeDetail ? `الوصف: ${selectedTypeDetail.description || 'لا يوجد وصف'}` : ''}
+        size="medium"
+        loading={detailLoading}
+        actions={
+          <Button onClick={() => setOpenDetailDrawer(false)} variant="outlined">
+            إغلاق
+          </Button>
+        }
+      >
+        {selectedTypeDetail && (
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.dark' }}>
+              منافذ التوزيع المدرجة تحت هذه الفئة ({typeOutlets.length})
+            </Typography>
+
+            {typeOutlets.length > 0 ? (
+              <TableContainer component={Paper} variant="outlined" sx={{ overflowX: 'auto', width: '100%' }}>
+                <Table size="small">
+                  <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableRow>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم المنفذ</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكود</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>المحافظة</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>رقم الهاتف</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحد الائتماني</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {typeOutlets.map((outlet) => (
+                      <TableRow key={outlet.id} hover>
+                        <TableCell align="center" sx={{ fontWeight: 500 }}>{outlet.name}</TableCell>
+                        <TableCell align="center" sx={{ fontFamily: 'monospace' }}>{outlet.code || '—'}</TableCell>
+                        <TableCell align="center">{outlet.governorate}</TableCell>
+                        <TableCell align="center" sx={{ direction: 'ltr' }}>{outlet.phone || '—'}</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                          {outlet.credit_limit ? `${outlet.credit_limit.toLocaleString('en-US')} ج.م` : 'بدون حد'}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={outlet.status === 'active' ? 'نشط' : 'معطل'}
+                            color={outlet.status === 'active' ? 'success' : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <EmptyState title="لا توجد منافذ" description="لا يوجد أي منافذ توزيع مسجلة تحت هذه الفئة حالياً." />
+            )}
+          </Box>
+        )}
       </EntityDrawer>
 
       {/* Confirmation Dialog */}

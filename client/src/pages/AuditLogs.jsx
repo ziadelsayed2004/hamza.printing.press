@@ -164,9 +164,9 @@ export const AuditLogs = () => {
       {logs.length === 0 ? (
         <EmptyState title="لا توجد سجلات" description="لم نتمكن من العثور على أي سجلات مطابقة للفلاتر النشطة." />
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer className="scrollable-table-container" component={Paper}>
           <Table>
-            <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+            <TableHead>
               <TableRow>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>التاريخ والوقت</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>المستخدم</TableCell>

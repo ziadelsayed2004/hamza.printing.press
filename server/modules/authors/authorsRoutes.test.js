@@ -72,7 +72,6 @@ describe('Authors API Integration Tests', () => {
     authorA = await authorsService.createAuthor({
       name: 'Test Author A',
       phone: '111111111',
-      email: 'authora@test.com',
       status: 'active',
       userId: authorUserA.id
     });
@@ -80,7 +79,6 @@ describe('Authors API Integration Tests', () => {
     authorB = await authorsService.createAuthor({
       name: 'Test Author B',
       phone: '222222222',
-      email: 'authorb@test.com',
       status: 'active',
       userId: authorUserB.id
     });
@@ -168,7 +166,6 @@ describe('Authors API Integration Tests', () => {
       .send({
         name: 'Test Author Custom',
         phone: '999999999',
-        email: 'custom@test.com',
         status: 'active',
         userId: accountantUser.id
       });
@@ -194,7 +191,6 @@ describe('Authors API Integration Tests', () => {
       .send({
         name: 'Test Author Custom',
         phone: '888888888',
-        email: 'edited@test.com',
         status: 'inactive',
         userId: authorUserB.id
       });

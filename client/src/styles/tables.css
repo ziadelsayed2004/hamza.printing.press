@@ -97,7 +97,7 @@
 .scrollable-table-container thead th {
   position: sticky;
   top: 0;
-  background-color: #f8fafc;
+  background-color: var(--color-surface-alt);
   z-index: 2;
 }
 

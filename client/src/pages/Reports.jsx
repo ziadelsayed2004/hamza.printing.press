@@ -532,9 +532,9 @@ export const Reports = () => {
           </Button>
         </Box>
         {balancesOutletLoading ? <LoadingState /> : balancesOutlet.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
-          <TableContainer component={Paper}>
+          <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.100' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>المنفذ</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>فئة المنفذ</TableCell>
@@ -569,9 +569,9 @@ export const Reports = () => {
       <TabPanel value={tab} index={2}>
         <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>مبيعات المحافظات</Typography>
         {balancesGovLoading ? <LoadingState /> : balancesGov.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
-          <TableContainer component={Paper}>
+          <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.100' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحافظة</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>إجمالي المبيعات</TableCell>
@@ -598,9 +598,9 @@ export const Reports = () => {
       <TabPanel value={tab} index={3}>
         <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>مبيعات فئات منافذ البيع</Typography>
         {balancesTypeLoading ? <LoadingState /> : balancesType.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
-          <TableContainer component={Paper}>
+          <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.100' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>فئة المنفذ</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>إجمالي المبيعات</TableCell>
@@ -632,9 +632,9 @@ export const Reports = () => {
           </Button>
         </Box>
         {stockLoading ? <LoadingState /> : stockData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
-          <TableContainer component={Paper}>
+          <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.100' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الكتاب (SKU)</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>العنوان</TableCell>
@@ -676,9 +676,9 @@ export const Reports = () => {
           </Button>
         </Box>
         {authorLoading ? <LoadingState /> : authorData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
-          <TableContainer component={Paper}>
+          <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.100' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>المؤلف</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>حالة الحساب</TableCell>
@@ -720,9 +720,9 @@ export const Reports = () => {
           </Button>
         </Box>
         {receiptLoading ? <LoadingState /> : receiptData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
-          <TableContainer component={Paper}>
+          <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
-              <TableHead sx={{ bgcolor: 'grey.100' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم المورد</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>عدد حركات التوريد</TableCell>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatCurrencyEGP } from '../utils/formatters';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { t } from '../locales/t';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import { FormSection } from '../components/forms/FormSection';
@@ -36,7 +37,11 @@ import {
   Snackbar,
   InputAdornment,
   Drawer,
-  Divider
+  Divider,
+  Tabs,
+  Tab,
+  Card,
+  CardContent
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -44,7 +49,12 @@ import {
   Search as SearchIcon,
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  QrCode as QrCodeIcon,
+  Visibility as VisibilityIcon,
+  Description as DescriptionIcon,
+  Book as BookIcon,
+  TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -61,7 +71,7 @@ export const Outlets = () => {
   const [usersList, setUsersList] = useState([]);
 
   // Filters State
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(new URLSearchParams(window.location.search).get('search') || '');
   const [governorateFilter, setGovernorateFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -81,10 +91,42 @@ export const Outlets = () => {
   const [formGovernorate, setFormGovernorate] = useState('');
   const [formAddressDetails, setFormAddressDetails] = useState('');
   const [formPhone, setFormPhone] = useState('');
-  const [formCreditLimit, setFormCreditLimit] = useState(0);
+  const [formCreditLimit, setFormCreditLimit] = useState('');
   const [formStatus, setFormStatus] = useState('active');
   const [formNotes, setFormNotes] = useState('');
   const [formUserId, setFormUserId] = useState('');
+  const [formCode, setFormCode] = useState('');
+
+  // QR Code Dialog States
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const handleShowQr = (outlet) => {
+    setQrData(outlet);
+    setQrOpen(true);
+  };
+
+  // Outlet Detail Drawer States
+  const [openDetailDrawer, setOpenDetailDrawer] = useState(false);
+  const [detailData, setDetailData] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState(0);
+
+  const handleOpenDetail = async (outlet) => {
+    setDetailLoading(true);
+    setOpenDetailDrawer(true);
+    setDetailData(null);
+    setDetailTab(0);
+    try {
+      const data = await apiClient.get(`/outlets/${outlet.id}/details`);
+      setDetailData(data);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تحميل تفاصيل المنفذ.', 'error');
+      setOpenDetailDrawer(false);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   // Toast Notifications State
   const [toastMsg, setToastMsg] = useState('');
@@ -117,6 +159,15 @@ export const Outlets = () => {
       
       const data = await apiClient.get(query);
       setOutlets(data);
+
+      // Auto-open QR code dialog if search code matches exactly
+      const searchParam = new URLSearchParams(window.location.search).get('search');
+      if (searchParam && data && data.length > 0) {
+        const exactMatch = data.find(o => o.code === searchParam.trim());
+        if (exactMatch) {
+          handleShowQr(exactMatch);
+        }
+      }
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تحميل بيانات المنافذ.', 'error');
@@ -142,14 +193,25 @@ export const Outlets = () => {
     setModalMode('create');
     setSelectedOutlet(null);
     setFormName('');
-    setFormOutletTypeId(outletTypes[0]?.id || '');
-    setFormGovernorate('القاهرة');
+    setFormOutletTypeId('');
+    setFormGovernorate('');
     setFormAddressDetails('');
     setFormPhone('');
-    setFormCreditLimit(0);
+    setFormCreditLimit('');
     setFormStatus('active');
     setFormNotes('');
     setFormUserId('');
+    setFormCode('');
+
+    // Auto-generate Outlet Code
+    apiClient.get('/system/next-code?type=outlet')
+      .then(res => {
+        if (res && res.code) {
+          setFormCode(res.code);
+        }
+      })
+      .catch(console.error);
+
     setOpenModal(true);
   };
 
@@ -161,10 +223,11 @@ export const Outlets = () => {
     setFormGovernorate(outlet.governorate);
     setFormAddressDetails(outlet.address_details || '');
     setFormPhone(outlet.phone || '');
-    setFormCreditLimit(outlet.credit_limit || 0);
+    setFormCreditLimit(outlet.credit_limit ? outlet.credit_limit.toLocaleString('en-US') : '');
     setFormStatus(outlet.status);
     setFormNotes(outlet.notes || '');
     setFormUserId(outlet.userId || '');
+    setFormCode(outlet.code || '');
     setOpenModal(true);
   };
 
@@ -181,10 +244,11 @@ export const Outlets = () => {
       governorate: formGovernorate,
       addressDetails: formAddressDetails,
       phone: formPhone,
-      creditLimit: parseFloat(formCreditLimit),
+      creditLimit: parseFloat(String(formCreditLimit).replace(/,/g, '')) || 0,
       status: formStatus,
       notes: formNotes,
-      userId: formUserId ? parseInt(formUserId, 10) : null
+      userId: formUserId ? parseInt(formUserId, 10) : null,
+      code: formCode
     };
 
     try {
@@ -339,46 +403,57 @@ export const Outlets = () => {
       {outlets.length === 0 ? (
         <EmptyState title="لا توجد منافذ بيع" description="لم نتمكن من العثور على أي منافذ توزيع مطابقة لمعايير البحث الحالية." />
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer className="scrollable-table-container" component={Paper} sx={{ overflowX: 'auto', width: '100%' }}>
           <Table>
-            <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+            <TableHead>
               <TableRow>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم المنفذ</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الفئة والسعر المعتمد</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحافظة والمدينة</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحساب المرتبط</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>السقف الائتماني</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم المنفذ</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الفئة والسعر المعتمد</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>المحافظة والمدينة</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحساب المرتبط</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>السقف الائتماني</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {outlets.map((outlet) => (
-                <TableRow key={outlet.id}>
-                  <TableCell align="right" sx={{ fontWeight: 500 }}>{outlet.name}</TableCell>
-                  <TableCell align="right">{outlet.outlet_type_name}</TableCell>
-                  <TableCell align="right">{outlet.governorate}</TableCell>
-                  <TableCell align="right">{outlet.phone || '-'}</TableCell>
-                  <TableCell align="right">
+                <TableRow key={outlet.id} hover>
+                  <TableCell align="center" sx={{ fontWeight: 500 }}>
+                    {outlet.name}
+                    <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', fontFamily: 'monospace' }}>
+                      {outlet.code}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">{outlet.outlet_type_name}</TableCell>
+                  <TableCell align="center">{outlet.governorate}</TableCell>
+                  <TableCell align="center">{outlet.phone || '-'}</TableCell>
+                  <TableCell align="center">
                     {outlet.linked_username ? (
                       <Chip label={outlet.linked_username} size="small" color="primary" variant="outlined" />
                     ) : (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير مرتبط</Typography>
                     )}
                   </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                  <TableCell align="center" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
                     {formatCurrencyEGP(outlet.credit_limit || 0)}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="center">
                     <Chip
                       label={outlet.status === 'active' ? 'نشط' : 'معطل'}
                       color={outlet.status === 'active' ? 'success' : 'error'}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1 }}>
+                      <IconButton color="warning" onClick={() => handleOpenDetail(outlet)} title="عرض التفاصيل والكتب والفواتير">
+                        <VisibilityIcon />
+                      </IconButton>
+                      <IconButton color="info" onClick={() => handleShowQr(outlet)} title={t('system.viewQr')}>
+                        <QrCodeIcon />
+                      </IconButton>
                       {hasPermission('outlets.update') && (
                         <IconButton color="primary" onClick={() => handleOpenEditModal(outlet)} title="تعديل">
                           <EditIcon />
@@ -431,6 +506,15 @@ export const Outlets = () => {
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
               />
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label={t('system.outletCode')}
+                value={formCode}
+                inputProps={{ className: 'ltr-value', readOnly: true }}
+                disabled={true}
+              />
               <FormControl fullWidth size="small">
                 <InputLabel id="form-type-label">فئة المنفذ التسعيرية</InputLabel>
                 <Select
@@ -470,12 +554,19 @@ export const Outlets = () => {
                 inputProps={{ className: 'ltr-value' }}
               />
               <TextField
-                type="number"
                 fullWidth
                 size="small"
                 label="السقف الائتماني المالي"
                 value={formCreditLimit}
-                onChange={(e) => setFormCreditLimit(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const digits = val.replace(/\D/g, '');
+                  if (!digits) {
+                    setFormCreditLimit('');
+                  } else {
+                    setFormCreditLimit(parseInt(digits, 10).toLocaleString('en-US'));
+                  }
+                }}
                 inputProps={{ className: 'ltr-value' }}
                 InputProps={{
                   endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
@@ -535,6 +626,265 @@ export const Outlets = () => {
         </form>
       </EntityDrawer>
 
+      {/* ══════ OUTLET DETAILS DRAWER ══════ */}
+      <EntityDrawer
+        open={openDetailDrawer}
+        onClose={() => setOpenDetailDrawer(false)}
+        title={detailData ? `تقرير وتفاصيل المنفذ: ${detailData.outlet.name}` : 'جاري تحميل التفاصيل...'}
+        subtitle={detailData ? `كود المنفذ: ${detailData.outlet.code} (${detailData.outlet.governorate})` : ''}
+        size="large"
+        loading={detailLoading}
+        actions={
+          <Button onClick={() => setOpenDetailDrawer(false)} variant="outlined">
+            إغلاق
+          </Button>
+        }
+      >
+        {detailData && (
+          <Box>
+            {/* Basic Info Card */}
+            <Card variant="outlined" sx={{ mb: 3, backgroundColor: '#fafafa', borderColor: '#e0e0e0' }}>
+              <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1.5, borderBottom: '1px solid #e0e0e0', pb: 0.5 }}>
+                  البيانات الأساسية للمنفذ
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>اسم المنفذ والكود</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {detailData.outlet.name} ({detailData.outlet.code})
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>فئة منفذ التوزيع</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {detailData.outlet.outlet_type_name}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>المحافظة</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {detailData.outlet.governorate}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>رقم الهاتف</Typography>
+                    <Typography variant="body2" sx={{ direction: 'ltr', textAlign: 'right', fontWeight: 500 }}>
+                      {detailData.outlet.phone || '—'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>الحساب المرتبط</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {detailData.outlet.linked_username ? (
+                        <Chip label={detailData.outlet.linked_username} size="small" color="primary" variant="outlined" sx={{ height: 20, fontSize: '0.75rem' }} />
+                      ) : (
+                        '—'
+                      )}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6} sm={4}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>حالة المنفذ</Typography>
+                    <Box sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={detailData.outlet.status === 'active' ? 'نشط' : 'معطل'}
+                        color={detailData.outlet.status === 'active' ? 'success' : 'error'}
+                        size="small"
+                        sx={{ height: 20, fontSize: '0.75rem', fontWeight: 'bold' }}
+                      />
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>تفاصيل العنوان</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {detailData.outlet.address_details || '—'}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>شروط خاصة وملاحظات</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {detailData.outlet.notes || '—'}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+
+            {/* Financial Summary Cards */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={6} sm={3}>
+                <Card variant="outlined" sx={{ borderColor: 'primary.light', height: '100%' }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, textAlign: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>إجمالي المبيعات بالفواتير</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mt: 0.5 }}>
+                      {formatCurrencyEGP(detailData.summary.totalInvoiced)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card variant="outlined" sx={{ borderColor: 'success.light', height: '100%' }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, textAlign: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>المسدد (المحصل نقداً)</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'success.main', mt: 0.5 }}>
+                      {formatCurrencyEGP(detailData.summary.totalPaid)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card variant="outlined" sx={{ borderColor: 'error.light', height: '100%' }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, textAlign: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>قيمة المرتجعات</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'error.main', mt: 0.5 }}>
+                      {formatCurrencyEGP(detailData.summary.totalReturned)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Card variant="outlined" sx={{ borderColor: 'warning.light', height: '100%' }}>
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, textAlign: 'center' }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'bold' }}>الرصيد المتبقي (الذمم)</Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main', mt: 0.5 }}>
+                      {formatCurrencyEGP(detailData.summary.totalRemaining)}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+
+            {/* Tabs for details */}
+            <Paper sx={{ mb: 3 }}>
+              <Tabs
+                value={detailTab}
+                onChange={(e, val) => setDetailTab(val)}
+                indicatorColor="primary"
+                textColor="primary"
+                variant="fullWidth"
+              >
+                <Tab label="الكتب والمنتجات" icon={<BookIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
+                <Tab label="الفواتير الصادرة" icon={<DescriptionIcon />} iconPosition="start" sx={{ fontWeight: 'bold' }} />
+              </Tabs>
+            </Paper>
+
+            {/* TAB 0: BOOKS purchased */}
+            {detailTab === 0 && (
+              <Box>
+                {detailData.books && detailData.books.length > 0 ? (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                        <TableRow>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم الكتاب</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>كود الكتاب</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المباعة</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المرتجعة</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>صافي الكمية</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>متوسط السعر</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>إجمالي القيمة</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {detailData.books.map((book) => (
+                          <TableRow key={book.product_id} hover>
+                            <TableCell align="right" sx={{ fontWeight: 500 }}>{book.product_title}</TableCell>
+                            <TableCell align="right" sx={{ fontFamily: 'monospace' }}>{book.product_code}</TableCell>
+                            <TableCell align="center">{book.total_purchased}</TableCell>
+                            <TableCell align="center" sx={{ color: book.total_returned > 0 ? 'error.main' : 'inherit' }}>{book.total_returned}</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>{book.net_quantity}</TableCell>
+                            <TableCell align="right">{formatCurrencyEGP(book.average_price)}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(book.total_amount)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <EmptyState title="لا توجد مبيعات كتب" description="لم يتم بيع أي كتب لهذا المنفذ بعد." />
+                )}
+              </Box>
+            )}
+
+            {/* TAB 1: INVOICES issued */}
+            {detailTab === 1 && (
+              <Box>
+                {detailData.invoices && detailData.invoices.length > 0 ? (
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                        <TableRow>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>رقم الفاتورة</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الإصدار</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>طريقة الدفع</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>إجمالي القيمة</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>المدفوع نقداً</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>الرصيد المتبقي</TableCell>
+                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>حالة الدفع</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {detailData.invoices.map((inv) => {
+                          const getPayStatusColor = (status) => {
+                            switch (status) {
+                              case 'paid': return 'success';
+                              case 'unpaid': return 'error';
+                              case 'partially_paid': return 'warning';
+                              default: return 'default';
+                            }
+                          };
+                          const getPayStatusLabel = (status) => {
+                            switch (status) {
+                              case 'paid': return 'مسددة بالكامل';
+                              case 'unpaid': return 'غير مسددة';
+                              case 'partially_paid': return 'مسددة جزئياً';
+                              case 'cancelled': return 'ملغاة';
+                              default: return status;
+                            }
+                          };
+                          const getPaymentTypeLabel = (type) => {
+                            switch (type) {
+                              case 'cash': return 'نقدي';
+                              case 'deferred': return 'آجل';
+                              default: return type;
+                            }
+                          };
+                          return (
+                            <TableRow key={inv.id} hover>
+                              <TableCell align="right" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>
+                                {inv.invoice_number}
+                              </TableCell>
+                              <TableCell align="right">
+                                {inv.created_at ? new Date(inv.created_at).toLocaleDateString('ar-EG') : '—'}
+                              </TableCell>
+                              <TableCell align="right">
+                                <Chip label={getPaymentTypeLabel(inv.payment_type)} size="small" variant="outlined" />
+                              </TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(inv.total_price)}</TableCell>
+                              <TableCell align="right" sx={{ color: 'success.main' }}>{formatCurrencyEGP(inv.paid_amount)}</TableCell>
+                              <TableCell align="right" sx={{ color: inv.remaining_amount > 0 ? 'error.main' : 'inherit' }}>{formatCurrencyEGP(inv.remaining_amount)}</TableCell>
+                              <TableCell align="center">
+                                <Chip
+                                  label={getPayStatusLabel(inv.payment_status)}
+                                  color={getPayStatusColor(inv.payment_status)}
+                                  size="small"
+                                />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                ) : (
+                  <EmptyState title="لا توجد فواتير صادرة" description="لم يتم إصدار أي فواتير لهذا المنفذ بعد." />
+                )}
+              </Box>
+            )}
+          </Box>
+        )}
+      </EntityDrawer>
+
       {/* Confirmation Dialog */}
       <ConfirmDialog
         open={confirmOpen}
@@ -545,6 +895,28 @@ export const Outlets = () => {
         severity="error"
         confirmText="حذف"
       />
+
+      {/* QR Code Dialog */}
+      <Dialog open={qrOpen} onClose={() => setQrOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle align="center">{t('system.qrCode')}</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 3 }}>
+          {qrData && (
+            <>
+              <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>{qrData.name}</Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>{t('system.outletCode')}: {qrData.code}</Typography>
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.origin + '/outlets?search=' + qrData.code)}`} 
+                alt="Outlet QR Code"
+                style={{ width: 180, height: 180 }}
+              />
+              <Typography variant="caption" sx={{ color: 'text.secondary', mt: 2, textAlign: 'center' }}>{t('system.scanQr')}</Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setQrOpen(false)}>{t('system.close')}</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar alerting */}
       <Snackbar

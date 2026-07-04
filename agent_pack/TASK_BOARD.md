@@ -4,7 +4,7 @@
 
 **الحالة الحالية:** مكتمل تماماً.  
 **الخطوة المفتوحة الحالية:** لا يوجد (تم الانتهاء).  
-**آخر خطوة مكتملة:** 159 — `invoice_creation_receipt_upload_item_card_layout`.
+**آخر خطوة مكتملة:** 163 — `translation_cleanup_english_arabic_extensible`.
 
 أي تعديل جديد لاحقاً يتبع نفس الـ Agent Pack الموحد.
 
@@ -183,3 +183,7 @@
 | 157 | `invoice_drawers_details_responsive_material_polish` | done | Invoice Drawers/Details Responsive Material UI Polish |
 | 158 | `custom_roles_permissions_advanced_rbac` | done | Custom Roles + Advanced Permissions RBAC |
 | 159 | `invoice_creation_receipt_upload_item_card_layout` | done | Invoice Creation Receipt Upload + Item Card Responsive Layout |
+| 160 | `dynamic_categories_management_for_books` | done | Dynamic Categories Management for Books |
+| 161 | `sequential_sku_code_generation_backend_migration` | done | Sequential SKU/Code Generation Backend & Migration |
+| 162 | `qr_code_integration_books_outlets_invoices` | done | QR Code Integration for Books, Outlets, and Invoices |
+| 163 | `translation_cleanup_english_arabic_extensible` | done | Translation Cleanup & English-Arabic Extensible Setup |

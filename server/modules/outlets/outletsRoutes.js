@@ -80,9 +80,42 @@ router.get('/:id', requireAuth, checkPermission('outlets.view'), async (req, res
   }
 });
 
+// 2.5 GET /api/outlets/:id/details - Fetch detailed report of books, invoices, and summaries for an outlet
+router.get('/:id/details', requireAuth, checkPermission('outlets.view'), async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Valid Outlet ID is required.' });
+  }
+
+  try {
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+
+    if (!isElevated) {
+      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+      if (linkedOutlets.length > 0 && !linkedOutlets.includes(id)) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Access denied. You do not have permission to view this outlet.'
+        });
+      }
+    }
+
+    const report = await outletsService.getOutletDetailsReport(id);
+    if (!report) {
+      return res.status(404).json({ error: 'Not Found', message: 'Outlet not found.' });
+    }
+
+    res.status(200).json(report);
+  } catch (err) {
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
 // 3. POST /api/outlets - Create a new outlet
 router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('create_outlet', 'outlets'), async (req, res) => {
-  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null } = req.body;
+  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null, code = '' } = req.body;
 
   if (!name || !outletTypeId || !governorate) {
     return res.status(400).json({ error: 'Bad Request', message: 'Name, outlet type ID, and governorate are required.' });
@@ -114,7 +147,8 @@ router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('creat
       creditLimit,
       status,
       notes,
-      userId
+      userId,
+      code
     });
 
     res.status(201).json({
@@ -130,7 +164,7 @@ router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('creat
 // 4. PUT /api/outlets/:id - Edit an outlet
 router.put('/:id', requireAuth, checkPermission('outlets.update'), auditLog('update_outlet', 'outlets'), async (req, res) => {
   const { id } = req.params;
-  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null } = req.body;
+  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null, code = '' } = req.body;
 
   if (!name || !outletTypeId || !governorate) {
     return res.status(400).json({ error: 'Bad Request', message: 'Name, outlet type ID, and governorate are required.' });
@@ -164,7 +198,8 @@ router.put('/:id', requireAuth, checkPermission('outlets.update'), auditLog('upd
       creditLimit,
       status,
       notes,
-      userId
+      userId,
+      code
     });
 
     const updated = await outletsService.findById(id);

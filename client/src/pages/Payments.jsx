@@ -758,7 +758,7 @@ export const Payments = () => {
       )}
 
       {/* Main Payments Table */}
-      <Paper sx={{ width: '100%', overflow: 'hidden', mb: 3 }}>
+      <Paper className="main-table-paper">
         {loading ? (
           <LoadingState message="جاري تحميل سجل المدفوعات..." />
         ) : payments.length === 0 ? (
@@ -767,7 +767,7 @@ export const Payments = () => {
             description="لم يتم تسجيل أي دفعات بعد، أو لا توجد دفعات تطابق معايير التصفية."
           />
         ) : (
-          <TableContainer sx={{ maxHeight: 600 }}>
+          <TableContainer className="scrollable-table-container" sx={{ maxHeight: 600 }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
@@ -842,10 +842,11 @@ export const Payments = () => {
                           <Chip label="تم رفع الإيصال" color="info" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
                           <Button 
                             size="small" 
-                            variant="text" 
-                            startIcon={<ReceiptIcon fontSize="small" />}
+                            variant="outlined" 
+                            color="primary"
+                            startIcon={<ReceiptIcon sx={{ fontSize: '0.9rem !important' }} />}
                             onClick={() => window.open(`/api/payments/${row.id}/receipt`, '_blank')}
-                            sx={{ p: 0, minWidth: 0, fontSize: '0.75rem' }}
+                            sx={{ py: 0.5, px: 1.5, fontSize: '0.75rem', borderRadius: '4px' }}
                           >
                             عرض الإيصال
                           </Button>
@@ -1292,7 +1293,7 @@ export const Payments = () => {
             {metricsPayments.length === 0 ? (
               <Typography variant="body2" color="textSecondary">لا توجد عمليات دفع مسجلة بعد.</Typography>
             ) : (
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer className="scrollable-table-container" component={Paper} variant="outlined">
                 <Table size="small">
                   <TableHead>
                     <TableRow>
@@ -1318,9 +1319,13 @@ export const Payments = () => {
                           {p.receipt_stored_path ? (
                             <Button 
                               size="small" 
+                              variant="outlined"
+                              color="primary"
+                              startIcon={<ReceiptIcon sx={{ fontSize: '0.9rem !important' }} />}
                               onClick={() => window.open(`/api/payments/${p.id}/receipt`, '_blank')}
+                              sx={{ py: 0.5, px: 1.5, fontSize: '0.75rem', borderRadius: '4px' }}
                             >
-                              عرض
+                              عرض الإيصال
                             </Button>
                           ) : (
                             '-'

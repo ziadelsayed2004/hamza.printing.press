@@ -83,6 +83,9 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
   if (invoice.payment_status === 'cancelled') {
     throw new Error('Cannot return items from a cancelled invoice');
   }
+  if (!['shipped', 'delivered'].includes(invoice.shipping_status)) {
+    throw new Error('Cannot return items from an invoice that has not been shipped or delivered');
+  }
 
   const validatedItems = [];
   let totalReturnValue = 0;

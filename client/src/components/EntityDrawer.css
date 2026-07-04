@@ -24,6 +24,14 @@
   width: min(920px, 100vw);
 }
 
+.entity-drawer-paper--xlarge {
+  width: min(1200px, 100vw);
+}
+
+.entity-drawer-paper--full {
+  width: min(1200px, 100vw);
+}
+
 /* Header design */
 .entity-drawer__header {
   padding: var(--space-4) var(--space-5);

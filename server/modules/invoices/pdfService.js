@@ -25,8 +25,8 @@ function translateShippingStatus(status) {
   switch (status) {
     case 'pending': return 'قيد الانتظار';
     case 'partially_shipped': return 'شحن جزئي';
-    case 'shipped': return 'تم الشحن';
-    case 'delivered': return 'تم التوصيل';
+    case 'shipped': return 'تم الشحن والتسليم';
+    case 'delivered': return 'تم الشحن والتسليم';
     default: return status || 'غير معروف';
   }
 }
@@ -433,7 +433,16 @@ async function generateInvoicesPdf(invoiceIds) {
 
   // 4. Generate PDF buffer using html-pdf-node
   const file = { content: htmlContent };
-  const options = { format: 'A4', printBackground: true };
+  const options = { 
+    format: 'A4', 
+    printBackground: true,
+    margin: {
+      top: '15mm',
+      bottom: '15mm',
+      left: '15mm',
+      right: '15mm'
+    }
+  };
 
   return await pdf.generatePdf(file, options);
 }

@@ -516,42 +516,42 @@ export const Users = () => {
           {users.length === 0 ? (
             <EmptyState title="لا يوجد مستخدمين" description="لم نتمكن من العثور على أي حسابات مستخدمين مطابقة للبحث." />
           ) : (
-            <TableContainer component={Paper}>
+            <TableContainer className="scrollable-table-container" component={Paper} sx={{ overflowX: 'auto', width: '100%' }}>
               <Table>
-                <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم المستخدم</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم الكامل</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الأدوار</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>حالة الحساب</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الإنشاء</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم المستخدم</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الاسم الكامل</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الأدوار</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>حالة الحساب</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>تاريخ الإنشاء</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {users.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell align="right" sx={{ fontWeight: 500 }}>{u.username}</TableCell>
-                      <TableCell align="right">{u.full_name}</TableCell>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    <TableRow key={u.id} hover>
+                      <TableCell align="center" sx={{ fontWeight: 500 }}>{u.username}</TableCell>
+                      <TableCell align="center">{u.full_name}</TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5 }}>
                           {u.roles?.map((r) => (
                             <Chip key={r} label={translateRoleName(r)} size="small" color="primary" variant="outlined" />
                           ))}
                         </Box>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="center">
                         <Chip
                           label={u.status === 'active' ? 'نشط' : 'معطل'}
                           color={u.status === 'active' ? 'success' : 'error'}
                           size="small"
                         />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="center">
                         {formatEgyptDate(u.created_at)}
                       </TableCell>
-                      <TableCell align="center">
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1 }}>
                           {hasPermission('users.update') && (
                             <IconButton color="primary" onClick={() => handleOpenEditModal(u)} title="تعديل">
                               <EditIcon />
@@ -605,9 +605,9 @@ export const Users = () => {
             </Button>
           </Box>
 
-          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+          <TableContainer className="scrollable-table-container" component={Paper} variant="outlined" sx={{ mb: 3 }}>
             <Table size="small">
-              <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم الدور الوظيفي</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوصف</TableCell>

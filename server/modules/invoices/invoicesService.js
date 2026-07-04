@@ -10,10 +10,11 @@ const config = require('../../config');
  * Create a new invoice.
  */
 async function createInvoice({
+  invoiceNumber: invoiceNumberInput = '',
   outletId,
   discount = 0,
   shippingCost = 0,
-  _paymentType = 'cash',
+  paymentType = 'cash',
   notes = '',
   items = [],
   userId,
@@ -47,8 +48,20 @@ async function createInvoice({
     }
   }
 
-  // Generate unique invoice number
-  const invoiceNumber = `INV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  // Generate/resolve unique invoice number
+  let finalInvoiceNumber = invoiceNumberInput ? invoiceNumberInput.trim() : '';
+  if (!finalInvoiceNumber) {
+    const row = await db.get("SELECT invoice_number as val FROM invoices WHERE invoice_number LIKE 'INV-%' ORDER BY invoice_number DESC LIMIT 1");
+    let nextNum = 1;
+    if (row && row.val) {
+      const match = row.val.match(/\d+$/);
+      if (match) {
+        nextNum = parseInt(match[0], 10) + 1;
+      }
+    }
+    finalInvoiceNumber = `INV-${String(nextNum).padStart(7, '0')}`;
+  }
+  const invoiceNumber = finalInvoiceNumber;
 
   // Handle receipt file BEFORE opening transaction (file I/O outside transaction)
   let receiptOriginalName = null;
@@ -581,10 +594,17 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
  */
 async function getInvoiceById(id) {
   const sql = `
-    SELECT i.*, o.name as outlet_name, o.outlet_type_id, o.governorate, o.address_details, o.phone, u.full_name as user_full_name
+    SELECT i.*, o.name as outlet_name, o.outlet_type_id, o.governorate, o.address_details, o.phone, u.full_name as user_full_name,
+           COALESCE(p.paid_amount, 0) as paid_amount,
+           (i.total_price - COALESCE(p.paid_amount, 0)) as remaining_amount
     FROM invoices i
     JOIN outlets o ON o.id = i.outlet_id
     LEFT JOIN users u ON u.id = i.created_by
+    LEFT JOIN (
+      SELECT invoice_id, SUM(amount) as paid_amount
+      FROM invoice_payments
+      GROUP BY invoice_id
+    ) p ON p.invoice_id = i.id
     WHERE i.id = ?
   `;
   const invoice = await db.get(sql, [id]);
@@ -774,8 +794,12 @@ async function getInvoices({
   }
 
   if (shippingStatus) {
-    sql += ` AND i.shipping_status = ?`;
-    params.push(shippingStatus);
+    if (shippingStatus === 'delivered') {
+      sql += ` AND i.shipping_status IN ('shipped', 'delivered')`;
+    } else {
+      sql += ` AND i.shipping_status = ?`;
+      params.push(shippingStatus);
+    }
   }
 
   if (startDate) {

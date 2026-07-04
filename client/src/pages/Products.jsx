@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatCurrencyEGP } from '../utils/formatters';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { t } from '../locales/t';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import { FormSection } from '../components/forms/FormSection';
@@ -55,7 +56,7 @@ export const Products = () => {
   const [authorsList, setAuthorsList] = useState([]);
   const [outletTypes, setOutletTypes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(new URLSearchParams(window.location.search).get('search') || '');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
@@ -71,7 +72,7 @@ export const Products = () => {
   // Form states
   const [formTitle, setFormTitle] = useState('');
   const [formCode, setFormCode] = useState('');
-  const [formCategory, setFormCategory] = useState('');
+  const [formCategoryIds, setFormCategoryIds] = useState([]);
   const [formStatus, setFormStatus] = useState('active');
   const [formStockPolicy, setFormStockPolicy] = useState('track');
   const [formAuthorId, setFormAuthorId] = useState('');
@@ -87,7 +88,7 @@ export const Products = () => {
 
   const fetchInitialData = async () => {
     try {
-      const cats = await apiClient.get('/products/categories');
+      const cats = await apiClient.get('/categories');
       setCategories(cats);
 
       const authorsData = await apiClient.get('/authors?limit=500&status=active');
@@ -109,6 +110,15 @@ export const Products = () => {
       
       const data = await apiClient.get(query);
       setProducts(data);
+
+      // Auto-open details if search code matches exactly
+      const searchParam = new URLSearchParams(window.location.search).get('search');
+      if (searchParam && data && data.length > 0) {
+        const exactMatch = data.find(p => p.code === searchParam.trim());
+        if (exactMatch) {
+          handleOpenDetails(exactMatch);
+        }
+      }
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تحميل المنتجات.', 'error');
@@ -149,7 +159,7 @@ export const Products = () => {
     setSelectedProduct(null);
     setFormTitle('');
     setFormCode('');
-    setFormCategory('');
+    setFormCategoryIds([]);
     setFormStatus('active');
     setFormStockPolicy('track');
     setFormAuthorId('');
@@ -161,6 +171,15 @@ export const Products = () => {
     });
     setFormPrices(initialPrices);
     
+    // Auto-generate SKU
+    apiClient.get('/system/next-code?type=product')
+      .then(res => {
+        if (res && res.code) {
+          setFormCode(res.code);
+        }
+      })
+      .catch(console.error);
+
     setOpenModal(true);
   };
 
@@ -169,7 +188,7 @@ export const Products = () => {
     setSelectedProduct(product);
     setFormTitle(product.title);
     setFormCode(product.code);
-    setFormCategory(product.category || '');
+    setFormCategoryIds(product.categories ? product.categories.map(c => c.id) : []);
     setFormStatus(product.status);
     setFormStockPolicy(product.stockPolicy || 'track');
     setFormAuthorId(product.authors?.[0]?.id || '');
@@ -214,7 +233,7 @@ export const Products = () => {
     const payload = {
       title: formTitle,
       code: formCode,
-      category: formCategory,
+      categoryIds: formCategoryIds,
       status: formStatus,
       stockPolicy: formStockPolicy,
       authorIds: formAuthorId ? [formAuthorId] : []
@@ -251,8 +270,8 @@ export const Products = () => {
 
       setOpenModal(false);
       fetchProducts();
-      // Reload categories list just in case a new one was typed
-      const cats = await apiClient.get('/products/categories');
+      // Reload categories list
+      const cats = await apiClient.get('/categories');
       setCategories(cats);
     } catch (err) {
       console.error(err);
@@ -334,8 +353,8 @@ export const Products = () => {
               >
                 <MenuItem value="">الجميع</MenuItem>
                 {categories.map((c) => (
-                  <MenuItem key={c} value={c}>
-                    {c}
+                  <MenuItem key={c.id} value={c.id.toString()}>
+                    {c.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -363,46 +382,54 @@ export const Products = () => {
       {products.length === 0 ? (
         <EmptyState title="لا يوجد منتجات" description="لم نتمكن من العثور على أي كتب تطابق معايير البحث الحالية." />
       ) : (
-        <TableContainer component={Paper}>
+        <TableContainer className="scrollable-table-container" component={Paper} sx={{ overflowX: 'auto', width: '100%' }}>
           <Table>
-            <TableHead sx={{ backgroundColor: '#f1f5f9' }}>
+            <TableHead>
               <TableRow>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الرمز (SKU)</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>العنوان والكتاب</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>التصنيف</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>المؤلف</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>سياسة الجرد</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الرمز (SKU)</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>العنوان والكتاب</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>التصنيف</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>المؤلف</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>سياسة الجرد</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {products.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell align="right" sx={{ fontFamily: 'monospace' }}>{p.code}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 500 }}>{p.title}</TableCell>
-                  <TableCell align="right">
-                    {p.category ? <Chip label={p.category} size="small" variant="outlined" /> : '-'}
+                <TableRow key={p.id} hover>
+                  <TableCell align="center" sx={{ fontFamily: 'monospace' }}>{p.code}</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 500 }}>{p.title}</TableCell>
+                  <TableCell align="center">
+                    {p.categories && p.categories.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.5 }}>
+                        {p.categories.map((c) => (
+                          <Chip key={c.id} label={c.name} size="small" variant="outlined" color="primary" />
+                        ))}
+                      </Box>
+                    ) : (
+                      '-'
+                    )}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="center">
                     {p.authors && p.authors.length > 0 ? (
                       p.authors[0].name
                     ) : (
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير محدد</Typography>
                     )}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="center">
                     {p.stockPolicy === 'track' ? 'تتبع الكميات' : 'تجاهل الجرد'}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell align="center">
                     <Chip
                       label={p.status === 'active' ? 'نشط' : 'معطل'}
                       color={p.status === 'active' ? 'success' : 'error'}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1 }}>
                       <IconButton color="secondary" onClick={() => handleOpenDetails(p)} title="عرض التفاصيل والأسعار">
                         <VisibilityIcon />
                       </IconButton>
@@ -433,15 +460,28 @@ export const Products = () => {
         actions={<Button onClick={() => setOpenDetailsModal(false)} variant="outlined">إغلاق</Button>}
       >
         {detailsProduct && (
-          <FormSection title={detailsProduct.title} description={`رمز SKU: ${detailsProduct.code}`}>
+          <FormSection title={detailsProduct.title} description={`${t('system.sku')}: ${detailsProduct.code}`}>
             <FieldGrid columns={1}>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                التصنيف: {detailsProduct.category || 'غير محدد'}
+                التصنيفات: {detailsProduct.categories && detailsProduct.categories.length > 0
+                  ? detailsProduct.categories.map(c => c.name).join('، ')
+                  : 'غير محدد'}
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                 المؤلف: {detailsProduct.authors?.[0]?.name || 'غير محدد'}
               </Typography>
             </FieldGrid>
+
+            {/* QR Code section */}
+            <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, border: '1px dashed #cbd5e1', borderRadius: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>{t('system.qrCode')}</Typography>
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/products?search=' + detailsProduct.code)}`} 
+                alt="Product QR Code"
+                style={{ width: 150, height: 150 }}
+              />
+              <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>{t('system.scanToViewProduct')}</Typography>
+            </Box>
             
             <Divider sx={{ my: 3 }} />
             
@@ -451,7 +491,7 @@ export const Products = () => {
             {detailsPrices.length === 0 ? (
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>لا توجد أسعار مدخلة بعد لهذا المنتج.</Typography>
             ) : (
-              <TableContainer>
+              <TableContainer className="scrollable-table-container">
                 <Table size="small">
                   <TableHead>
                     <TableRow>
@@ -503,18 +543,35 @@ export const Products = () => {
                 required
                 fullWidth
                 size="small"
-                label="رمز SKU / الرمز التعريفي"
+                label={t('system.sku')}
                 value={formCode}
-                onChange={(e) => setFormCode(e.target.value)}
-                inputProps={{ className: 'ltr-value' }}
+                inputProps={{ className: 'ltr-value', readOnly: true }}
+                disabled={true}
               />
-              <TextField
-                fullWidth
-                size="small"
-                label="التصنيف (مثال: رواية، أكاديمي، فلسفة)"
-                value={formCategory}
-                onChange={(e) => setFormCategory(e.target.value)}
-              />
+              <FormControl fullWidth size="small">
+                <InputLabel id="form-categories-label">التصنيفات</InputLabel>
+                <Select
+                  labelId="form-categories-label"
+                  multiple
+                  value={formCategoryIds}
+                  onChange={(e) => setFormCategoryIds(e.target.value)}
+                  label="التصنيفات"
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const cat = categories.find(c => c.id === value);
+                        return <Chip key={value} label={cat ? cat.name : value} size="small" />;
+                      })}
+                    </Box>
+                  )}
+                >
+                  {categories.map((c) => (
+                    <MenuItem key={c.id} value={c.id}>
+                      {c.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <FormControl fullWidth size="small">
                 <InputLabel id="form-stock-policy-label">سياسة المخزون والجرد</InputLabel>
                 <Select

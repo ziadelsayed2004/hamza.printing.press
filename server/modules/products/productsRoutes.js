@@ -11,12 +11,11 @@ router.get('/categories', requireAuth, checkPermission('products.view'), async (
   try {
     const db = require('../../db');
     const rows = await db.all(`
-      SELECT DISTINCT category 
-      FROM products 
-      WHERE category IS NOT NULL AND category != '' 
-      ORDER BY category ASC
+      SELECT name 
+      FROM categories 
+      ORDER BY name ASC
     `);
-    const categories = rows.map(r => r.category);
+    const categories = rows.map(r => r.name);
     res.status(200).json(categories);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -137,7 +136,7 @@ router.get('/:id', requireAuth, checkPermission('products.view'), async (req, re
 
 // 3. POST /api/products - Create a new product (with SKU validation)
 router.post('/', requireAuth, checkPermission('products.create'), auditLog('create_product', 'products'), async (req, res) => {
-  const { title, code, category = '', status = 'active', stockPolicy = 'track', authorIds = [] } = req.body;
+  const { title, code, category = '', status = 'active', stockPolicy = 'track', authorIds = [], categoryIds = [] } = req.body;
 
   if (!title || !code) {
     return res.status(400).json({ error: 'Bad Request', message: 'Title and code are required.' });
@@ -155,7 +154,8 @@ router.post('/', requireAuth, checkPermission('products.create'), auditLog('crea
       category,
       status,
       stockPolicy,
-      authorIds
+      authorIds,
+      categoryIds
     });
 
     res.status(201).json({
@@ -171,7 +171,7 @@ router.post('/', requireAuth, checkPermission('products.create'), auditLog('crea
 // 4. PUT /api/products/:id - Edit a product
 router.put('/:id', requireAuth, checkPermission('products.update'), auditLog('update_product', 'products'), async (req, res) => {
   const productId = parseInt(req.params.id, 10);
-  const { title, code, category = '', status = 'active', stockPolicy = 'track', authorIds = [] } = req.body;
+  const { title, code, category = '', status = 'active', stockPolicy = 'track', authorIds = [], categoryIds = [] } = req.body;
 
   if (!title || !code) {
     return res.status(400).json({ error: 'Bad Request', message: 'Title and code are required.' });
@@ -195,7 +195,8 @@ router.put('/:id', requireAuth, checkPermission('products.update'), auditLog('up
       category,
       status,
       stockPolicy,
-      authorIds
+      authorIds,
+      categoryIds
     });
 
     const updatedProduct = await productsService.findById(productId);

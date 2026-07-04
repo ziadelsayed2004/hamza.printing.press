@@ -8,6 +8,7 @@
   "nav": {
     "dashboard": "لوحة التحكم",
     "products": "الكتب والمنتجات",
+    "categories": "تصنيفات الكتب",
     "authors": "المؤلفين",
     "outletTypes": "فئات المنافذ",
     "outlets": "المنافذ والفروع",
@@ -76,7 +77,13 @@
     "todayInvoices": "فواتير اليوم",
     "todaySales": "إجمالي مبيعات اليوم",
     "todayPayments": "مقبوضات اليوم",
-    "criticalAlerts": "تنبيهات حرجة"
+    "criticalAlerts": "تنبيهات حرجة",
+    "newInvoice": "فاتورة مبيعات جديدة",
+    "addStock": "توريد مخزون وارد",
+    "addOutlet": "إضافة فرع / منفذ",
+    "addProduct": "إضافة منتج جديد",
+    "outletTypes": "فئات منافذ البيع",
+    "bookCategories": "تصنيفات الكتب"
   },
   "products": {
     "title": "الكتب والمنتجات",
@@ -117,5 +124,17 @@
   "reports": {
     "title": "التقارير",
     "export": "تصدير تقرير"
+  },
+  "system": {
+    "generate": "توليد تلقائي",
+    "qrCode": "رمز الاستجابة السريعة (QR Code)",
+    "scanQr": "امسح الرمز لعرض البيانات بالبحث السريع",
+    "viewQr": "عرض رمز QR",
+    "close": "إغلاق",
+    "sku": "رمز SKU / الرمز التعريفي",
+    "outletCode": "الرمز التعريفي للمنفذ",
+    "invoiceNumber": "رقم الفاتورة / الرمز التعريفي",
+    "scanToViewProduct": "امسح لعرض بيانات الكتاب بالبحث السريع",
+    "scanToViewInvoice": "امسح لعرض بيانات الفاتورة بالبحث السريع"
   }
 }

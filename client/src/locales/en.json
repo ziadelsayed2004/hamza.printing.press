@@ -1,0 +1,140 @@
+{
+  "app": {
+    "title": "BookStore Manager",
+    "subtitle": "Integrated Management System",
+    "company": "Hamza Printing Press",
+    "developer": "Ziad Elsayed CodzHub"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Books & Products",
+    "categories": "Book Categories",
+    "authors": "Authors",
+    "outletTypes": "Outlet Types",
+    "outlets": "Outlets & Branches",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "finance": "Treasury & Finance",
+    "inventory": "Inventory",
+    "shipments": "Shipments",
+    "reports": "Reports",
+    "exports": "Export Data",
+    "users": "Users & Roles",
+    "audit": "Audit Logs",
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "logout": "Logout",
+    "main": "Main",
+    "catalog": "Catalog & Pricing",
+    "distribution": "Outlets & Distribution",
+    "sales": "Invoices & Sales",
+    "financeSection": "Finance & Accounts",
+    "inventorySection": "Inventory",
+    "shippingSection": "Shipping",
+    "reportsSection": "Reports & Exports",
+    "managementSection": "Management",
+    "expandMenu": "Expand Menu",
+    "collapseMenu": "Collapse Menu",
+    "openMenu": "Open Menu",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "actions": "Actions",
+    "status": "Status",
+    "active": "Active",
+    "disabled": "Disabled",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "noData": "No data available",
+    "confirm": "Confirm",
+    "user": "User",
+    "new": "New"
+  },
+  "auth": {
+    "login": "Login",
+    "username": "Username",
+    "password": "Password",
+    "loginFailed": "Login failed. Please check username and password.",
+    "usernameRequired": "Please enter username and password",
+    "accountOptions": "Account Options"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome, {name}",
+    "subtitle": "Integrated dashboard for bookstore operations and finances",
+    "activeBooks": "Total Active Books",
+    "activeOutlets": "Total Active Outlets",
+    "todayInvoices": "Today's Invoices",
+    "todaySales": "Today's Total Sales",
+    "todayPayments": "Today's Payments",
+    "criticalAlerts": "Critical Alerts",
+    "newInvoice": "New Sales Invoice",
+    "addStock": "Supply Incoming Stock",
+    "addOutlet": "Add Branch / Outlet",
+    "addProduct": "Add New Book/Product",
+    "outletTypes": "Outlet Types",
+    "bookCategories": "Book Categories"
+  },
+  "products": {
+    "title": "Books & Products",
+    "addBook": "Add New Book",
+    "editBook": "Edit Book"
+  },
+  "authors": {
+    "title": "Authors",
+    "addAuthor": "Add New Author"
+  },
+  "outlets": {
+    "title": "Outlets & Branches",
+    "addOutlet": "Add New Outlet"
+  },
+  "invoices": {
+    "title": "Invoices & Sales",
+    "addInvoice": "Create New Invoice"
+  },
+  "payments": {
+    "title": "Payments",
+    "addPayment": "Record New Payment"
+  },
+  "finance": {
+    "title": "Treasury & Finance",
+    "ledger": "Financial Ledger"
+  },
+  "inventory": {
+    "title": "Inventory Receipts",
+    "adjust": "Inventory Adjustment"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAsRead": "Mark Read",
+    "resolve": "Resolve",
+    "noNotifications": "No notifications",
+    "viewAll": "View All Notifications"
+  },
+  "reports": {
+    "title": "Reports",
+    "export": "Export Report"
+  },
+  "system": {
+    "generate": "Auto Generate",
+    "qrCode": "QR Code",
+    "scanQr": "Scan QR code to view details via search",
+    "viewQr": "View QR Code",
+    "close": "Close",
+    "sku": "SKU / Code",
+    "outletCode": "Outlet Code",
+    "invoiceNumber": "Invoice Number",
+    "scanToViewProduct": "Scan to view book details via quick search",
+    "scanToViewInvoice": "Scan to view invoice details via quick search"
+  }
+}

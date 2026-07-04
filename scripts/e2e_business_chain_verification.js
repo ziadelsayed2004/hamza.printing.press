@@ -69,8 +69,7 @@ async function runE2EChain() {
     console.log('Step 4: Creating Author...');
     const author = await authorsService.createAuthor({
       name: 'E2E Author ' + Date.now(),
-      phone: '01012345678',
-      email: 'e2e@author.com'
+      phone: '01012345678'
     });
     created.authorIds.push(author.id);
     console.log(`✓ Author created with ID ${author.id}`);

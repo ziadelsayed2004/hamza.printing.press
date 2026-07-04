@@ -3,29 +3,29 @@ const db = require('../../db');
 /**
  * Create a new author.
  */
-async function createAuthor({ name, phone = '', email = '', status = 'active', userId = null }) {
+async function createAuthor({ name, phone = '', status = 'active', userId = null }) {
   if (!name) {
     throw new Error('Author name is required');
   }
 
   const sql = `
-    INSERT INTO authors (name, phone, email, status)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO authors (name, phone, status)
+    VALUES (?, ?, ?)
   `;
-  const result = await db.run(sql, [name.trim(), phone.trim(), email.trim(), status]);
+  const result = await db.run(sql, [name.trim(), phone.trim(), status]);
   const authorId = result.lastID;
 
   if (userId) {
     await db.run('INSERT INTO author_users (author_id, user_id) VALUES (?, ?)', [authorId, userId]);
   }
 
-  return { id: authorId, name, phone, email, status, userId };
+  return { id: authorId, name, phone, status, userId };
 }
 
 /**
  * Update an existing author.
  */
-async function updateAuthor(id, { name, phone = '', email = '', status = 'active', userId = null }) {
+async function updateAuthor(id, { name, phone = '', status = 'active', userId = null }) {
   if (!name) {
     throw new Error('Author name is required');
   }
@@ -35,10 +35,10 @@ async function updateAuthor(id, { name, phone = '', email = '', status = 'active
 
   const sql = `
     UPDATE authors
-    SET name = ?, phone = ?, email = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+    SET name = ?, phone = ?, status = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `;
-  const result = await db.run(sql, [name.trim(), phone.trim(), email.trim(), status, id]);
+  const result = await db.run(sql, [name.trim(), phone.trim(), status, id]);
 
   // Clean up and update linked user account
   await db.run('DELETE FROM author_users WHERE author_id = ?', [id]);
@@ -98,9 +98,9 @@ async function getAll({ limit = 50, offset = 0, search = '', status = '', userId
   const params = [];
 
   if (search) {
-    sql += ` AND (a.name LIKE ? OR a.phone LIKE ? OR a.email LIKE ?)`;
+    sql += ` AND (a.name LIKE ? OR a.phone LIKE ?)`;
     const term = `%${search}%`;
-    params.push(term, term, term);
+    params.push(term, term);
   }
   if (status) {
     sql += ` AND a.status = ?`;

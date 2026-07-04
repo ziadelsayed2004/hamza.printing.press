@@ -468,8 +468,13 @@ async function getStockReport({ search = '', category = '', status = '', authorI
     params.push(term, term);
   }
   if (category) {
-    sql += ` AND p.category = ?`;
-    params.push(category);
+    if (Number.isInteger(Number(category)) && String(category).trim() !== '') {
+      sql += ` AND p.id IN (SELECT product_id FROM product_categories WHERE category_id = ?)`;
+      params.push(Number(category));
+    } else {
+      sql += ` AND p.id IN (SELECT pc.product_id FROM product_categories pc JOIN categories c ON pc.category_id = c.id WHERE c.name = ?)`;
+      params.push(category);
+    }
   }
   if (status) {
     sql += ` AND p.status = ?`;

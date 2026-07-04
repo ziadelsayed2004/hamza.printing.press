@@ -11,6 +11,7 @@ import { AuditLogs } from './pages/AuditLogs';
 import { Profile } from './pages/Profile';
 import { Authors } from './pages/Authors';
 import { Products } from './pages/Products';
+import { Categories } from './pages/Categories';
 import { Outlets } from './pages/Outlets';
 import { OutletTypes } from './pages/OutletTypes';
 import { Invoices } from './pages/Invoices';
@@ -108,6 +109,7 @@ export function App() {
                 <Route path="outlets" element={<Outlets />} />
                 <Route path="authors" element={<Authors />} />
                 <Route path="products" element={<Products />} />
+                <Route path="categories" element={<Categories />} />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="invoices" element={<Invoices />} />
                 <Route path="payments" element={<Payments />} />

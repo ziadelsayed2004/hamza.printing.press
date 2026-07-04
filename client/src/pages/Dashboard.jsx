@@ -41,7 +41,8 @@ import {
   LocalShipping as ShippingIcon,
   AccessTime as AccessTimeIcon,
   Launch as LaunchIcon,
-  Check as ResolveIcon
+  Check as ResolveIcon,
+  Category as CategoryIcon
 } from '@mui/icons-material';
 import './Dashboard.css';
 
@@ -466,11 +467,12 @@ export const Dashboard = () => {
       </Typography>
       <Box className="quick-actions-grid">
         {[
-          { label: 'فاتورة مبيعات جديدة', icon: <AddInvoiceIcon className="quick-action-btn__icon" />, path: '/invoices', perm: 'invoices.create' },
-          { label: 'توريد مخزون وارد', icon: <AddStockIcon className="quick-action-btn__icon" />, path: '/inventory', perm: 'inventory.create' },
-          { label: 'إضافة فرع / منفذ', icon: <StoreIcon className="quick-action-btn__icon" />, path: '/outlets', perm: 'outlets.create' },
-          { label: 'إضافة منتج جديد', icon: <AddProductIcon className="quick-action-btn__icon" />, path: '/products', perm: 'products.create' },
-          { label: 'فئات منافذ البيع', icon: <AddCircleIcon className="quick-action-btn__icon" />, path: '/outlet-types', perm: 'outlet-types.create' },
+          { label: t('dashboard.newInvoice'), icon: <AddInvoiceIcon className="quick-action-btn__icon" />, path: '/invoices', perm: 'invoices.create' },
+          { label: t('dashboard.addStock'), icon: <AddStockIcon className="quick-action-btn__icon" />, path: '/inventory', perm: 'inventory.create' },
+          { label: t('dashboard.addOutlet'), icon: <StoreIcon className="quick-action-btn__icon" />, path: '/outlets', perm: 'outlets.create' },
+          { label: t('dashboard.addProduct'), icon: <AddProductIcon className="quick-action-btn__icon" />, path: '/products', perm: 'products.create' },
+          { label: t('dashboard.bookCategories'), icon: <CategoryIcon className="quick-action-btn__icon" />, path: '/categories', perm: 'products.view' },
+          { label: t('dashboard.outletTypes'), icon: <AddCircleIcon className="quick-action-btn__icon" />, path: '/outlet-types', perm: 'outlet-types.create' },
         ].map(act => {
           if (act.perm && !hasPermission(act.perm)) return null;
           return (

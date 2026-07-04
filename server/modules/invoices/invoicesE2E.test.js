@@ -128,8 +128,7 @@ describe('E2E Business Flow Integrity Tests', () => {
     // 3. Create author
     const autRes = await agent.post('/api/authors').send({
       name: 'E2E Author Name',
-      phone: '01111111111',
-      email: 'e2e@author.com'
+      phone: '01111111111'
     });
     expect(autRes.status).toBe(201);
     author = autRes.body.author || autRes.body;

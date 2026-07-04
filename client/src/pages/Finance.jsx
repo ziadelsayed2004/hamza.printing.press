@@ -591,25 +591,25 @@ export const Finance = () => {
             <LoadingState message="جاري تحميل حركات الدفتر المالي..." />
           ) : ledger.length > 0 ? (
             <Box>
-              <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
+              <TableContainer className="scrollable-table-container" component={Paper} sx={{ boxShadow: 0, overflowX: 'auto', width: '100%' }}>
                 <Table sx={{ minWidth: 650 }}>
-                  <TableHead sx={{ bgcolor: 'action.selected' }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>التاريخ والوقت</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>منفذ البيع</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>نوع الحركة</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>تأثير الخزينة (نقدي)</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>تأثير المديونيات (ذمم)</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>الملاحظات والبيان</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>التاريخ والوقت</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>منفذ البيع</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>نوع الحركة</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>تأثير الخزينة (نقدي)</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>تأثير المديونيات (الرصيد المعلق)</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الملاحظات والبيان</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {ledger.map((entry) => (
                       <TableRow key={entry.id} hover>
-                        <TableCell align="right">{formatEgyptDateTime(entry.created_at)}</TableCell>
-                        <TableCell align="right">{entry.outlet_name}</TableCell>
-                        <TableCell align="right">
+                        <TableCell align="center">{formatEgyptDateTime(entry.created_at)}</TableCell>
+                        <TableCell align="center">{entry.outlet_name}</TableCell>
+                        <TableCell align="center">
                           <Chip
                             label={entryTypeTranslations[entry.entry_type] || entry.entry_type}
                             size="small"
@@ -623,7 +623,7 @@ export const Finance = () => {
                             variant="outlined"
                           />
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="center">
                           <Typography
                             variant="body2"
                             sx={{
@@ -634,7 +634,7 @@ export const Finance = () => {
                             {entry.cash_amount > 0 ? '+' : ''}{formatCurrencyEGP(entry.cash_amount)}
                           </Typography>
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="center">
                           <Typography
                             variant="body2"
                             sx={{
@@ -645,8 +645,8 @@ export const Finance = () => {
                             {entry.receivable_amount > 0 ? '+' : ''}{formatCurrencyEGP(entry.receivable_amount)}
                           </Typography>
                         </TableCell>
-                        <TableCell align="right">{entry.user_full_name || 'غير معروف'}</TableCell>
-                        <TableCell align="right">{entry.notes || '-'}</TableCell>
+                        <TableCell align="center">{entry.user_full_name || 'غير معروف'}</TableCell>
+                        <TableCell align="center">{entry.notes || '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -676,18 +676,18 @@ export const Finance = () => {
           {outletLoading ? (
             <LoadingState message="جاري تحميل أرصدة الفروع والمنافذ..." />
           ) : outletBalances.length > 0 ? (
-             <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
+             <TableContainer className="scrollable-table-container" component={Paper} sx={{ boxShadow: 0, overflowX: 'auto', width: '100%' }}>
               <Table sx={{ minWidth: 650 }}>
-                <TableHead sx={{ bgcolor: 'action.selected' }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم المنفذ</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>فئة المنفذ</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحافظة</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحد الائتماني</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المرتجع (قيمة -)</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحصل (نقداً)</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المتبقي (ذمم مدينة)</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم المنفذ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>فئة المنفذ</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المحافظة</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحد الائتماني</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المرتجع (قيمة -)</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المحصل (نقداً)</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الرصيد المتبقي (المديونية)</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -695,20 +695,20 @@ export const Finance = () => {
                     const limitExceeded = bal.receivable_balance > bal.credit_limit && bal.credit_limit > 0;
                     return (
                       <TableRow key={bal.id} hover>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>{bal.name}</TableCell>
-                        <TableCell align="right">{bal.outlet_type_name}</TableCell>
-                        <TableCell align="right">{bal.governorate}</TableCell>
-                        <TableCell align="right">{formatCurrencyEGP(bal.credit_limit)}</TableCell>
-                        <TableCell align="right" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>{bal.name}</TableCell>
+                        <TableCell align="center">{bal.outlet_type_name}</TableCell>
+                        <TableCell align="center">{bal.governorate}</TableCell>
+                        <TableCell align="center">{formatCurrencyEGP(bal.credit_limit)}</TableCell>
+                        <TableCell align="center" sx={{ color: 'error.main', fontWeight: 'bold' }}>
                           {formatCurrencyEGP(bal.return_balance || 0)}
                         </TableCell>
-                        <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                        <TableCell align="center" sx={{ color: 'success.main', fontWeight: 'bold' }}>
                           {formatCurrencyEGP(bal.collected_balance)}
                         </TableCell>
-                        <TableCell align="right" sx={{ color: limitExceeded ? 'error.main' : 'warning.main', fontWeight: 'bold' }}>
+                        <TableCell align="center" sx={{ color: limitExceeded ? 'error.main' : 'warning.main', fontWeight: 'bold' }}>
                           {formatCurrencyEGP(bal.receivable_balance)}
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="center">
                           <Chip
                             label={limitExceeded ? 'تجاوز الحد الائتماني' : 'سليم ائتمانياً'}
                             color={limitExceeded ? 'error' : 'success'}
@@ -732,23 +732,23 @@ export const Finance = () => {
           {govLoading ? (
             <LoadingState message="جاري تحميل أرصدة المحافظات..." />
           ) : governorateBalances.length > 0 ? (
-            <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
+            <TableContainer className="scrollable-table-container" component={Paper} sx={{ boxShadow: 0, overflowX: 'auto', width: '100%' }}>
               <Table sx={{ minWidth: 650 }}>
-                <TableHead sx={{ bgcolor: 'action.selected' }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحافظة</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحصل (نقداً)</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المتبقي (ذمم مدينة)</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المحافظة</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المحصل (نقداً)</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الرصيد المتبقي (المديونية)</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {governorateBalances.map((bal) => (
                     <TableRow key={bal.governorate} hover>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>{bal.governorate}</TableCell>
-                      <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>{bal.governorate}</TableCell>
+                      <TableCell align="center" sx={{ color: 'success.main', fontWeight: 'bold' }}>
                         {formatCurrencyEGP(bal.collected_balance)}
                       </TableCell>
-                      <TableCell align="right" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
+                      <TableCell align="center" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
                         {formatCurrencyEGP(bal.receivable_balance)}
                       </TableCell>
                     </TableRow>
@@ -766,23 +766,23 @@ export const Finance = () => {
           {typeLoading ? (
             <LoadingState message="جاري تحميل أرصدة الفئات..." />
           ) : outletTypeBalances.length > 0 ? (
-            <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
+            <TableContainer className="scrollable-table-container" component={Paper} sx={{ boxShadow: 0, overflowX: 'auto', width: '100%' }}>
               <Table sx={{ minWidth: 650 }}>
-                <TableHead sx={{ bgcolor: 'action.selected' }}>
+                <TableHead>
                   <TableRow>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>فئة منفذ التوزيع</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المحصل (نقداً)</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المتبقي (ذمم مدينة)</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>فئة منفذ التوزيع</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>المحصل (نقداً)</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold' }}>الرصيد المتبقي (المديونية)</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {outletTypeBalances.map((bal) => (
                     <TableRow key={bal.id} hover>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>{bal.outlet_type_name}</TableCell>
-                      <TableCell align="right" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>{bal.outlet_type_name}</TableCell>
+                      <TableCell align="center" sx={{ color: 'success.main', fontWeight: 'bold' }}>
                         {formatCurrencyEGP(bal.collected_balance)}
                       </TableCell>
-                      <TableCell align="right" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
+                      <TableCell align="center" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
                         {formatCurrencyEGP(bal.receivable_balance)}
                       </TableCell>
                     </TableRow>
@@ -876,9 +876,9 @@ export const Finance = () => {
             <LoadingState message="جاري تحميل سجل المدفوعات والتوريد..." />
           ) : paymentsList.length > 0 ? (
             <Box>
-              <TableContainer component={Paper} sx={{ boxShadow: 0 }}>
+              <TableContainer className="scrollable-table-container" component={Paper} sx={{ boxShadow: 0 }}>
                 <Table sx={{ minWidth: 650 }} size="small">
-                  <TableHead sx={{ bgcolor: 'action.selected' }}>
+                  <TableHead>
                     <TableRow>
                       {/* Checkbox Header */}
                       {hasPermission('payments.supply_batch') && (
@@ -996,9 +996,9 @@ export const Finance = () => {
         {/* TAB 5: CLIENT STATEMENT OF ACCOUNT */}
         <TabPanel value={tab} index={5}>
           {/* Outlet Selection Dropdown */}
-          <Box sx={{ p: 2, mb: 3, bg: 'action.hover', borderRadius: 2 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12}>
+          <Box sx={{ p: 2, mb: 2, bg: 'action.hover', borderRadius: 2 }}>
+            <Grid container spacing={2} alignItems="center" className="filter-grid">
+              <Grid item xs={12} sm={4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>اختر منفذ البيع لعرض كشف الحساب</InputLabel>
                   <Select
@@ -1091,9 +1091,9 @@ export const Finance = () => {
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'text.secondary' }}>
                 الحركات التفصيلية مرتبة زمنياً
               </Typography>
-              <TableContainer component={Paper}>
+              <TableContainer className="scrollable-table-container" component={Paper}>
                 <Table size="small">
-                  <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableHead>
                     <TableRow>
                       <TableCell align="right" sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 'bold' }}>المستند</TableCell>

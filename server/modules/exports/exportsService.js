@@ -316,7 +316,7 @@ async function exportPrices(format = 'xlsx') {
  */
 async function exportAuthors(format = 'xlsx') {
   const sql = `
-    SELECT a.id, a.name, a.phone, a.email, a.status,
+    SELECT a.id, a.name, a.phone, a.status,
            (SELECT GROUP_CONCAT(user_id, ' | ') FROM author_users au WHERE au.author_id = a.id) as user_ids
     FROM authors a
     ORDER BY a.name ASC
@@ -324,8 +324,8 @@ async function exportAuthors(format = 'xlsx') {
   const rows = await db.all(sql);
   const config = {
     title: 'قائمة أسماء وبيانات المؤلفين',
-    arabicHeaders: ['المعرف', 'الاسم', 'الهاتف', 'البريد الإلكتروني', 'الحالة', 'معرفات المستخدمين'],
-    englishKeys: ['id', 'name', 'phone', 'email', 'status', 'user_ids'],
+    arabicHeaders: ['المعرف', 'الاسم', 'الهاتف', 'الحالة', 'معرفات المستخدمين'],
+    englishKeys: ['id', 'name', 'phone', 'status', 'user_ids'],
     rows
   };
 
@@ -881,8 +881,8 @@ async function exportCourierSheet(query = {}, format = 'xlsx') {
   const formattedRows = rows.map(r => {
     let statusAr = r.shipment_status;
     if (r.shipment_status === 'pending') statusAr = 'قيد الانتظار / التجهيز';
-    else if (r.shipment_status === 'shipped') statusAr = 'تم الشحن';
-    else if (r.shipment_status === 'delivered') statusAr = 'تم التسليم للعميل';
+    else if (r.shipment_status === 'shipped') statusAr = 'تم الشحن والتسليم';
+    else if (r.shipment_status === 'delivered') statusAr = 'تم الشحن والتسليم';
     else if (r.shipment_status === 'cancelled') statusAr = 'ملغاة';
 
     let payStatusAr = r.payment_status;

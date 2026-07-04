@@ -332,8 +332,8 @@ export const Shipments = () => {
   const statusLabel = (s) => {
     switch (s) {
       case 'pending': return 'قيد الانتظار';
-      case 'shipped': return 'تم الشحن';
-      case 'delivered': return 'تم التسليم';
+      case 'shipped': return 'تم الشحن والتسليم';
+      case 'delivered': return 'تم الشحن والتسليم';
       case 'cancelled': return 'ملغاة';
       default: return s || '—';
     }
@@ -342,17 +342,18 @@ export const Shipments = () => {
   const statusColor = (s) => {
     switch (s) {
       case 'pending': return 'warning';
-      case 'shipped': return 'info';
+      case 'shipped': return 'success';
       case 'delivered': return 'success';
       case 'cancelled': return 'error';
       default: return 'default';
     }
   };
 
-  const statusSteps = ['pending', 'shipped', 'delivered'];
+  const statusSteps = ['pending', 'delivered'];
   const getActiveStep = (s) => {
     if (s === 'cancelled') return -1;
-    return statusSteps.indexOf(s);
+    if (s === 'shipped' || s === 'delivered') return 1;
+    return 0;
   };
 
   // ──── Render ────
@@ -409,8 +410,7 @@ export const Shipments = () => {
                   >
                     <MenuItem value="">الكل</MenuItem>
                     <MenuItem value="pending">قيد الانتظار</MenuItem>
-                    <MenuItem value="shipped">تم الشحن</MenuItem>
-                    <MenuItem value="delivered">تم التسليم</MenuItem>
+                    <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
                     <MenuItem value="cancelled">ملغاة</MenuItem>
                   </Select>
                 </FormControl>
@@ -456,7 +456,7 @@ export const Shipments = () => {
       )}
 
       {/* Shipments Table */}
-      <Paper sx={{ width: '100%', overflow: 'hidden', mb: 3 }}>
+      <Paper className="main-table-paper">
         {loading ? (
           <LoadingState message="جاري تحميل سجل الشحنات..." />
         ) : shipments.length === 0 ? (
@@ -467,7 +467,7 @@ export const Shipments = () => {
             onAction={hasPermission('shipments.create') ? handleOpenCreate : undefined}
           />
         ) : (
-          <TableContainer sx={{ maxHeight: 550 }}>
+          <TableContainer className="scrollable-table-container" sx={{ maxHeight: 550 }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
@@ -620,9 +620,9 @@ export const Shipments = () => {
 
                   <Divider sx={{ my: 1.5 }} />
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>أصناف الفاتورة والكميات المراد شحنها:</Typography>
-                  <TableContainer component={Paper} variant="outlined">
+                  <TableContainer className="scrollable-table-container" component={Paper} variant="outlined">
                     <Table size="small">
-                      <TableHead sx={{ backgroundColor: 'background.paper' }}>
+                      <TableHead>
                         <TableRow>
                           <TableCell sx={{ fontWeight: 'bold' }}>اسم الكتاب</TableCell>
                           <TableCell align="center" sx={{ fontWeight: 'bold' }}>المطلب</TableCell>
@@ -750,9 +750,9 @@ export const Shipments = () => {
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
                   أصناف الشحنة ({detailData.items.length})
                 </Typography>
-                <TableContainer component={Paper}>
+                <TableContainer className="scrollable-table-container" component={Paper}>
                   <Table size="small">
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>
@@ -781,9 +781,9 @@ export const Shipments = () => {
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
                   سجل تغييرات الحالة
                 </Typography>
-                <TableContainer component={Paper}>
+                <TableContainer className="scrollable-table-container" component={Paper}>
                   <Table size="small">
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 'bold' }}>من</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>إلى</TableCell>
@@ -828,7 +828,7 @@ export const Shipments = () => {
               onChange={(e) => setStatusNewStatus(e.target.value)}
               label="الحالة الجديدة"
             >
-              {statusCurrentStatus === 'pending' && <MenuItem value="shipped">تم الشحن (Shipped)</MenuItem>}
+              {statusCurrentStatus === 'pending' && <MenuItem value="delivered">تم الشحن والتسليم (Shipped & Delivered)</MenuItem>}
               {statusCurrentStatus === 'pending' && <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>}
               {statusCurrentStatus === 'shipped' && <MenuItem value="delivered">تم التسليم (Delivered)</MenuItem>}
               {statusCurrentStatus === 'shipped' && <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>}

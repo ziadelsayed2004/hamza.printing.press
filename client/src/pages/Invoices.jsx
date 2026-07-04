@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrencyEGP, formatEgyptDate, formatEgyptDateTime } from '../utils/formatters';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
+import { t } from '../locales/t';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
@@ -106,7 +107,7 @@ export const Invoices = () => {
 
   // Filter States
   const [showFilters, setShowFilters] = useState(false);
-  const [filterSearch, setFilterSearch] = useState('');
+  const [filterSearch, setFilterSearch] = useState(new URLSearchParams(window.location.search).get('search') || '');
   const [filterOutletId, setFilterOutletId] = useState('');
   const [filterOutletTypeId, setFilterOutletTypeId] = useState('');
   const [filterProductId, setFilterProductId] = useState('');
@@ -158,6 +159,7 @@ export const Invoices = () => {
   const [formCollectionNotes, setFormCollectionNotes] = useState('');
   const [formReceiptName, setFormReceiptName] = useState('');
   const [formReceiptData, setFormReceiptData] = useState('');
+  const [formInvoiceNumber, setFormInvoiceNumber] = useState('');
   const [outletBalances, setOutletBalances] = useState([]);
 
   const [openReturnDrawer, setOpenReturnDrawer] = useState(false);
@@ -235,6 +237,15 @@ export const Invoices = () => {
       // Since backend doesn't return count directly, calculate totalCount dynamically
       // if rows length matches limit, there could be more. Otherwise offset + data.length
       setTotalCount(data.length < limit ? offset + data.length : offset + data.length + limit);
+
+      // Auto-open details if search code matches exactly
+      const searchParam = new URLSearchParams(window.location.search).get('search');
+      if (searchParam && data && data.length > 0) {
+        const exactMatch = data.find(inv => inv.invoice_number === searchParam.trim());
+        if (exactMatch) {
+          handleOpenDetails(exactMatch);
+        }
+      }
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تحميل الفواتير.', 'error');
@@ -464,6 +475,10 @@ export const Invoices = () => {
       showToast('لا يمكن عمل مرتجع لفاتورة ملغاة.', 'warning');
       return;
     }
+    if (!['shipped', 'delivered'].includes(invoice.shipping_status)) {
+      showToast('لا يمكن عمل مرتجع إلا بعد شحن الفاتورة أو تسليمها (تم الشحن أو التوصيل).', 'warning');
+      return;
+    }
     try {
       const fullInvoice = await apiClient.get(`/invoices/${invoice.id}`);
       const hasReturnable = fullInvoice.items?.some(item => (item.remaining_returnable_quantity || 0) > 0);
@@ -597,6 +612,14 @@ export const Invoices = () => {
     setFormCollectionNotes('');
     setFormReceiptName('');
     setFormReceiptData('');
+    setFormInvoiceNumber('');
+    apiClient.get('/system/next-code?type=invoice')
+      .then(res => {
+        if (res && res.code) {
+          setFormInvoiceNumber(res.code);
+        }
+      })
+      .catch(console.error);
     setOpenFormModal(true);
   };
 
@@ -616,6 +639,7 @@ export const Invoices = () => {
       setFormShippingCost(data.shipping_cost);
       setFormPaymentType(data.payment_type);
       setFormNotes(data.notes || '');
+      setFormInvoiceNumber(data.invoice_number || '');
 
       // Load products items
       const loadedItems = data.items.map(item => {
@@ -836,6 +860,7 @@ export const Invoices = () => {
     setFormSubmitting(true);
     try {
       const payload = {
+        invoiceNumber: formInvoiceNumber,
         outletId: parseInt(formOutletId, 10),
         discount: discountVal,
         shippingCost: parseFloat(formShippingCost) || 0,
@@ -900,11 +925,11 @@ export const Invoices = () => {
       case 'pending':
         return <Chip label="قيد الانتظار" variant="outlined" color="warning" size="small" />;
       case 'shipped':
-        return <Chip label="تم الشحن" color="primary" size="small" />;
+        return <Chip label="تم الشحن والتسليم" color="success" size="small" />;
       case 'partially_shipped':
         return <Chip label="شحن جزئي" variant="outlined" color="info" size="small" />;
       case 'delivered':
-        return <Chip label="تم التسليم" color="success" size="small" />;
+        return <Chip label="تم الشحن والتسليم" color="success" size="small" />;
       default:
         return <Chip label={status || 'غير معروف'} size="small" />;
     }
@@ -1120,9 +1145,8 @@ export const Invoices = () => {
                   >
                     <MenuItem value="">الكل</MenuItem>
                     <MenuItem value="pending">قيد الانتظار</MenuItem>
-                    <MenuItem value="shipped">تم الشحن</MenuItem>
                     <MenuItem value="partially_shipped">شحن جزئي</MenuItem>
-                    <MenuItem value="delivered">تم التسليم</MenuItem>
+                    <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1435,7 +1459,7 @@ export const Invoices = () => {
         open={openDetailsModal}
         onClose={() => setOpenDetailsModal(false)}
         title={detailsInvoice ? `عرض تفاصيل الفاتورة: ${detailsInvoice.invoice_number}` : ''}
-        size="large"
+        size="full"
         actions={
           detailsInvoice && (
             <>
@@ -1517,7 +1541,7 @@ export const Invoices = () => {
           <Box sx={{ flexGrow: 1, pr: 1, pl: 1 }}>
               {/* Responsive summary KPI cards */}
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2.4}>
                   <Card variant="outlined" sx={kpiCardStyle}>
                     <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>العميل / المنفذ</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 0.5 }}>{detailsInvoice.outlet_name}</Typography>
@@ -1526,7 +1550,7 @@ export const Invoices = () => {
                     </Typography>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2.4}>
                   <Card variant="outlined" sx={getRemainingCardStyle(detailsInvoice.remaining_amount)}>
                     <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>المبلغ المتبقي (ذمة)</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: detailsInvoice.remaining_amount > 0 ? 'error.main' : 'success.main', mt: 0.5 }}>
@@ -1537,7 +1561,7 @@ export const Invoices = () => {
                     </Typography>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2.4}>
                   <Card variant="outlined" sx={kpiCardStyle}>
                     <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>الشحن والتوزيع</Typography>
                     <Box sx={{ mt: 0.5 }}>
@@ -1548,7 +1572,7 @@ export const Invoices = () => {
                     </Typography>
                   </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={2.4}>
                   <Card variant="outlined" sx={kpiCardStyle}>
                     <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>القيمة الإجمالية للفاتورة</Typography>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mt: 0.5 }}>
@@ -1557,6 +1581,17 @@ export const Invoices = () => {
                     <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5 }}>
                       تاريخ الفاتورة: {formatEgyptDateTime(detailsInvoice.created_at)}
                     </Typography>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={2.4}>
+                  <Card variant="outlined" sx={{ ...kpiCardStyle, alignItems: 'center', p: 1, height: '100%' }}>
+                    <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500, mb: 0.5 }}>{t('system.qrCode')}</Typography>
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/invoices?search=' + detailsInvoice.invoice_number)}`} 
+                      alt="Invoice QR Code"
+                      style={{ width: 70, height: 70 }}
+                    />
+                    <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, fontSize: '0.65rem' }}>{t('system.scanToViewInvoice')}</Typography>
                   </Card>
                 </Grid>
               </Grid>
@@ -1615,41 +1650,39 @@ export const Invoices = () => {
               </Box>
 
               {/* Totals Section */}
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 4 }}>
-                <Box sx={{ width: 300 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2">المجموع الفرعي:</Typography>
-                    <Typography variant="body2">{formatCurrencyEGP(detailsInvoice.subtotal || 0)}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2">تكلفة الشحن:</Typography>
-                    <Typography variant="body2">+{formatCurrencyEGP(detailsInvoice.shipping_cost || 0)}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2">الخصم الممنوح:</Typography>
-                    <Typography variant="body2" sx={{ color: 'error.main' }}>
-                      -{formatCurrencyEGP(detailsInvoice.discount || 0)}
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ my: 1 }} />
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>المجموع النهائي:</Typography>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                      {formatCurrencyEGP(detailsInvoice.total_price)}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, color: 'success.main' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>المجموع المسدد:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {formatCurrencyEGP(detailsInvoice.paid_amount || 0)}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5, color: 'error.main' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>المبلغ المتبقي:</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {formatCurrencyEGP(detailsInvoice.remaining_amount || 0)}
-                    </Typography>
-                  </Box>
+              <Box sx={{ width: '100%', mb: 4, border: '1px solid #e2e8f0', borderRadius: '8px', p: 2.5, backgroundColor: '#f8fafc' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">المجموع الفرعي:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(detailsInvoice.subtotal || 0)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">تكلفة الشحن:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>+{formatCurrencyEGP(detailsInvoice.shipping_cost || 0)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">الخصم الممنوح:</Typography>
+                  <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                    -{formatCurrencyEGP(detailsInvoice.discount || 0)}
+                  </Typography>
+                </Box>
+                <Divider sx={{ my: 1.5 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>المجموع النهائي:</Typography>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                    {formatCurrencyEGP(detailsInvoice.total_price)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: 'success.main' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>المجموع المسدد:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {formatCurrencyEGP(detailsInvoice.paid_amount || 0)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: 'error.main' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>المبلغ المتبقي:</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {formatCurrencyEGP(detailsInvoice.remaining_amount || 0)}
+                  </Typography>
                 </Box>
               </Box>
 
@@ -1895,6 +1928,16 @@ export const Invoices = () => {
         <form onSubmit={handleFormSubmit} id="invoice-editor-form">
           <FormSection title="بيانات العميل والفاتورة">
             <FieldGrid columns={2}>
+              <TextField
+                required
+                fullWidth
+                size="small"
+                label={t('system.invoiceNumber')}
+                value={formInvoiceNumber}
+                inputProps={{ className: 'ltr-value', readOnly: true }}
+                disabled={true}
+              />
+
               {/* Outlet select */}
               <FormControl fullWidth size="small" required>
                 <InputLabel id="form-outlet-select-label">المنفذ / العميل</InputLabel>
@@ -2335,6 +2378,11 @@ export const Invoices = () => {
             id="create-return-form"
           >
             <FormSection title="أصناف وكميات الفاتورة القابلة للإرجاع">
+              <Alert severity="warning" sx={{ mb: 2, fontWeight: 'bold' }}>
+                تنبيه: عند إتمام المرتجع، سيتم إرجاع الكتب إلى المخزن تلقائياً. 
+                لا يمكن إعادة شحن هذه الكميات المرتجعة على نفس هذه الفاتورة مرة أخرى. 
+                لإعادة شحنها للعميل، يجب إنشاء فاتورة جديدة ومستقلة.
+              </Alert>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
                 <Button
                   size="small"
@@ -2429,8 +2477,7 @@ export const Invoices = () => {
             >
               <MenuItem value="pending">قيد الانتظار</MenuItem>
               <MenuItem value="partially_shipped">شحن جزئي</MenuItem>
-              <MenuItem value="shipped">تم الشحن</MenuItem>
-              <MenuItem value="delivered">تم التسليم</MenuItem>
+              <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>

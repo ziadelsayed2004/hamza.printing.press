@@ -135,6 +135,7 @@ export const MainLayout = () => {
       'outlets': t('nav.outlets'),
       'authors': t('nav.authors'),
       'products': t('nav.products'),
+      'categories': t('nav.categories'),
       'inventory': t('nav.inventory'),
       'invoices': t('nav.invoices'),
       'payments': t('nav.payments'),
@@ -181,6 +182,7 @@ export const MainLayout = () => {
       title: 'الكتالوج والتسعير',
       items: [
         { textKey: 'nav.products', text: 'الكتب والمنتجات', icon: <BookIcon />, path: '/products', permission: 'products.view' },
+        { textKey: 'nav.categories', text: 'تصنيفات الكتب', icon: <CategoryIcon />, path: '/categories', permission: 'products.view' },
         { textKey: 'nav.authors', text: 'المؤلفين', icon: <CreateIcon />, path: '/authors', permission: 'authors.view' },
         { textKey: 'nav.outletTypes', text: 'فئات المنافذ', icon: <CategoryIcon />, path: '/outlet-types', permission: 'outlet_types.view' }
       ]

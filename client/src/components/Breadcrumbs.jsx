@@ -13,6 +13,7 @@ const getBreadcrumbLabel = (name) => {
     'outlets': t('nav.outlets'),
     'authors': t('nav.authors'),
     'products': t('nav.products'),
+    'categories': t('nav.categories'),
     'inventory': t('nav.inventory'),
     'invoices': t('nav.invoices'),
     'payments': t('nav.payments'),

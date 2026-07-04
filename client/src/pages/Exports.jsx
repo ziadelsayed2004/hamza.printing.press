@@ -571,8 +571,7 @@ export const Exports = () => {
                   >
                     <MenuItem value=""><em>كافة الحالات</em></MenuItem>
                     <MenuItem value="pending">قيد الانتظار</MenuItem>
-                    <MenuItem value="shipped">تم الشحن</MenuItem>
-                    <MenuItem value="delivered">تم التسليم</MenuItem>
+                    <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
                     <MenuItem value="cancelled">ملغاة</MenuItem>
                   </Select>
                 </FormControl>
@@ -590,8 +589,7 @@ export const Exports = () => {
                   >
                     <MenuItem value=""><em>كافة الحالات</em></MenuItem>
                     <MenuItem value="pending">قيد الانتظار / التجهيز</MenuItem>
-                    <MenuItem value="shipped">تم الشحن</MenuItem>
-                    <MenuItem value="delivered">تم التسليم</MenuItem>
+                    <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
                     <MenuItem value="cancelled">ملغاة</MenuItem>
                   </Select>
                 </FormControl>
