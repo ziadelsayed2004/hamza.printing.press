@@ -255,7 +255,7 @@ describe('Exports API Integration Tests', () => {
 
     it('should export authors list as CSV', async () => {
       const response = await agent.get('/api/exports/authors').query({ format: 'csv' });
-      verifyCsvHeadersAndContent(response, ['المعرف', 'الاسم', 'الهاتف', 'البريد الإلكتروني', 'الحالة', 'معرفات المستخدمين'], ['Test Export Author']);
+      verifyCsvHeadersAndContent(response, ['المعرف', 'الاسم', 'الهاتف', 'الحالة', 'معرفات المستخدمين'], ['Test Export Author']);
     });
 
     it('should export outlets listing as CSV', async () => {

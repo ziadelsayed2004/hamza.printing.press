@@ -266,7 +266,7 @@ describe('Shipments API Integration Tests', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
-      expect(response.body.shipment.status).toBe('pending');
+      expect(response.body.shipment.status).toBe('delivered');
       expect(response.body.shipment.items).toHaveLength(1);
       expect(response.body.shipment.items[0].quantity).toBe(2);
 
@@ -306,48 +306,29 @@ describe('Shipments API Integration Tests', () => {
       });
     });
 
-    it('should transition invoice shipping status dynamically to shipped and then delivered', async () => {
+    it('should transition invoice shipping status dynamically to partially_shipped and then delivered', async () => {
       const agent = request.agent(app);
       await agent.post('/api/auth/login').send({ username: 'test_shp_api_staff', password: 'password123' });
 
-      // Currently we have:
-      // Shipment 1 (qty 2) - status pending
-      // Shipment 2 (qty 3) - status pending
-      // Invoice status: partially_shipped (since they are pending, none is 'shipped'/'delivered')
-
-      // 1. Shipped Shipment 2 (qty 3)
-      const res1 = await agent.post(`/api/shipments/${shipment2.id}/status`).send({ status: 'shipped' });
-      expect(res1.status).toBe(200);
-
+      // We created Shipment 1 (qty 2) and Shipment 2 (qty 3) in beforeEach.
+      // Since they are both created as 'delivered', the invoice shipping status should be 'delivered' (fully shipped).
       let updatedInvoice = await invoicesService.getInvoiceById(invoice.id);
-      // Not all items are shipped (2 still pending in shipment 1)
+      expect(updatedInvoice.shipping_status).toBe('delivered');
+
+      // Now, let's cancel Shipment 2 (qty 3).
+      // Invoice shipping status should transition back to 'partially_shipped' (since only 2 items in Shipment 1 are shipped).
+      const res = await agent.post(`/api/shipments/${shipment2.id}/status`).send({ status: 'cancelled' });
+      expect(res.status).toBe(200);
+
+      updatedInvoice = await invoicesService.getInvoiceById(invoice.id);
       expect(updatedInvoice.shipping_status).toBe('partially_shipped');
 
-      // 2. Shipped Shipment 1
-      const list = await shipmentsService.getShipments({ invoiceId: invoice.id });
-      const shipment1 = list.find(s => s.id !== shipment2.id);
-
-      const res2 = await agent.post(`/api/shipments/${shipment1.id}/status`).send({ status: 'shipped' });
+      // Now, let's update Shipment 2 status back to 'delivered'.
+      // Invoice shipping status should transition back to 'delivered'.
+      const res2 = await agent.post(`/api/shipments/${shipment2.id}/status`).send({ status: 'delivered' });
       expect(res2.status).toBe(200);
 
       updatedInvoice = await invoicesService.getInvoiceById(invoice.id);
-      // All items are now shipped!
-      expect(updatedInvoice.shipping_status).toBe('shipped');
-
-      // 3. Deliver Shipment 2
-      const res3 = await agent.post(`/api/shipments/${shipment2.id}/status`).send({ status: 'delivered' });
-      expect(res3.status).toBe(200);
-
-      updatedInvoice = await invoicesService.getInvoiceById(invoice.id);
-      // Some but not all are delivered
-      expect(updatedInvoice.shipping_status).toBe('shipped');
-
-      // 4. Deliver Shipment 1
-      const res4 = await agent.post(`/api/shipments/${shipment1.id}/status`).send({ status: 'delivered' });
-      expect(res4.status).toBe(200);
-
-      updatedInvoice = await invoicesService.getInvoiceById(invoice.id);
-      // All items are now delivered!
       expect(updatedInvoice.shipping_status).toBe('delivered');
     });
   });
@@ -428,9 +409,14 @@ describe('Shipments API Integration Tests', () => {
       });
       const freshInvoiceItemId = freshInvoice.items[0].id;
 
-      // Set invoice shipping_status to shipped to satisfy return rules
-      const db = require('../../db');
-      await db.run("UPDATE invoices SET shipping_status = 'shipped' WHERE id = ?", [freshInvoice.id]);
+      // Ship 3 items first
+      await shipmentsService.createShipment({
+        invoiceId: freshInvoice.id,
+        shippingCarrier: 'DHL',
+        trackingNumber: 'TRK123',
+        items: [{ invoiceItemId: freshInvoiceItemId, quantity: 3 }],
+        userId: adminUser.id
+      });
 
       // Create a return of 3 items for this invoice
       await returnsService.createReturn({
@@ -440,7 +426,7 @@ describe('Shipments API Integration Tests', () => {
         userId: adminUser.id
       });
 
-      // Shipped 2 items first
+      // Shipped 2 items next
       await shipmentsService.createShipment({
         invoiceId: freshInvoice.id,
         shippingCarrier: 'DHL',

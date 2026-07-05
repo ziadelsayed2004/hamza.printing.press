@@ -947,6 +947,17 @@ export const Invoices = () => {
     }
   };
 
+  const getPaymentTypeDisplay = (row) => {
+    if (row.payment_status === 'paid') {
+      return <Chip label="دفع كلي" variant="outlined" color="success" size="small" sx={{ fontWeight: 500 }} />;
+    }
+    if (row.payment_status === 'partially_paid') {
+      return <Chip label="دفع جزئي" variant="outlined" color="warning" size="small" sx={{ fontWeight: 500 }} />;
+    }
+    const label = translatePaymentType(row.payment_type);
+    return <Chip label={label} variant="outlined" color="default" size="small" sx={{ fontWeight: 500 }} />;
+  };
+
   const formTotals = calculateFormTotals();
   const selectedOutlet = outlets.find(o => o.id === formOutletId);
   const selectedOutletBalance = outletBalances.find(b => b.id === formOutletId);
@@ -1314,7 +1325,7 @@ export const Invoices = () => {
                         {formatEgyptDate(row.created_at)}
                       </TableCell>
                       <TableCell>{row.outlet_name}</TableCell>
-                      <TableCell>{translatePaymentType(row.payment_type)}</TableCell>
+                      <TableCell>{getPaymentTypeDisplay(row)}</TableCell>
                       <TableCell>{getPaymentStatusChip(row.payment_status)}</TableCell>
                       <TableCell>{getShippingStatusChip(row.shipping_status)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>
@@ -1565,7 +1576,11 @@ export const Invoices = () => {
                       {getShippingStatusChip(detailsInvoice.shipping_status)}
                     </Box>
                     <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
-                      طريقة الدفع: {translatePaymentType(detailsInvoice.payment_type)}
+                      طريقة الدفع: {
+                        detailsInvoice.payment_status === 'paid' ? 'دفع كلي' :
+                        detailsInvoice.payment_status === 'partially_paid' ? 'دفع جزئي' :
+                        translatePaymentType(detailsInvoice.payment_type)
+                      }
                     </Typography>
                   </Card>
                 </Grid>

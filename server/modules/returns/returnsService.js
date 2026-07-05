@@ -83,7 +83,7 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
   if (invoice.payment_status === 'cancelled') {
     throw new Error('Cannot return items from a cancelled invoice');
   }
-  if (!['shipped', 'delivered'].includes(invoice.shipping_status)) {
+  if (!['shipped', 'delivered', 'partially_shipped'].includes(invoice.shipping_status)) {
     throw new Error('Cannot return items from an invoice that has not been shipped or delivered');
   }
 
@@ -109,6 +109,19 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
       throw new Error(`Invoice Item with ID ${invoiceItemId} does not exist on invoice ${invoiceId}`);
     }
 
+    // Get total quantity shipped for this invoice item (status: shipped or delivered)
+    const shippedRow = await db.get(`
+      SELECT COALESCE(SUM(si.quantity), 0) as qty
+      FROM shipment_items si
+      JOIN shipments s ON s.id = si.shipment_id
+      WHERE si.invoice_item_id = ? AND s.status IN ('shipped', 'delivered')
+    `, [invoiceItemId]);
+    let shippedQty = shippedRow.qty;
+
+    if (['shipped', 'delivered'].includes(invoice.shipping_status)) {
+      shippedQty = invoiceItem.quantity;
+    }
+
     // Get total quantity already returned for this invoice item
     const returnedRow = await db.get(`
       SELECT COALESCE(SUM(ri.quantity), 0) as qty
@@ -118,7 +131,7 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
     `, [invoiceItemId]);
 
     const returnedQty = returnedRow.qty;
-    const maxReturnable = invoiceItem.quantity - returnedQty;
+    const maxReturnable = shippedQty - returnedQty;
 
     if (qty > maxReturnable) {
       throw new Error(`Requested return quantity for product "${invoiceItem.product_title}" exceeds the remaining returnable quantity of ${maxReturnable}.`);

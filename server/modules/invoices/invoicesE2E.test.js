@@ -392,6 +392,15 @@ describe('E2E Business Flow Integrity Tests', () => {
     expect(invRes.status).toBe(201);
     const invoice = invRes.body.invoice;
 
+    // Create shipment for the invoice to satisfy return rules (items must be shipped)
+    const shipRes = await agent.post('/api/shipments').send({
+      invoiceId: invoice.id,
+      shippingCarrier: 'DHL',
+      trackingNumber: 'TRK-FREE-QTY',
+      items: [{ invoiceItemId: invoice.items[0].id, quantity: 10 }]
+    });
+    expect(shipRes.status).toBe(201);
+
     // Physical total: 10, billable total: 8 * 10 = 80
     expect(invoice.total_price).toBe(80);
 

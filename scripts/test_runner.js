@@ -1,5 +1,6 @@
 process.env.NODE_ENV = 'test';
 process.env.SESSION_SECRET = 'dev-session-secret-key-1234567890';
+process.env.DATABASE_PATH = './storage/database_test.sqlite';
 
 const { spawnSync } = require('child_process');
 const path = require('path');

@@ -23,6 +23,41 @@ describe('Returns API Integration Tests', () => {
   let invoiceItemId;
 
   const cleanup = async () => {
+    // Delete shipment-related records first to avoid foreign key constraints
+    await db.run(`
+      DELETE FROM shipment_status_history 
+      WHERE shipment_id IN (
+        SELECT id FROM shipments 
+        WHERE invoice_id IN (
+          SELECT id FROM invoices 
+          WHERE outlet_id IN (
+            SELECT id FROM outlets WHERE name = "Test Return Outlet"
+          )
+        )
+      )
+    `);
+    await db.run(`
+      DELETE FROM shipment_items 
+      WHERE shipment_id IN (
+        SELECT id FROM shipments 
+        WHERE invoice_id IN (
+          SELECT id FROM invoices 
+          WHERE outlet_id IN (
+            SELECT id FROM outlets WHERE name = "Test Return Outlet"
+          )
+        )
+      )
+    `);
+    await db.run(`
+      DELETE FROM shipments 
+      WHERE invoice_id IN (
+        SELECT id FROM invoices 
+        WHERE outlet_id IN (
+          SELECT id FROM outlets WHERE name = "Test Return Outlet"
+        )
+      )
+    `);
+
     // 1. Delete return-related records
     await db.run(`
       DELETE FROM return_items 
@@ -147,7 +182,7 @@ describe('Returns API Integration Tests', () => {
     testOutlet = await outletsService.createOutlet({
       name: 'Test Return Outlet',
       outletTypeId: wholesaleType.id,
-      governorate: 'Cairo',
+      governorate: 'Alexandria',
       addressDetails: 'Return Center',
       phone: '01555555555',
       creditLimit: 20000,
@@ -188,6 +223,16 @@ describe('Returns API Integration Tests', () => {
     });
 
     invoiceItemId = invoice.items[0].id;
+
+    // Create shipment for the invoice to satisfy return rules (items must be shipped)
+    const shipmentsService = require('../shipments/shipmentsService');
+    await shipmentsService.createShipment({
+      invoiceId: invoice.id,
+      shippingCarrier: 'DHL',
+      trackingNumber: 'TRK-RETURN-TEST',
+      items: [{ invoiceItemId, quantity: 10 }],
+      userId: adminUser.id
+    });
   });
 
   afterAll(async () => {
@@ -282,6 +327,50 @@ describe('Returns API Integration Tests', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toContain('exceeds');
+    });
+
+    it('should allow returns if invoice shipping status is delivered even if shipment status is pending', async () => {
+      const agent = request.agent(app);
+      await agent.post('/api/auth/login').send({ username: 'test_ret_api_staff', password: 'password123' });
+
+      // Create a new invoice without any shipment
+      const newInvoice = await invoicesService.createInvoice({
+        outletId: testOutlet.id,
+        discount: 0,
+        shippingCost: 0,
+        paymentType: 'deferred',
+        notes: 'Test pending shipment return',
+        items: [{ productId: testBook.id, quantity: 5 }],
+        userId: adminUser.id
+      });
+
+      const newInvoiceItemId = newInvoice.items[0].id;
+
+      // Create a pending shipment for this invoice item
+      const shipmentNumber = `SHP-TEST-PENDING-${Date.now()}`;
+      const shipmentResult = await db.run(`
+        INSERT INTO shipments (shipment_number, invoice_id, status, created_by)
+        VALUES (?, ?, 'pending', ?)
+      `, [shipmentNumber, newInvoice.id, adminUser.id]);
+      await db.run(`
+        INSERT INTO shipment_items (shipment_id, invoice_item_id, quantity)
+        VALUES (?, ?, 5)
+      `, [shipmentResult.lastID, newInvoiceItemId]);
+
+      // Manually set invoice shipping status to delivered (e.g. simulation of bulk update or direct delivery update)
+      await db.run('UPDATE invoices SET shipping_status = "delivered" WHERE id = ?', [newInvoice.id]);
+
+      // Now create a return for this invoice item
+      const response = await agent
+        .post('/api/returns')
+        .send({
+          invoiceId: newInvoice.id,
+          reason: 'Defective books on pending shipment',
+          items: [{ invoiceItemId: newInvoiceItemId, quantity: 2 }]
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
     });
   });
 
