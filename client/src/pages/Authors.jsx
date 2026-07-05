@@ -42,6 +42,7 @@ import {
   Book as BookIcon
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
+import '../styles/Authors.css';
 
 export const Authors = () => {
   const { hasPermission } = useAuth();

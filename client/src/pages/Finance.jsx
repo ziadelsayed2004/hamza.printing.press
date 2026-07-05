@@ -53,6 +53,8 @@ import {
   Category as CategoryIcon
 } from '@mui/icons-material';
 
+import '../styles/Finance.css';
+
 function TabPanel({ children, value, index, ...props }) {
   return (
     <Box role="tabpanel" hidden={value !== index} {...props}>
@@ -652,19 +654,50 @@ export const Finance = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <TablePagination
-                component="div"
-                count={totalCount}
-                page={page}
-                onPageChange={(e, newPage) => setPage(newPage)}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setRowsPerPage(parseInt(e.target.value, 10));
-                  setPage(0);
+              {/* Custom Table Pagination */}
+              <Box
+                sx={{
+                  p: 2,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderTop: '1px solid rgba(224, 224, 224, 1)',
+                  backgroundColor: '#ffffff',
+                  width: '100%'
                 }}
-                labelRowsPerPage="عدد الأسطر لكل صفحة:"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} من ${count}`}
-              />
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    عدد الأسطر لكل صفحة:
+                  </Typography>
+                  <Select
+                    size="small"
+                    value={rowsPerPage}
+                    onChange={(e) => {
+                      setRowsPerPage(parseInt(e.target.value, 10));
+                      setPage(0);
+                    }}
+                    sx={{ minWidth: 70 }}
+                  >
+                    <MenuItem value={10}>10</MenuItem>
+                    <MenuItem value={25}>25</MenuItem>
+                    <MenuItem value={50}>50</MenuItem>
+                    <MenuItem value={100}>100</MenuItem>
+                  </Select>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Button size="small" disabled={page === 0} onClick={() => setPage(prev => Math.max(0, prev - 1))}>
+                    السابق
+                  </Button>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    السجلات ({page * rowsPerPage + 1} - {page * rowsPerPage + ledger.length})
+                  </Typography>
+                  <Button size="small" disabled={ledger.length < rowsPerPage} onClick={() => setPage(prev => prev + 1)}>
+                    التالي
+                  </Button>
+                </Box>
+              </Box>
             </Box>
           ) : (
             <EmptyState message="لم يتم العثور على أي حركات مالية مسجلة بالخزينة تطابق البحث." />

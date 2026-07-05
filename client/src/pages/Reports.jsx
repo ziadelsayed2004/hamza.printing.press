@@ -40,6 +40,8 @@ import {
 
 
 
+import '../styles/Reports.css';
+
 function TabPanel({ children, value, index, ...props }) {
   return (
     <Box role="tabpanel" hidden={value !== index} {...props}>

@@ -28,6 +28,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
+import '../styles/Categories.css';
 
 export const Categories = () => {
   const { hasPermission } = useAuth();

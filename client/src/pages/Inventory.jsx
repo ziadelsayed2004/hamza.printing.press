@@ -52,6 +52,8 @@ import {
   WarningAmber as WarningIcon
 } from '@mui/icons-material';
 
+import '../styles/Inventory.css';
+
 // ──── Tab Panel ────
 
 function TabPanel({ children, value, index, ...props }) {

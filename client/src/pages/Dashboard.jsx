@@ -44,7 +44,7 @@ import {
   Check as ResolveIcon,
   Category as CategoryIcon
 } from '@mui/icons-material';
-import './Dashboard.css';
+import '../styles/Dashboard.css';
 
 export const Dashboard = () => {
   const { user, hasPermission } = useAuth();

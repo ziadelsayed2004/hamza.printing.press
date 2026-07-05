@@ -64,8 +64,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Receipt as ReceiptIcon
 } from '@mui/icons-material';
-
-
+import '../styles/Invoices.css';
 
 export const Invoices = () => {
   const { hasPermission } = useAuth();
@@ -454,16 +453,14 @@ export const Invoices = () => {
 
   const handleShipHandoff = (invoice) => {
     if (!hasPermission('invoices.update')) {
-      showToast('ليس لديك صلاحية لتعديل حالة الشحن.', 'error');
+      showToast('ليس لديك صلاحية لتسجيل الشحنات.', 'error');
       return;
     }
     if (invoice.payment_status === 'cancelled') {
-      showToast('لا يمكن تعديل حالة الشحن لفاتورة ملغاة.', 'warning');
+      showToast('لا يمكن تسجيل شحنة لفاتورة ملغاة.', 'warning');
       return;
     }
-    setSelectedInvoiceIds([invoice.id]);
-    setBulkShippingStatus(invoice.shipping_status || 'pending');
-    setOpenBulkShippingModal(true);
+    navigate(`/shipments?invoiceId=${invoice.id}&action=create`);
   };
 
   const handleReturnClick = async (invoice) => {
@@ -1589,7 +1586,7 @@ export const Invoices = () => {
                     <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/invoices?search=' + detailsInvoice.invoice_number)}`} 
                       alt="Invoice QR Code"
-                      style={{ width: 70, height: 70 }}
+                      className="invoice-qr-code"
                     />
                     <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, fontSize: '0.65rem' }}>{t('system.scanToViewInvoice')}</Typography>
                   </Card>
@@ -2476,7 +2473,6 @@ export const Invoices = () => {
               label="حالة الشحن الجديدة"
             >
               <MenuItem value="pending">قيد الانتظار</MenuItem>
-              <MenuItem value="partially_shipped">شحن جزئي</MenuItem>
               <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
             </Select>
           </FormControl>

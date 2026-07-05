@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { formatCurrencyEGP, formatEgyptDate } from '../utils/formatters';
-import './Payments.css';
+import '../styles/Payments.css';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';

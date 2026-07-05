@@ -37,6 +37,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 
+import '../styles/Notifications.css';
+
 const categoryLabels = {
   'stock_negative': 'رصيد سالب',
   'stock_low': 'رصيد منخفض',

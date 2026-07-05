@@ -32,6 +32,8 @@ import {
   FilterList as FilterListIcon
 } from '@mui/icons-material';
 
+import '../styles/AuditLogs.css';
+
 const actionTranslations = {
   'login': 'تسجيل الدخول',
   'logout': 'تسجيل الخروج',

@@ -17,6 +17,8 @@ import {
 import LockIcon from '@mui/icons-material/Lock';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
+import '../styles/Profile.css';
+
 export const Profile = () => {
   const { user } = useAuth();
   

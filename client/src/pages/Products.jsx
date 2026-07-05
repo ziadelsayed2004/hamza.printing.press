@@ -47,6 +47,8 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 
+import '../styles/Products.css';
+
 export const Products = () => {
   const { hasPermission } = useAuth();
   
@@ -478,7 +480,7 @@ export const Products = () => {
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/products?search=' + detailsProduct.code)}`} 
                 alt="Product QR Code"
-                style={{ width: 150, height: 150 }}
+                className="product-qr-code"
               />
               <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>{t('system.scanToViewProduct')}</Typography>
             </Box>

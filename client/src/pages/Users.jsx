@@ -55,6 +55,8 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 
+import '../styles/Users.css';
+
 const roleTranslations = {
   super_admin: 'مدير النظام (سوبر أدمن)',
   admin: 'مدير',

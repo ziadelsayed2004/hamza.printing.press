@@ -37,6 +37,7 @@ import {
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
+import '../styles/OutletTypes.css';
 
 export const OutletTypes = () => {
   const { hasPermission } = useAuth();

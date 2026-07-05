@@ -56,6 +56,8 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material';
 
+import '../styles/Shipments.css';
+
 export const Shipments = () => {
   const { hasPermission } = useAuth();
   const location = useLocation();

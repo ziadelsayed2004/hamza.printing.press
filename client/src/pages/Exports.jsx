@@ -41,6 +41,8 @@ import {
   FilterAlt as FilterIcon
 } from '@mui/icons-material';
 
+import '../styles/Exports.css';
+
 export const Exports = () => {
   const { hasPermission } = useAuth();
   

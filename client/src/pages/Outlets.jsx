@@ -57,8 +57,7 @@ import {
   TrendingUp as TrendingUpIcon
 } from '@mui/icons-material';
 import ConfirmDialog from '../components/ConfirmDialog';
-
-
+import '../styles/Outlets.css';
 
 export const Outlets = () => {
   const { hasPermission } = useAuth();
@@ -907,7 +906,7 @@ export const Outlets = () => {
               <img 
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.origin + '/outlets?search=' + qrData.code)}`} 
                 alt="Outlet QR Code"
-                style={{ width: 180, height: 180 }}
+                className="outlet-qr-code"
               />
               <Typography variant="caption" sx={{ color: 'text.secondary', mt: 2, textAlign: 'center' }}>{t('system.scanQr')}</Typography>
             </>
