@@ -13,6 +13,7 @@
     "outletTypes": "Outlet Types",
     "outlets": "Outlets & Branches",
     "invoices": "Invoices",
+    "returns": "Returns",
     "payments": "Payments",
     "finance": "Treasury & Finance",
     "inventory": "Inventory",
@@ -169,5 +170,22 @@
     "invoiceNumber": "Invoice Number",
     "scanToViewProduct": "Scan to view book details via quick search",
     "scanToViewInvoice": "Scan to view invoice details via quick search"
+  },
+  "returns": {
+    "title": "Returns Management",
+    "totalReturnsValue": "Total Returns Value",
+    "returnsCount": "Total Returns Count",
+    "distinctOutlets": "Outlets with Returns",
+    "viewDetails": "View Return Details",
+    "returnDetails": "Return Document Details",
+    "reason": "Return Reason",
+    "bookTitle": "Book Title",
+    "quantity": "Returned Qty",
+    "price": "Unit Price",
+    "total": "Total Value",
+    "invoiceNum": "Original Invoice No.",
+    "status": "Approval Status",
+    "createdBy": "Recorded By",
+    "date": "Return Date"
   }
 }

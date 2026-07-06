@@ -16,6 +16,7 @@ import { Categories } from './pages/Categories';
 import { Outlets } from './pages/Outlets';
 import { OutletTypes } from './pages/OutletTypes';
 import { Invoices } from './pages/Invoices';
+import { Returns } from './pages/Returns';
 import { Payments } from './pages/Payments';
 import { Inventory } from './pages/Inventory';
 import { Shipments } from './pages/Shipments';
@@ -114,6 +115,7 @@ export function App() {
                   <Route path="categories" element={<Categories />} />
                   <Route path="inventory" element={<Inventory />} />
                   <Route path="invoices" element={<Invoices />} />
+                  <Route path="returns" element={<Returns />} />
                   <Route path="payments" element={<Payments />} />
                   <Route path="finance" element={<Finance />} />
                   <Route path="shipments" element={<Shipments />} />

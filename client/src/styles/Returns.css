@@ -1,0 +1,31 @@
+/* Returns Page Stylesheet */
+
+.returns-pagination-container {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+}
+
+.returns-filter-group {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  background-color: var(--color-surface);
+  border-radius: 4px;
+}
+
+.returns-filters-grid .MuiAutocomplete-root,
+.returns-filters-grid .MuiFormControl-root,
+.returns-filters-grid .MuiTextField-root {
+  width: 100%;
+}
+
+.returns-drawer-detail-section {
+  margin-bottom: 24px;
+}
+
+.returns-drawer-table-header {
+  font-weight: bold;
+}

@@ -201,7 +201,8 @@ export const MainLayout = () => {
       titleKey: 'nav.sales',
       title: 'الفواتير والمبيعات',
       items: [
-        { textKey: 'nav.invoices', text: 'الفواتير', icon: <ReceiptIcon />, path: '/invoices', permission: 'invoices.view' }
+        { textKey: 'nav.invoices', text: 'الفواتير', icon: <ReceiptIcon />, path: '/invoices', permission: 'invoices.view' },
+        { textKey: 'nav.returns', text: 'المرتجعات', icon: <HistoryIcon />, path: '/returns', permission: 'returns.view' }
       ]
     },
     {
