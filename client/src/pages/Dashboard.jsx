@@ -59,6 +59,7 @@ export const Dashboard = () => {
   const [recentInvoices, setRecentInvoices] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
+  const [recentReturns, setRecentReturns] = useState([]);
   const [shipments, setShipments] = useState([]);
   
   const [loading, setLoading] = useState(true);
@@ -146,6 +147,14 @@ export const Dashboard = () => {
           apiClient.get('/payments?limit=5')
             .then(data => setRecentPayments(data || []))
             .catch(err => console.error('Recent payments fetch error:', err))
+        );
+      }
+
+      if (hasPermission('invoices.view')) {
+        promises.push(
+          apiClient.get('/returns?limit=5')
+            .then(data => setRecentReturns(data || []))
+            .catch(err => console.error('Recent returns fetch error:', err))
         );
       }
 
@@ -527,6 +536,46 @@ export const Dashboard = () => {
           ) : (
             <Typography variant="body2" sx={{ color: 'text.secondary', py: 4, textAlign: 'center' }}>
               لا توجد فواتير مسجلة بعد.
+            </Typography>
+          )}
+        </Paper>
+
+        {/* Latest Returns */}
+        <Paper className="activity-panel">
+          <Typography variant="subtitle2" className="activity-panel__header">
+            <HistoryIcon color="primary" /> {t('dashboard.recentReturns')}
+          </Typography>
+          <Divider sx={{ mb: 2 }} />
+          {recentReturns.length > 0 ? (
+            <List disablePadding>
+              {recentReturns.map((ret, idx) => (
+                <React.Fragment key={ret.id}>
+                  <ListItem className="activity-item">
+                    <Box>
+                      <Typography className="activity-item__primary-text">{t('dashboard.returnCode')}: #{ret.id}</Typography>
+                      <Typography className="activity-item__secondary-text">
+                        {t('system.invoiceNumber')}: {ret.invoice_number} ({ret.outlet_name})
+                      </Typography>
+                    </Box>
+                    <Box className="activity-item__meta">
+                      <Typography className="activity-item__amount" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                        {formatCurrencyEGP(ret.return_value)}
+                      </Typography>
+                      <Chip
+                        label={ret.status === 'approved' ? (localStorage.getItem('appLanguage') === 'en' ? 'Approved' : 'معتمد') : ret.status}
+                        size="small"
+                        color={ret.status === 'approved' ? 'success' : 'default'}
+                        className="activity-item__chip"
+                      />
+                    </Box>
+                  </ListItem>
+                  {idx < recentReturns.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
+          ) : (
+            <Typography variant="body2" sx={{ color: 'text.secondary', py: 4, textAlign: 'center' }}>
+              {t('dashboard.noReturns')}
             </Typography>
           )}
         </Paper>

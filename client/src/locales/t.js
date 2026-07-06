@@ -1,13 +1,15 @@
 import ar from './ar.json';
+import en from './en.json';
 
 /**
- * Translates a key using the Arabic dictionary.
+ * Translates a key using the active language dictionary.
  * Supports dot notation: t('nav.dashboard')
  * Supports replacements: t('dashboard.welcome', { name: 'أحمد' })
  */
 export function t(key, replacements = {}) {
+  const currentLanguage = localStorage.getItem('appLanguage') || 'ar';
   const keys = key.split('.');
-  let value = ar;
+  let value = currentLanguage === 'en' ? en : ar;
 
   for (const k of keys) {
     if (value && typeof value === 'object' && k in value) {

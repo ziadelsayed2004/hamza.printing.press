@@ -14,6 +14,14 @@ const cacheRtl = createCache({
   prepend: true,
 });
 
+// Create Emotion cache for LTR
+const cacheLtr = createCache({
+  key: 'muiltr',
+  prepend: true,
+});
+
+import { useLanguage } from '../locales/LanguageContext';
+
 export const ColorModeContext = createContext({
   toggleColorMode: () => { },
   mode: 'light'
@@ -22,6 +30,7 @@ export const ColorModeContext = createContext({
 export const useColorMode = () => useContext(ColorModeContext);
 
 export const ThemeConfig = ({ children }) => {
+  const { language } = useLanguage();
   // Read initial mode from localStorage or fallback to system preferences
   const [mode, setMode] = useState(() => {
     const savedMode = localStorage.getItem('themeMode');
@@ -48,7 +57,7 @@ export const ThemeConfig = ({ children }) => {
   const theme = useMemo(
     () =>
       createTheme({
-        direction: 'rtl',
+        direction: language === 'en' ? 'ltr' : 'rtl',
         palette: {
           mode,
           ...(mode === 'light'
@@ -134,7 +143,7 @@ export const ThemeConfig = ({ children }) => {
           MuiInputBase: {
             styleOverrides: {
               input: {
-                textAlign: 'right',
+                textAlign: language === 'en' ? 'left' : 'right',
                 '&.ltr-value': {
                   textAlign: 'left', // ltr-value
                 },
@@ -373,15 +382,15 @@ export const ThemeConfig = ({ children }) => {
           },
         },
       }),
-    [mode]
+    [mode, language]
   );
 
   return (
-    <CacheProvider value={cacheRtl}>
+    <CacheProvider value={language === 'en' ? cacheLtr : cacheRtl}>
       <ColorModeContext.Provider value={colorMode}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <div dir="rtl" className="theme-root">
+          <div dir={language === 'en' ? 'ltr' : 'rtl'} className="theme-root">
             {children}
           </div>
         </ThemeProvider>

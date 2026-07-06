@@ -5,6 +5,8 @@ import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
+import { t } from '../locales/t';
+import { useLanguage } from '../locales/LanguageContext';
 import {
   Box,
   Typography,
@@ -63,27 +65,19 @@ function TabPanel({ children, value, index, ...props }) {
   );
 }
 
-const adjustmentTypeTranslations = {
-  'deposit': 'إيداع نقدي الخزينة',
-  'withdrawal': 'سحب نقدي من الخزينة',
-  'credit_adjustment': 'تسوية خصم ذمم (إبراء)',
-  'debit_adjustment': 'تسوية إضافة ذمم (قيد مالي)'
-};
 
-const entryTypeTranslations = {
-  'invoice_created': 'إنشاء فاتورة مبيعات',
-  'invoice_cancelled': 'إلغاء فاتورة مبيعات',
-  'invoice_updated': 'تعديل فاتورة مبيعات',
-  'payment_recorded': 'تحصيل نقدي (سداد فاتورة)',
-  'payment_reversed': 'إلغاء تحصيل نقدي (عكس سداد)',
-  'manual_adjustment': 'تسوية يدوية بالخزينة',
-  'payment_supplied': 'توريد نقدية تحصيل لمقر الشركة',
-  'supply_reversed': 'إلغاء توريد نقدية تحصيل',
-  'return_created': 'مرتجع مبيعات'
-};
 
 export const Finance = () => {
   const { hasPermission } = useAuth();
+  const { language } = useLanguage();
+
+  const getAdjustmentTypeLabel = (type) => {
+    return t(`finance.adjustmentTypes.${type}`) || type;
+  };
+
+  const getEntryTypeLabel = (type) => {
+    return t(`finance.entryTypes.${type}`) || type;
+  };
   
   // Page UI State
   const [tab, setTab] = useState(0);
@@ -542,8 +536,8 @@ export const Finance = () => {
                     label="نوع الحركة المالية"
                   >
                     <MenuItem value="">الكل</MenuItem>
-                    {Object.entries(entryTypeTranslations).map(([k, v]) => (
-                      <MenuItem key={k} value={k}>{v}</MenuItem>
+                    {['invoice_created', 'invoice_cancelled', 'invoice_updated', 'payment_recorded', 'payment_reversed', 'manual_adjustment', 'payment_supplied', 'supply_reversed', 'return_created'].map((k) => (
+                      <MenuItem key={k} value={k}>{getEntryTypeLabel(k)}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -613,7 +607,11 @@ export const Finance = () => {
                         <TableCell align="center">{entry.outlet_name}</TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={entryTypeTranslations[entry.entry_type] || entry.entry_type}
+                            label={
+                              entry.entry_type === 'manual_adjustment' && entry.adjustment_type
+                                ? `${getEntryTypeLabel(entry.entry_type)} (${getAdjustmentTypeLabel(entry.adjustment_type)})`
+                                : getEntryTypeLabel(entry.entry_type)
+                            }
                             size="small"
                             color={
                               entry.entry_type === 'invoice_cancelled' || entry.entry_type === 'payment_reversed'
@@ -1149,7 +1147,11 @@ export const Finance = () => {
                           </TableCell>
                           <TableCell align="right">
                             <Chip
-                              label={entryTypeTranslations[item.entry_type] || item.entry_type}
+                              label={
+                                item.entry_type === 'manual_adjustment' && item.adjustment_type
+                                  ? `${getEntryTypeLabel(item.entry_type)} (${getAdjustmentTypeLabel(item.adjustment_type)})`
+                                  : getEntryTypeLabel(item.entry_type)
+                              }
                               size="small"
                               variant="outlined"
                               color={debitVal > 0 ? 'primary' : 'success'}
@@ -1219,8 +1221,8 @@ export const Finance = () => {
                     label="طبيعة التسوية"
                     disabled={submittingAdj}
                   >
-                    {Object.entries(adjustmentTypeTranslations).map(([k, v]) => (
-                      <MenuItem key={k} value={k}>{v}</MenuItem>
+                    {['deposit', 'withdrawal', 'credit_adjustment', 'debit_adjustment', 'expense', 'salary', 'refund'].map((k) => (
+                      <MenuItem key={k} value={k}>{getAdjustmentTypeLabel(k)}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>

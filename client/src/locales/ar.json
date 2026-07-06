@@ -37,7 +37,10 @@
     "collapseMenu": "تصغير القائمة",
     "openMenu": "فتح القائمة",
     "lightMode": "الوضع المضيء",
-    "darkMode": "الوضع المظلم"
+    "darkMode": "الوضع المظلم",
+    "arabic": "العربية",
+    "english": "English",
+    "langToggle": "تغيير اللغة"
   },
   "common": {
     "loading": "جاري التحميل...",
@@ -83,7 +86,10 @@
     "addOutlet": "إضافة فرع / منفذ",
     "addProduct": "إضافة منتج جديد",
     "outletTypes": "فئات منافذ البيع",
-    "bookCategories": "تصنيفات الكتب"
+    "bookCategories": "تصنيفات الكتب",
+    "recentReturns": "آخر المرتجعات المعتمدة",
+    "returnCode": "رقم المرتجع",
+    "noReturns": "لا توجد مرتجعات مسجلة بعد."
   },
   "products": {
     "title": "الكتب والمنتجات",
@@ -108,7 +114,34 @@
   },
   "finance": {
     "title": "الخزينة والمالية",
-    "ledger": "دفتر الأستاذ المالي"
+    "ledger": "دفتر الأستاذ المالي",
+    "deposit": "إيداع عادي",
+    "withdrawal": "سحب عادي",
+    "credit_adjustment": "تسوية خصم ذمم (إبراء)",
+    "debit_adjustment": "تسوية إضافة ذمم (قيد مالي)",
+    "expense": "مصاريف",
+    "salary": "رواتب",
+    "refund": "إرجاع نقدي للمنفذ",
+    "entryTypes": {
+      "invoice_created": "إنشاء فاتورة مبيعات",
+      "invoice_cancelled": "إلغاء فاتورة مبيعات",
+      "invoice_updated": "تعديل فاتورة مبيعات",
+      "payment_recorded": "تحصيل نقدي (سداد فاتورة)",
+      "payment_reversed": "إلغاء تحصيل نقدي (عكس سداد)",
+      "manual_adjustment": "تسوية يدوية بالخزينة",
+      "payment_supplied": "توريد نقدية تحصيل لمقر الشركة",
+      "supply_reversed": "إلغاء توريد نقدية تحصيل",
+      "return_created": "مرتجع مبيعات"
+    },
+    "adjustmentTypes": {
+      "deposit": "إيداع عادي",
+      "withdrawal": "سحب عادي",
+      "credit_adjustment": "تسوية خصم ذمم (إبراء)",
+      "debit_adjustment": "تسوية إضافة ذمم (قيد مالي)",
+      "expense": "مصاريف",
+      "salary": "رواتب",
+      "refund": "إرجاع نقدي للمنفذ"
+    }
   },
   "inventory": {
     "title": "المخزون وواردات الكتب",

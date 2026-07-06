@@ -12,7 +12,7 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
   if (isNaN(parsedAmount) || parsedAmount <= 0) {
     throw new Error('Amount must be a positive number');
   }
-  if (!adjustmentType || !['deposit', 'withdrawal', 'credit_adjustment', 'debit_adjustment'].includes(adjustmentType)) {
+  if (!adjustmentType || !['deposit', 'withdrawal', 'credit_adjustment', 'debit_adjustment', 'expense', 'salary', 'refund'].includes(adjustmentType)) {
     throw new Error('Invalid adjustment type');
   }
   if (!notes || notes.trim() === '') {
@@ -28,7 +28,7 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
 
   try {
     let signedAmount = parsedAmount;
-    if (adjustmentType === 'withdrawal' || adjustmentType === 'credit_adjustment') {
+    if (adjustmentType === 'withdrawal' || adjustmentType === 'credit_adjustment' || adjustmentType === 'expense' || adjustmentType === 'salary' || adjustmentType === 'refund') {
       signedAmount = -parsedAmount;
     }
 
@@ -49,6 +49,13 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
     } else if (adjustmentType === 'credit_adjustment') {
       receivableImpact = -parsedAmount;
     } else if (adjustmentType === 'debit_adjustment') {
+      receivableImpact = parsedAmount;
+    } else if (adjustmentType === 'expense') {
+      cashImpact = -parsedAmount;
+    } else if (adjustmentType === 'salary') {
+      cashImpact = -parsedAmount;
+    } else if (adjustmentType === 'refund') {
+      cashImpact = -parsedAmount;
       receivableImpact = parsedAmount;
     }
 
@@ -281,10 +288,15 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
  */
 async function getLedgerHistory({ limit = 50, offset = 0, outletId = null, startDate = '', endDate = '', entryType = '', outletIds = null } = {}) {
   let sql = `
-    SELECT fle.*, o.name as outlet_name, u.full_name as user_full_name
+    SELECT 
+      fle.*, 
+      o.name as outlet_name, 
+      u.full_name as user_full_name,
+      ma.adjustment_type
     FROM finance_ledger_entries fle
     JOIN outlets o ON o.id = fle.outlet_id
     LEFT JOIN users u ON u.id = fle.created_by
+    LEFT JOIN manual_adjustments ma ON ma.id = fle.reference_id AND fle.reference_type = 'manual'
     WHERE 1=1
   `;
   const params = [];
@@ -412,9 +424,13 @@ async function getOutletStatement(outletId) {
   }
 
   const entries = await db.all(`
-    SELECT fle.*, u.full_name as user_full_name
+    SELECT 
+      fle.*, 
+      u.full_name as user_full_name,
+      ma.adjustment_type
     FROM finance_ledger_entries fle
     LEFT JOIN users u ON u.id = fle.created_by
+    LEFT JOIN manual_adjustments ma ON ma.id = fle.reference_id AND fle.reference_type = 'manual'
     WHERE fle.outlet_id = ?
     ORDER BY fle.created_at ASC, fle.id ASC
   `, [outletId]);
@@ -428,6 +444,7 @@ async function getOutletStatement(outletId) {
     return {
       id: entry.id,
       entry_type: entry.entry_type,
+      adjustment_type: entry.adjustment_type,
       reference_type: entry.reference_type,
       reference_id: entry.reference_id,
       cash_amount: entry.cash_amount,

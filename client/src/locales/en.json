@@ -37,7 +37,10 @@
     "collapseMenu": "Collapse Menu",
     "openMenu": "Open Menu",
     "lightMode": "Light Mode",
-    "darkMode": "Dark Mode"
+    "darkMode": "Dark Mode",
+    "arabic": "العربية",
+    "english": "English",
+    "langToggle": "Language"
   },
   "common": {
     "loading": "Loading...",
@@ -83,7 +86,10 @@
     "addOutlet": "Add Branch / Outlet",
     "addProduct": "Add New Book/Product",
     "outletTypes": "Outlet Types",
-    "bookCategories": "Book Categories"
+    "bookCategories": "Book Categories",
+    "recentReturns": "Latest Returns",
+    "returnCode": "Return ID",
+    "noReturns": "No returns registered yet."
   },
   "products": {
     "title": "Books & Products",
@@ -108,7 +114,34 @@
   },
   "finance": {
     "title": "Treasury & Finance",
-    "ledger": "Financial Ledger"
+    "ledger": "Financial Ledger",
+    "deposit": "Cash Deposit",
+    "withdrawal": "Cash Withdrawal",
+    "credit_adjustment": "Waiver of Debt",
+    "debit_adjustment": "Add Debt",
+    "expense": "Expense",
+    "salary": "Salary",
+    "refund": "Refund to Outlet",
+    "entryTypes": {
+      "invoice_created": "Invoice Created",
+      "invoice_cancelled": "Invoice Cancelled",
+      "invoice_updated": "Invoice Updated",
+      "payment_recorded": "Payment Recorded",
+      "payment_reversed": "Payment Reversed",
+      "manual_adjustment": "Manual Adjustment",
+      "payment_supplied": "Cash Supplied to HQ",
+      "supply_reversed": "Supply Reversed",
+      "return_created": "Sales Return"
+    },
+    "adjustmentTypes": {
+      "deposit": "Deposit",
+      "withdrawal": "Withdrawal",
+      "credit_adjustment": "Waiver of Debt",
+      "debit_adjustment": "Add Debt",
+      "expense": "Expense",
+      "salary": "Salary",
+      "refund": "Refund to Outlet"
+    }
   },
   "inventory": {
     "title": "Inventory Receipts",
