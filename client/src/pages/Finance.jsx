@@ -5,8 +5,6 @@ import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
-import { t } from '../locales/t';
-import { useLanguage } from '../locales/LanguageContext';
 import {
   Box,
   Typography,
@@ -65,19 +63,29 @@ function TabPanel({ children, value, index, ...props }) {
   );
 }
 
+const adjustmentTypeTranslations = {
+  'deposit': 'إيداع نقدي الخزينة',
+  'withdrawal': 'سحب نقدي من الخزينة',
+  'expense': 'مصاريف تشغيلية',
+  'salary': 'رواتب وأجور منفذ البيع',
+  'credit_adjustment': 'تسوية خصم ذمم (إبراء)',
+  'debit_adjustment': 'تسوية إضافة ذمم (قيد مالي)'
+};
 
+const entryTypeTranslations = {
+  'invoice_created': 'إنشاء فاتورة مبيعات',
+  'invoice_cancelled': 'إلغاء فاتورة مبيعات',
+  'invoice_updated': 'تعديل فاتورة مبيعات',
+  'payment_recorded': 'تحصيل نقدي (سداد فاتورة)',
+  'payment_reversed': 'إلغاء تحصيل نقدي (عكس سداد)',
+  'manual_adjustment': 'تسوية يدوية بالخزينة',
+  'payment_supplied': 'توريد نقدية تحصيل لمقر الشركة',
+  'supply_reversed': 'إلغاء توريد نقدية تحصيل',
+  'return_created': 'مرتجع مبيعات'
+};
 
 export const Finance = () => {
   const { hasPermission } = useAuth();
-  const { language } = useLanguage();
-
-  const getAdjustmentTypeLabel = (type) => {
-    return t(`finance.adjustmentTypes.${type}`) || type;
-  };
-
-  const getEntryTypeLabel = (type) => {
-    return t(`finance.entryTypes.${type}`) || type;
-  };
   
   // Page UI State
   const [tab, setTab] = useState(0);
@@ -122,6 +130,7 @@ export const Finance = () => {
   const [adjOutletId, setAdjOutletId] = useState('');
   const [adjAmount, setAdjAmount] = useState('');
   const [adjType, setAdjType] = useState('deposit');
+  const [adjTitle, setAdjTitle] = useState('');
   const [adjNotes, setAdjNotes] = useState('');
   const [submittingAdj, setSubmittingAdj] = useState(false);
 
@@ -300,8 +309,8 @@ export const Finance = () => {
   // Submit Manual Adjustment
   const handleAdjSubmit = async (e) => {
     e.preventDefault();
-    if (!adjOutletId || !adjAmount || !adjNotes.trim()) {
-      showToast('يرجى ملء جميع الحقول المطلوبة للتسوية', 'error');
+    if (!adjOutletId || !adjAmount || !adjTitle.trim() || !adjNotes.trim()) {
+      showToast('يرجى ملء جميع الحقول المطلوبة للتسوية بما في ذلك العنوان', 'error');
       return;
     }
     const amtNum = parseFloat(adjAmount);
@@ -316,6 +325,7 @@ export const Finance = () => {
         outletId: adjOutletId,
         amount: amtNum,
         adjustmentType: adjType,
+        title: adjTitle.trim(),
         notes: adjNotes.trim()
       });
       showToast('تم تسجيل حركة التسوية اليدوية بالخزينة والحسابات بنجاح.', 'success');
@@ -324,6 +334,7 @@ export const Finance = () => {
       setAdjOutletId('');
       setAdjAmount('');
       setAdjType('deposit');
+      setAdjTitle('');
       setAdjNotes('');
       // Refresh active lists
       fetchSummary();
@@ -536,8 +547,8 @@ export const Finance = () => {
                     label="نوع الحركة المالية"
                   >
                     <MenuItem value="">الكل</MenuItem>
-                    {['invoice_created', 'invoice_cancelled', 'invoice_updated', 'payment_recorded', 'payment_reversed', 'manual_adjustment', 'payment_supplied', 'supply_reversed', 'return_created'].map((k) => (
-                      <MenuItem key={k} value={k}>{getEntryTypeLabel(k)}</MenuItem>
+                    {Object.entries(entryTypeTranslations).map(([k, v]) => (
+                      <MenuItem key={k} value={k}>{v}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -607,11 +618,7 @@ export const Finance = () => {
                         <TableCell align="center">{entry.outlet_name}</TableCell>
                         <TableCell align="center">
                           <Chip
-                            label={
-                              entry.entry_type === 'manual_adjustment' && entry.adjustment_type
-                                ? `${getEntryTypeLabel(entry.entry_type)} (${getAdjustmentTypeLabel(entry.adjustment_type)})`
-                                : getEntryTypeLabel(entry.entry_type)
-                            }
+                            label={entryTypeTranslations[entry.entry_type] || entry.entry_type}
                             size="small"
                             color={
                               entry.entry_type === 'invoice_cancelled' || entry.entry_type === 'payment_reversed'
@@ -646,7 +653,16 @@ export const Finance = () => {
                           </Typography>
                         </TableCell>
                         <TableCell align="center">{entry.user_full_name || 'غير معروف'}</TableCell>
-                        <TableCell align="center">{entry.notes || '-'}</TableCell>
+                        <TableCell align="center">
+                          {entry.title ? (
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{entry.title}</Typography>
+                              <Typography variant="caption" color="text.secondary">{entry.notes}</Typography>
+                            </Box>
+                          ) : (
+                            entry.notes || '-'
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1147,11 +1163,7 @@ export const Finance = () => {
                           </TableCell>
                           <TableCell align="right">
                             <Chip
-                              label={
-                                item.entry_type === 'manual_adjustment' && item.adjustment_type
-                                  ? `${getEntryTypeLabel(item.entry_type)} (${getAdjustmentTypeLabel(item.adjustment_type)})`
-                                  : getEntryTypeLabel(item.entry_type)
-                              }
+                              label={entryTypeTranslations[item.entry_type] || item.entry_type}
                               size="small"
                               variant="outlined"
                               color={debitVal > 0 ? 'primary' : 'success'}
@@ -1166,7 +1178,16 @@ export const Finance = () => {
                           <TableCell align="right" sx={{ fontWeight: 'bold', color: item.running_receivable > 0 ? 'error.main' : 'success.main' }}>
                             {formatCurrencyEGP(item.running_receivable)}
                           </TableCell>
-                          <TableCell align="right">{item.notes || '—'}</TableCell>
+                          <TableCell align="right">
+                            {item.title ? (
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{item.title}</Typography>
+                                <Typography variant="caption" color="text.secondary">{item.notes}</Typography>
+                              </Box>
+                            ) : (
+                              item.notes || '—'
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -1221,8 +1242,8 @@ export const Finance = () => {
                     label="طبيعة التسوية"
                     disabled={submittingAdj}
                   >
-                    {['deposit', 'withdrawal', 'credit_adjustment', 'debit_adjustment', 'expense', 'salary', 'refund'].map((k) => (
-                      <MenuItem key={k} value={k}>{getAdjustmentTypeLabel(k)}</MenuItem>
+                    {Object.entries(adjustmentTypeTranslations).map(([k, v]) => (
+                      <MenuItem key={k} value={k}>{v}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -1245,6 +1266,16 @@ export const Finance = () => {
                 />
               </Grid>
             </Grid>
+
+            <TextField
+              fullWidth
+              required
+              size="small"
+              label="عنوان أو بند التسوية (مثال: فاتورة كهرباء، رواتب المندوبين)"
+              value={adjTitle}
+              onChange={(e) => setAdjTitle(e.target.value)}
+              disabled={submittingAdj}
+            />
 
             <TextField
               fullWidth

@@ -4,7 +4,7 @@ const paymentsService = require('../payments/paymentsService');
 /**
  * Record a manual financial adjustment (deposit, withdrawal, or receivable credit/debit adjustment).
  */
-async function recordManualAdjustment({ outletId, amount, adjustmentType, notes, userId }) {
+async function recordManualAdjustment({ outletId, amount, adjustmentType, title, notes, userId }) {
   if (!outletId) {
     throw new Error('Outlet ID is required');
   }
@@ -12,7 +12,7 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
   if (isNaN(parsedAmount) || parsedAmount <= 0) {
     throw new Error('Amount must be a positive number');
   }
-  if (!adjustmentType || !['deposit', 'withdrawal', 'credit_adjustment', 'debit_adjustment', 'expense', 'salary', 'refund'].includes(adjustmentType)) {
+  if (!adjustmentType || !['deposit', 'withdrawal', 'credit_adjustment', 'debit_adjustment', 'expense', 'salary'].includes(adjustmentType)) {
     throw new Error('Invalid adjustment type');
   }
   if (!notes || notes.trim() === '') {
@@ -28,15 +28,15 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
 
   try {
     let signedAmount = parsedAmount;
-    if (adjustmentType === 'withdrawal' || adjustmentType === 'credit_adjustment' || adjustmentType === 'expense' || adjustmentType === 'salary' || adjustmentType === 'refund') {
+    if (['withdrawal', 'credit_adjustment', 'expense', 'salary'].includes(adjustmentType)) {
       signedAmount = -parsedAmount;
     }
 
     const adjSql = `
-      INSERT INTO manual_adjustments (outlet_id, amount, adjustment_type, notes, created_by)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO manual_adjustments (outlet_id, amount, adjustment_type, title, notes, created_by)
+      VALUES (?, ?, ?, ?, ?, ?)
     `;
-    const adjResult = await db.run(adjSql, [outletId, signedAmount, adjustmentType, notes.trim(), userId]);
+    const adjResult = await db.run(adjSql, [outletId, signedAmount, adjustmentType, title ? title.trim() : null, notes.trim(), userId]);
     const adjId = adjResult.lastID;
 
     let cashImpact = 0;
@@ -54,17 +54,14 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
       cashImpact = -parsedAmount;
     } else if (adjustmentType === 'salary') {
       cashImpact = -parsedAmount;
-    } else if (adjustmentType === 'refund') {
-      cashImpact = -parsedAmount;
-      receivableImpact = parsedAmount;
     }
 
     await db.run(`
       INSERT INTO finance_ledger_entries (
         outlet_id, entry_type, reference_type, reference_id,
-        cash_amount, receivable_amount, notes, created_by
-      ) VALUES (?, 'manual_adjustment', 'manual', ?, ?, ?, ?, ?)
-    `, [outletId, adjId, cashImpact, receivableImpact, notes.trim(), userId]);
+        cash_amount, receivable_amount, title, notes, created_by
+      ) VALUES (?, 'manual_adjustment', 'manual', ?, ?, ?, ?, ?, ?)
+    `, [outletId, adjId, cashImpact, receivableImpact, title ? title.trim() : null, notes.trim(), userId]);
 
     await db.exec('COMMIT;');
     return {
@@ -72,6 +69,7 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, notes,
       outletId,
       amount: signedAmount,
       adjustmentType,
+      title: title ? title.trim() : null,
       notes: notes.trim(),
       createdBy: userId
     };
@@ -288,15 +286,10 @@ async function getFinanceSummary(outletIds = null, authorIds = null) {
  */
 async function getLedgerHistory({ limit = 50, offset = 0, outletId = null, startDate = '', endDate = '', entryType = '', outletIds = null } = {}) {
   let sql = `
-    SELECT 
-      fle.*, 
-      o.name as outlet_name, 
-      u.full_name as user_full_name,
-      ma.adjustment_type
+    SELECT fle.*, o.name as outlet_name, u.full_name as user_full_name
     FROM finance_ledger_entries fle
     JOIN outlets o ON o.id = fle.outlet_id
     LEFT JOIN users u ON u.id = fle.created_by
-    LEFT JOIN manual_adjustments ma ON ma.id = fle.reference_id AND fle.reference_type = 'manual'
     WHERE 1=1
   `;
   const params = [];
@@ -424,13 +417,9 @@ async function getOutletStatement(outletId) {
   }
 
   const entries = await db.all(`
-    SELECT 
-      fle.*, 
-      u.full_name as user_full_name,
-      ma.adjustment_type
+    SELECT fle.*, u.full_name as user_full_name
     FROM finance_ledger_entries fle
     LEFT JOIN users u ON u.id = fle.created_by
-    LEFT JOIN manual_adjustments ma ON ma.id = fle.reference_id AND fle.reference_type = 'manual'
     WHERE fle.outlet_id = ?
     ORDER BY fle.created_at ASC, fle.id ASC
   `, [outletId]);
@@ -444,7 +433,6 @@ async function getOutletStatement(outletId) {
     return {
       id: entry.id,
       entry_type: entry.entry_type,
-      adjustment_type: entry.adjustment_type,
       reference_type: entry.reference_type,
       reference_id: entry.reference_id,
       cash_amount: entry.cash_amount,

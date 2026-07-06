@@ -6,7 +6,6 @@ import { formatEgyptDateTime } from '../utils/formatters';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { APP_CONFIG } from '../config/appConfig';
 import { useColorMode } from '../theme/ThemeConfig';
-import { useLanguage } from '../locales/LanguageContext';
 import { t } from '../locales/t';
 import {
   AppBar,
@@ -57,8 +56,7 @@ import {
   Info as InfoIcon,
   CheckCircle as CheckCircleIcon,
   Inventory as InventoryIcon,
-  Person as PersonIcon,
-  Translate as TranslateIcon
+  Person as PersonIcon
 } from '@mui/icons-material';
 import './MainLayout.css';
 
@@ -67,7 +65,6 @@ export const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { mode, toggleColorMode } = useColorMode();
-  const { language, toggleLanguage } = useLanguage();
   const muiTheme = useTheme();
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -202,7 +199,7 @@ export const MainLayout = () => {
       title: 'الفواتير والمبيعات',
       items: [
         { textKey: 'nav.invoices', text: 'الفواتير', icon: <ReceiptIcon />, path: '/invoices', permission: 'invoices.view' },
-        { textKey: 'nav.returns', text: 'المرتجعات', icon: <HistoryIcon />, path: '/returns', permission: 'returns.view' }
+        { textKey: 'nav.returns', text: 'المرتجعات', icon: <HistoryIcon />, path: '/returns', permission: 'invoices.view' }
       ]
     },
     {
@@ -444,16 +441,6 @@ export const MainLayout = () => {
             </IconButton>
           </Tooltip>
 
-          {/* Language Toggle */}
-          <Tooltip title={t('nav.langToggle')}>
-            <IconButton
-              onClick={toggleLanguage}
-              className="main-layout__icon-btn"
-            >
-              <TranslateIcon />
-            </IconButton>
-          </Tooltip>
-
           {/* Notifications Bell */}
           <Tooltip title={t('nav.notifications')}>
             <IconButton
@@ -637,7 +624,7 @@ export const MainLayout = () => {
         {/* Mobile Drawer */}
         <Drawer
           variant="temporary"
-          anchor={muiTheme.direction === 'rtl' ? 'right' : 'left'}
+          anchor={muiTheme.direction === 'rtl' ? 'left' : 'right'}
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
@@ -652,7 +639,7 @@ export const MainLayout = () => {
         {/* Desktop Drawer */}
         <Drawer
           variant="permanent"
-          anchor={muiTheme.direction === 'rtl' ? 'right' : 'left'}
+          anchor={muiTheme.direction === 'rtl' ? 'left' : 'right'}
           PaperProps={{
             className: `main-layout__desktop-drawer-paper ${collapsed ? 'main-layout__desktop-drawer-paper--collapsed' : 'main-layout__desktop-drawer-paper--expanded'}`
           }}

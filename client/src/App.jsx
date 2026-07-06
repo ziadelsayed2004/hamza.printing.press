@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './app/AuthContext';
 import { ThemeConfig } from './theme/ThemeConfig';
-import { LanguageProvider } from './locales/LanguageContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { MainLayout } from './layouts/MainLayout';
 import { Login } from './pages/Login';
@@ -16,13 +15,13 @@ import { Categories } from './pages/Categories';
 import { Outlets } from './pages/Outlets';
 import { OutletTypes } from './pages/OutletTypes';
 import { Invoices } from './pages/Invoices';
-import { Returns } from './pages/Returns';
 import { Payments } from './pages/Payments';
 import { Inventory } from './pages/Inventory';
 import { Shipments } from './pages/Shipments';
 import { Reports } from './pages/Reports';
 import { Exports } from './pages/Exports';
 import { Finance } from './pages/Finance';
+import { Returns } from './pages/Returns';
 import { Notifications } from './pages/Notifications';
 import { Box, Typography, Paper } from '@mui/material';
 import { LoadingState } from './components/LoadingState';
@@ -81,55 +80,53 @@ const PlaceholderPage = ({ title }) => (
 export function App() {
   return (
     <ErrorBoundary>
-      <LanguageProvider>
-        <ThemeConfig>
-          <AuthProvider>
-            <BrowserRouter>
-              <Routes>
-                {/* Guest Route */}
-                <Route
-                  path="/login"
-                  element={
-                    <GuestRoute>
-                      <Login />
-                    </GuestRoute>
-                  }
-                />
+      <ThemeConfig>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Guest Route */}
+              <Route
+                path="/login"
+                element={
+                  <GuestRoute>
+                    <Login />
+                  </GuestRoute>
+                }
+              />
 
-                {/* Protected Routes */}
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <MainLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route index element={<Dashboard />} />
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="users" element={<Users />} />
-                  <Route path="outlet-types" element={<OutletTypes />} />
-                  <Route path="outlets" element={<Outlets />} />
-                  <Route path="authors" element={<Authors />} />
-                  <Route path="products" element={<Products />} />
-                  <Route path="categories" element={<Categories />} />
-                  <Route path="inventory" element={<Inventory />} />
-                  <Route path="invoices" element={<Invoices />} />
-                  <Route path="returns" element={<Returns />} />
-                  <Route path="payments" element={<Payments />} />
-                  <Route path="finance" element={<Finance />} />
-                  <Route path="shipments" element={<Shipments />} />
-                  <Route path="reports" element={<Reports />} />
-                  <Route path="exports" element={<Exports />} />
-                  <Route path="audit" element={<AuditLogs />} />
-                  <Route path="notifications" element={<Notifications />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </AuthProvider>
-        </ThemeConfig>
-      </LanguageProvider>
+              {/* Protected Routes */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <MainLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="users" element={<Users />} />
+                <Route path="outlet-types" element={<OutletTypes />} />
+                <Route path="outlets" element={<Outlets />} />
+                <Route path="authors" element={<Authors />} />
+                <Route path="products" element={<Products />} />
+                <Route path="categories" element={<Categories />} />
+                <Route path="inventory" element={<Inventory />} />
+                <Route path="invoices" element={<Invoices />} />
+                <Route path="returns" element={<Returns />} />
+                <Route path="payments" element={<Payments />} />
+                <Route path="finance" element={<Finance />} />
+                <Route path="shipments" element={<Shipments />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="exports" element={<Exports />} />
+                <Route path="audit" element={<AuditLogs />} />
+                <Route path="notifications" element={<Notifications />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeConfig>
     </ErrorBoundary>
   );
 }

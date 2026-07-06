@@ -7,6 +7,7 @@ import { apiClient } from '../services/apiClient';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
+import Returns from './Returns';
 import { FormSection } from '../components/forms/FormSection';
 import { FieldGrid } from '../components/forms/FieldGrid';
 import {
@@ -565,7 +566,7 @@ export const Payments = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          {hasPermission('payments.create') && (
+          {activeTab === 0 && hasPermission('payments.create') && (
             <Button
               variant="contained"
               color="primary"
@@ -575,11 +576,33 @@ export const Payments = () => {
               تسجيل دفعة جديدة
             </Button>
           )}
+          {activeTab === 2 && reviewQueue.length > 0 && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleExportReviewQueue}
+            >
+              تصدير المراجعة للـ CSV
+            </Button>
+          )}
         </Box>
       </Box>
 
-      {/* سجل المدفوعات والتحصيل مباشرة */}
-      <>
+      {/* Tabs Menu */}
+      <Tabs
+        value={activeTab}
+        onChange={(e, newValue) => setActiveTab(newValue)}
+        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+        textColor="primary"
+        indicatorColor="primary"
+      >
+        <Tab label="سجل المقبوضات والتحصيل" />
+        <Tab label="المرتجعات المالية" />
+        {hasPermission('payments.create') && <Tab label="مراجعة إيصالات الدفع المعلقة" />}
+      </Tabs>
+
+      {activeTab === 0 && (
+        <>
           {/* Expandable Filters */}
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
@@ -918,6 +941,100 @@ export const Payments = () => {
         </Box>
       </Paper>
     </>
+      )}
+
+      {activeTab === 1 && <Returns standalone={false} />}
+
+      {activeTab === 2 && hasPermission('payments.create') && (
+        <Paper className="main-table-paper">
+          {reviewQueueLoading ? (
+            <LoadingState message="جاري تحميل قائمة المراجعة..." />
+          ) : reviewQueue.length === 0 ? (
+            <EmptyState
+              title="لا توجد إيصالات معلقة"
+              description="تم اعتماد أو رفض جميع المقبوضات وإيصالات الدفع بنجاح."
+            />
+          ) : (
+            <TableContainer sx={{ maxHeight: 600 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>منفذ البيع</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>رقم الفاتورة</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>المبلغ</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>طريقة الدفع</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الدفع</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>الإيصال</TableCell>
+                    <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 150 }}>خيارات المراجعة</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {reviewQueue.map((row) => (
+                    <TableRow key={row.id} hover>
+                      <TableCell sx={{ fontFamily: 'monospace' }}>{row.id}</TableCell>
+                      <TableCell>{row.outlet_name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={row.invoice_number}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          sx={{ fontFamily: 'monospace', cursor: 'pointer' }}
+                          onClick={() => handleOpenMetrics(row.invoice_id)}
+                        />
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                        {formatCurrencyEGP(row.amount)}
+                      </TableCell>
+                      <TableCell>{translateMethod(row.payment_method)}</TableCell>
+                      <TableCell>{row.payment_date ? formatEgyptDate(row.payment_date) : '-'}</TableCell>
+                      <TableCell>{row.recorder_full_name || 'غير معروف'}</TableCell>
+                      <TableCell>{row.notes || '-'}</TableCell>
+                      <TableCell>
+                        {row.receipt_stored_path ? (
+                          <Button 
+                            size="small" 
+                            variant="outlined" 
+                            color="primary"
+                            startIcon={<ReceiptIcon sx={{ fontSize: '0.9rem !important' }} />}
+                            onClick={() => window.open(`/api/payments/${row.id}/receipt`, '_blank')}
+                          >
+                            عرض الإيصال
+                          </Button>
+                        ) : (
+                          <Chip label="لا يوجد إيصال" size="small" variant="outlined" sx={{ color: 'text.secondary' }} />
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          variant="contained"
+                          color="success"
+                          size="small"
+                          sx={{ mr: 1, ml: 1 }}
+                          onClick={() => handleApproveReceipt(row.id)}
+                        >
+                          اعتماد
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
+                          onClick={() => handleOpenReject(row.id)}
+                        >
+                          رفض
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Paper>
+      )}
 
 
       {/* ================ ADD PAYMENT Drawer ================ */}

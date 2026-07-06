@@ -83,7 +83,7 @@ router.get('/balances/history', requireAuth, checkPermission('finance.view'), as
 
 // 3. POST /api/finance/manual-adjustments - Record a manual cash or receivable adjustment
 router.post('/manual-adjustments', requireAuth, checkPermission('finance.adjust'), auditLog('manual_finance_adjustment', 'finance'), async (req, res) => {
-  const { outletId, amount, adjustmentType, notes } = req.body;
+  const { outletId, amount, adjustmentType, title, notes } = req.body;
 
   if (!outletId || amount === undefined || !adjustmentType || !notes) {
     return res.status(400).json({ error: 'Bad Request', message: 'outletId, amount, adjustmentType, and notes are required.' });
@@ -95,6 +95,7 @@ router.post('/manual-adjustments', requireAuth, checkPermission('finance.adjust'
       outletId,
       amount,
       adjustmentType,
+      title,
       notes,
       userId
     });
