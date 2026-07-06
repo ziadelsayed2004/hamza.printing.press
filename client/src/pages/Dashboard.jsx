@@ -5,6 +5,7 @@ import { apiClient } from '../services/apiClient';
 import { formatCurrencyEGP, formatEgyptDateTime } from '../utils/formatters';
 import LoadingState from '../components/LoadingState';
 import { t } from '../locales/t';
+import { useLanguage } from '../locales/LanguageContext';
 import {
   Box,
   Typography,
@@ -49,6 +50,7 @@ import '../styles/Dashboard.css';
 export const Dashboard = () => {
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
+  const { language } = useLanguage();
 
   // Core Data States
   const [financials, setFinancials] = useState(null);
@@ -253,16 +255,16 @@ export const Dashboard = () => {
         <Grid container spacing={3} alignItems="center">
           <Grid item xs={12} md={7}>
             <Typography variant="h5" className="dashboard-hero__title">
-              {t('dashboard.welcome', { name: user?.fullName || user?.username || 'مدير النظام' })}
+              {t('dashboard.welcome', { name: user?.fullName || user?.username || (language === 'en' ? 'System Admin' : 'مدير النظام') })}
             </Typography>
             <Typography variant="body2" className="dashboard-hero__subtitle">
               <AccessTimeIcon sx={{ fontSize: 16 }} />
-              {cairoTime || 'جاري تحميل التوقيت...'}
+              {cairoTime || t('dashboard.loadingTime')}
             </Typography>
           </Grid>
           <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 1 }}>
             {user?.roles?.map(r => (
-              <Chip key={r} label={r === 'super_admin' ? 'مدير عام صلاحيات كاملة' : r} color="secondary" className="dashboard-hero__role-chip" />
+              <Chip key={r} label={r === 'super_admin' ? t('dashboard.superAdminRole') : r} color="secondary" className="dashboard-hero__role-chip" />
             ))}
           </Grid>
         </Grid>
@@ -272,34 +274,34 @@ export const Dashboard = () => {
       {isDatabaseFresh && (
         <Paper className="onboarding-wizard">
           <Typography variant="h6" className="onboarding-wizard__title">
-            <CheckCircleIcon color="success" /> تهيئة النظام جاهزة للبدء
+            <CheckCircleIcon color="success" /> {t('dashboard.onboardingTitle')}
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            قاعدة البيانات تم تصفيرها بنجاح للإنتاج. لبدء دورة العمل التشغيلية، يرجى اتباع الخطوات المتسلسلة التالية:
+            {t('dashboard.onboardingDesc')}
           </Typography>
           <Box className="onboarding-wizard__steps-grid">
             <Box className="onboarding-card" onClick={() => navigate('/outlet-types')}>
               <Typography variant="subtitle2" className="onboarding-card__step-title">
-                ١. تصنيفات ومنافذ البيع
+                {t('dashboard.onboardingStep1')}
               </Typography>
               <Typography variant="caption" className="onboarding-card__step-description">
-                قم بتعريف الفئات التسعيرية (مثال: جملة، تجزئة، معارض)، ثم أضف منافذ التوزيع وعناوينها.
+                {t('dashboard.onboardingStep1Desc')}
               </Typography>
             </Box>
             <Box className="onboarding-card" onClick={() => navigate('/products')}>
               <Typography variant="subtitle2" className="onboarding-card__step-title">
-                ٢. فهرس الكتب والأسعار
+                {t('dashboard.onboardingStep2')}
               </Typography>
               <Typography variant="caption" className="onboarding-card__step-description">
-                أضف قائمة المؤلفين، ثم أضف الكتب وحدد أسعار بيعها المعتمدة لكل فئة منفذ بيع.
+                {t('dashboard.onboardingStep2Desc')}
               </Typography>
             </Box>
             <Box className="onboarding-card" onClick={() => navigate('/inventory')}>
               <Typography variant="subtitle2" className="onboarding-card__step-title">
-                ٣. توريد وجرد المخزون
+                {t('dashboard.onboardingStep3')}
               </Typography>
               <Typography variant="caption" className="onboarding-card__step-description">
-                سجل فواتير التوريد الواردة من المطابع لزيادة كميات الكتب في المستودع قبل إصدار الفواتير.
+                {t('dashboard.onboardingStep3Desc')}
               </Typography>
             </Box>
           </Box>
@@ -310,7 +312,7 @@ export const Dashboard = () => {
       {activeAlerts.length > 0 && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AlertIcon /> تحذيرات تشغيلية حرجة
+            <AlertIcon /> {t('dashboard.criticalAlertsTitle')}
           </Typography>
           {activeAlerts.map((alert) => (
             <Alert
@@ -357,15 +359,15 @@ export const Dashboard = () => {
       {/* 4. KPI Cards Strip (8-Card Grid) */}
       <Box className="kpi-grid">
         {[
-          { title: 'الذمم المعلقة', value: formatCurrencyEGP(pendingMetric), sub: 'الذمم المدينة المتبقية المستحقة من العملاء', icon: <WalletIcon />, theme: 'warning' },
-          { title: 'التحصيل الفعلي كاش', value: formatCurrencyEGP(collectedMetric), sub: 'إجمالي النقدية المحصلة فعلياً في الخزينة', icon: <PaymentIcon />, theme: 'success' },
-          { title: 'التوريدات المسلمة', value: formatCurrencyEGP(suppliedMetric), sub: 'المبالغ الموردة والمسلمة للمقر الرئيسي', icon: <CheckCircleIcon />, theme: 'primary' },
-          { title: 'التوريدات المعلقة', value: formatCurrencyEGP(unsuppliedMetric), sub: 'مبالغ محصلة جاري تسليمها للمقر الرئيسي', icon: <AccessTimeIcon />, theme: 'info' },
-          { title: 'المرتجعات المعتمدة', value: formatCurrencyEGP(returnsMetric), sub: 'إجمالي قيمة المرتجعات المعتمدة بالكامل', icon: <HistoryIcon />, theme: 'danger' },
-          { title: 'المبيعات والفواتير', value: formatCurrencyEGP(invoicesAmountVal), sub: `عدد الفواتير المصدرة: ${invoicesCountVal}`, icon: <ReceiptIcon />, theme: 'primary' },
-          { title: 'شحنات جزئية معلقة', value: `${partialShipmentsVal} شحنة`, sub: 'شحنات جزئية معلقة للمنافذ والفروع', icon: <ShippingIcon />, theme: 'warning' },
-          { title: 'تنبيهات المخزون', value: `${stockAlertsVal} كتاب`, sub: 'كتب تخطت حد الأمان أو ذات رصيد سالب', icon: <AlertIcon />, theme: 'danger' }
-        ].map((card, i) => (
+          { title: t('dashboard.pendingReceivables'), value: formatCurrencyEGP(pendingMetric), sub: t('dashboard.pendingReceivablesDesc'), icon: <WalletIcon />, theme: 'warning', perm: 'finance.view' },
+          { title: t('dashboard.actualCollection'), value: formatCurrencyEGP(collectedMetric), sub: t('dashboard.actualCollectionDesc'), icon: <PaymentIcon />, theme: 'success', perm: 'finance.view' },
+          { title: t('dashboard.suppliedAmounts'), value: formatCurrencyEGP(suppliedMetric), sub: t('dashboard.suppliedAmountsDesc'), icon: <CheckCircleIcon />, theme: 'primary', perm: 'finance.view' },
+          { title: t('dashboard.unsuppliedAmounts'), value: formatCurrencyEGP(unsuppliedMetric), sub: t('dashboard.unsuppliedAmountsDesc'), icon: <AccessTimeIcon />, theme: 'info', perm: 'finance.view' },
+          { title: t('dashboard.approvedReturns'), value: formatCurrencyEGP(returnsMetric), sub: t('dashboard.approvedReturnsDesc'), icon: <HistoryIcon />, theme: 'danger', perm: 'invoices.view' },
+          { title: t('dashboard.salesInvoices'), value: formatCurrencyEGP(invoicesAmountVal), sub: t('dashboard.invoicesCountDesc', { count: invoicesCountVal }), icon: <ReceiptIcon />, theme: 'primary', perm: 'invoices.view' },
+          { title: t('dashboard.pendingPartialShipments'), value: language === 'en' ? `${partialShipmentsVal} shipments` : `${partialShipmentsVal} شحنة`, sub: t('dashboard.pendingPartialShipmentsDesc'), icon: <ShippingIcon />, theme: 'warning', perm: 'invoices.view' },
+          { title: t('dashboard.stockAlerts'), value: language === 'en' ? `${stockAlertsVal} books` : `${stockAlertsVal} كتاب`, sub: t('dashboard.stockAlertsDesc'), icon: <AlertIcon />, theme: 'danger', perm: 'inventory.view' }
+        ].filter(card => !card.perm || hasPermission(card.perm)).map((card, i) => (
           <Card className={`kpi-card kpi-card--${card.theme}`} key={i}>
             <CardContent className="kpi-card__body">
               <Box className={`kpi-card__icon-wrapper kpi-card__icon-wrapper--${card.theme}`}>
@@ -388,91 +390,97 @@ export const Dashboard = () => {
       </Box>
 
       {/* 5. Finance and Operations Status Overview */}
-      <Box className="snapshots-grid">
-        {/* Finance Overview Panel */}
-        <Paper className="snapshot-panel">
-          <Typography variant="subtitle1" className="snapshot-panel__header">
-            <TrendingUpIcon color="primary" /> ملخص المركز المالي والحسابات
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-          
-          <Box className="snapshot-panel__progress-box">
-            <Box className="snapshot-panel__progress-label">
-              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>نسبة تحصيل الديون والمبيعات</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                {collectionRate.toFixed(1)}%
+      {(hasPermission('finance.view') || hasPermission('inventory.view')) && (
+        <Box className="snapshots-grid">
+          {/* Finance Overview Panel */}
+          {hasPermission('finance.view') && (
+            <Paper className="snapshot-panel">
+              <Typography variant="subtitle1" className="snapshot-panel__header">
+                <TrendingUpIcon color="primary" /> {t('dashboard.financialsSummary')}
               </Typography>
-            </Box>
-            <LinearProgress variant="determinate" value={collectionRate} className="snapshot-panel__progress-bar" />
-          </Box>
+              <Divider sx={{ mb: 3 }} />
+              
+              <Box className="snapshot-panel__progress-box">
+                <Box className="snapshot-panel__progress-label">
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{t('dashboard.collectionRate')}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                    {collectionRate.toFixed(1)}%
+                  </Typography>
+                </Box>
+                <LinearProgress variant="determinate" value={collectionRate} className="snapshot-panel__progress-bar" />
+              </Box>
 
-          <Box className="snapshot-panel__grid">
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">إجمالي المبيعات الآجلة</Typography>
-              <Typography className="snapshot-panel__stat-value">
-                {formatCurrencyEGP(totalSales)}
-              </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">إيصالات قيد المراجعة</Typography>
-              <Typography className={`snapshot-panel__stat-value ${unreviewedCountVal > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
-                {unreviewedCountVal} إيصالات
-              </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">تجاوزات الحد الائتماني</Typography>
-              <Typography className={`snapshot-panel__stat-value ${exceededLimitsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
-                {exceededLimitsCount} منافذ
-              </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">عدد منافذ التوزيع</Typography>
-              <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--warning">
-                {activeOutletsCount} نشطة
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
+              <Box className="snapshot-panel__grid">
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.creditSales')}</Typography>
+                  <Typography className="snapshot-panel__stat-value">
+                    {formatCurrencyEGP(totalSales)}
+                  </Typography>
+                </Box>
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.unreviewedReceipts')}</Typography>
+                  <Typography className={`snapshot-panel__stat-value ${unreviewedCountVal > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
+                    {t('dashboard.unreviewedReceiptsCount', { count: unreviewedCountVal })}
+                  </Typography>
+                </Box>
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.creditLimitExceeded')}</Typography>
+                  <Typography className={`snapshot-panel__stat-value ${exceededLimitsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
+                    {t('dashboard.creditLimitExceededCount', { count: exceededLimitsCount })}
+                  </Typography>
+                </Box>
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.distributionOutlets')}</Typography>
+                  <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--warning">
+                    {t('dashboard.distributionOutletsCount', { count: activeOutletsCount })}
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          )}
 
-        {/* Inventory Operations Panel */}
-        <Paper className="snapshot-panel">
-          <Typography variant="subtitle1" className="snapshot-panel__header">
-            <StoreIcon color="primary" /> ملخص حركة الجرد والكميات اللوجستية
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-          
-          <Box className="snapshot-panel__grid" sx={{ height: '100%', alignContent: 'center' }}>
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">تحت حد التنبيه ({"<= 10"})</Typography>
-              <Typography className={`snapshot-panel__stat-value ${lowStockItemsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
-                {lowStockItemsCount} عنوان كتاب
+          {/* Inventory Operations Panel */}
+          {hasPermission('inventory.view') && (
+            <Paper className="snapshot-panel">
+              <Typography variant="subtitle1" className="snapshot-panel__header">
+                <StoreIcon color="primary" /> {t('dashboard.inventorySummary')}
               </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">عناوين ذات رصيد سالب</Typography>
-              <Typography className={`snapshot-panel__stat-value ${negativeStockItemsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
-                {negativeStockItemsCount} عنوان كتاب
-              </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">عمليات التوريد (اليوم)</Typography>
-              <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--success">
-                {receiptsTodayCount} توريدات واردة
-              </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
-              <Typography className="snapshot-panel__stat-title">شحنات معلقة قيد التجهيز</Typography>
-              <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--warning">
-                {shipments.filter(s => s.status === 'pending').length} شحنة
-              </Typography>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
+              <Divider sx={{ mb: 3 }} />
+              
+              <Box className="snapshot-panel__grid" sx={{ height: '100%', alignContent: 'center' }}>
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.lowStockAlert')}</Typography>
+                  <Typography className={`snapshot-panel__stat-value ${lowStockItemsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
+                    {t('dashboard.lowStockAlertCount', { count: lowStockItemsCount })}
+                  </Typography>
+                </Box>
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.negativeStockAlert')}</Typography>
+                  <Typography className={`snapshot-panel__stat-value ${negativeStockItemsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
+                    {t('dashboard.negativeStockAlertCount', { count: negativeStockItemsCount })}
+                  </Typography>
+                </Box>
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.todayReceipts')}</Typography>
+                  <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--success">
+                    {t('dashboard.todayReceiptsCount', { count: receiptsTodayCount })}
+                  </Typography>
+                </Box>
+                <Box className="snapshot-panel__stat-box">
+                  <Typography className="snapshot-panel__stat-title">{t('dashboard.pendingShipments')}</Typography>
+                  <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--warning">
+                    {t('dashboard.pendingShipmentsCount', { count: shipments.filter(s => s.status === 'pending').length })}
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          )}
+        </Box>
+      )}
 
       {/* 6. Quick Operations Grid */}
       <Typography variant="subtitle1" className="quick-actions-section-title">
-        العمليات والمهام السريعة
+        {t('dashboard.quickActions')}
       </Typography>
       <Box className="quick-actions-grid">
         {[

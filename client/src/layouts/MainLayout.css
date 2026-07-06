@@ -83,11 +83,19 @@
 }
 
 .main-layout__desktop-drawer-paper {
-  border-left: 1px solid var(--border-color);
-  border-right: none;
   box-sizing: border-box;
   overflow-x: hidden;
   background-color: var(--color-surface) !important;
+}
+
+[dir="rtl"] .main-layout__desktop-drawer-paper {
+  border-left: 1px solid var(--border-color);
+  border-right: none;
+}
+
+[dir="ltr"] .main-layout__desktop-drawer-paper {
+  border-right: 1px solid var(--border-color);
+  border-left: none;
 }
 
 .main-layout__desktop-drawer-paper--expanded {

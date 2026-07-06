@@ -44,6 +44,11 @@ export const ThemeConfig = ({ children }) => {
     document.documentElement.setAttribute('data-theme', mode);
   }, [mode]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('dir', language === 'en' ? 'ltr' : 'rtl');
+    document.documentElement.dir = language === 'en' ? 'ltr' : 'rtl';
+  }, [language]);
+
   const colorMode = useMemo(
     () => ({
       mode,
