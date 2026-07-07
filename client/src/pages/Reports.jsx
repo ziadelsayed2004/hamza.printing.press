@@ -35,7 +35,8 @@ import {
   Payment as PaymentIcon,
   AccountBalanceWallet as WalletIcon,
   FileDownload as DownloadIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  Print as PrintIcon
 } from '@mui/icons-material';
 
 
@@ -239,6 +240,302 @@ export const Reports = () => {
     setAuthorSearch('');
     setAuthorStatus('');
     setReceiptSearch('');
+  };
+
+  const handlePrintReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('يرجى السماح بالنوافذ المنبثقة لطباعة التقرير.', 'warning');
+      return;
+    }
+
+    const reportTitles = [
+      'الخلاصة المالية',
+      'أرصدة الفروع ومنافذ البيع',
+      'مبيعات المحافظات',
+      'مبيعات فئات منافذ البيع',
+      'حالة المخزون التفصيلي',
+      'مبيعات وأرصدة كتب المؤلفين',
+      'سجل توريدات الموردين'
+    ];
+
+    const currentTitle = reportTitles[tab] || 'التقرير المالي';
+    let contentHtml = '';
+
+    // Apply active filters summary html
+    const filtersUsed = [];
+    if (startDate) filtersUsed.push(`من تاريخ: ${startDate}`);
+    if (endDate) filtersUsed.push(`إلى تاريخ: ${endDate}`);
+    if (tab === 0) {
+      if (selectedOutlet) {
+        const outlet = outlets.find(o => o.id === selectedOutlet);
+        if (outlet) filtersUsed.push(`المنفذ: ${outlet.name}`);
+      }
+    }
+    if ([0, 1].includes(tab)) {
+      if (selectedOutletType) {
+        const type = outletTypes.find(t => t.id === selectedOutletType);
+        if (type) filtersUsed.push(`الفئة: ${type.name}`);
+      }
+      if (selectedGovernorate) filtersUsed.push(`المحافظة: ${selectedGovernorate}`);
+    }
+    if (tab === 4) {
+      if (stockSearch) filtersUsed.push(`بحث المخزون: ${stockSearch}`);
+      if (stockStatus) filtersUsed.push(`الحالة: ${stockStatus === 'active' ? 'نشط' : 'معطل'}`);
+    }
+    if (tab === 5) {
+      if (authorSearch) filtersUsed.push(`اسم المؤلف: ${authorSearch}`);
+      if (authorStatus) filtersUsed.push(`الحالة: ${authorStatus === 'active' ? 'نشط' : 'معطل'}`);
+    }
+    if (tab === 6) {
+      if (receiptSearch) filtersUsed.push(`اسم المورد: ${receiptSearch}`);
+    }
+
+    const filtersHtml = filtersUsed.length > 0 
+      ? `<div style="margin-bottom: 20px; font-size: 13px; color: #475569; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 6px;">
+           <strong>الفلاتر المطبقة:</strong> ${filtersUsed.join(' | ')}
+         </div>`
+      : '';
+
+    if (tab === 0) {
+      // TAB 0: Summary Data Cards
+      if (!summaryData) {
+        contentHtml = '<p style="text-align:center;">لا توجد بيانات متاحة حالياً.</p>';
+      } else {
+        contentHtml = `
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px;">
+            <div style="background-color: #ebf5fb; border-right: 5px solid #1d4ed8; padding: 15px; border-radius: 6px;">
+              <span style="font-size: 12px; color: #475569; display:block;">إجمالي المبيعات</span>
+              <strong style="font-size: 18px; color: #1e3a8a; display:block; margin-top:5px;">${formatCurrencyEGP(summaryData.totalSales)}</strong>
+            </div>
+            <div style="background-color: #e8f8f5; border-right: 5px solid #047857; padding: 15px; border-radius: 6px;">
+              <span style="font-size: 12px; color: #475569; display:block;">المبالغ المسددة</span>
+              <strong style="font-size: 18px; color: #065f46; display:block; margin-top:5px;">${formatCurrencyEGP(summaryData.totalPaid)}</strong>
+            </div>
+            <div style="background-color: #fdf2e9; border-right: 5px solid #c2410c; padding: 15px; border-radius: 6px;">
+              <span style="font-size: 12px; color: #475569; display:block;">المبالغ المتبقية (الديون)</span>
+              <strong style="font-size: 18px; color: #9a3412; display:block; margin-top:5px;">${formatCurrencyEGP(summaryData.totalRemaining)}</strong>
+            </div>
+          </div>
+
+          <h4 style="margin: 25px 0 10px 0; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">تفاصيل التوريدات المادية واللوجستية:</h4>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 25px;">
+            <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; background-color: #fafafa;">
+              <span style="font-size: 12px; color: #475569; display:block;">مدفوعات موردة للخزينة الرئيسية (Supplied)</span>
+              <strong style="font-size: 16px; color: #047857; display:block; margin-top:5px;">${formatCurrencyEGP(summaryData.totalSupplied)}</strong>
+            </div>
+            <div style="border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; background-color: #fafafa;">
+              <span style="font-size: 12px; color: #475569; display:block;">مدفوعات معلقة في الخزن الفرعية (Unsupplied)</span>
+              <strong style="font-size: 16px; color: #dc2626; display:block; margin-top:5px;">${formatCurrencyEGP(summaryData.totalUnsupplied)}</strong>
+            </div>
+          </div>
+
+          <h4 style="margin: 20px 0 10px 0; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">إحصائيات الشحن وتسليم الطلبيات:</h4>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr style="background-color: #f1f5f9;">
+                <th style="border: 1px solid #cbd5e1; padding: 10px; text-align: right;">الحالة اللوجستية شحن وتوصيل</th>
+                <th style="border: 1px solid #cbd5e1; padding: 10px; text-align: center;">العدد الإجمالي للفواتير</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border: 1px solid #cbd5e1; padding: 10px;">فواتير تم شحنها وتسليمها بالكامل</td>
+                <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center; font-weight: bold;">${summaryData.countShipped} فواتير</td>
+              </tr>
+              <tr>
+                <td style="border: 1px solid #cbd5e1; padding: 10px;">فواتير شحنت بشكل جزئي</td>
+                <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center; font-weight: bold; color: #ca8a04;">${summaryData.countPartiallyShipped} فواتير</td>
+              </tr>
+              <tr>
+                <td style="border: 1px solid #cbd5e1; padding: 10px;">فواتير قيد الانتظار وغير مشحونة</td>
+                <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center; font-weight: bold; color: #dc2626;">${summaryData.countNotShipped} فواتير</td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+      }
+    } else {
+      // TABLES TABS
+      let headersHtml = '';
+      let bodyHtml = '';
+
+      if (tab === 1) {
+        headersHtml = `
+          <tr>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">المنفذ</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">فئة المنفذ</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">المحافظة</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">سقف الائتمان</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">إجمالي المبيعات</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">المسدد</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">المتبقي</th>
+          </tr>
+        `;
+        bodyHtml = balancesOutlet.map((row) => `
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.outletName}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.outletTypeName}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.governorate}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${row.creditLimit ? formatCurrencyEGP(row.creditLimit) : 'مفتوح'}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.totalSales)}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.totalPaid)}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left; font-weight: bold; color: ${row.remainingAmount > 0 ? '#b45309' : 'inherit'};">${formatCurrencyEGP(row.remainingAmount)}</td>
+          </tr>
+        `).join('');
+      } else if (tab === 2) {
+        headersHtml = `
+          <tr>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">المحافظة</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">إجمالي المبيعات</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">المسدد</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">المتبقي (الذمم المفتوحة)</th>
+          </tr>
+        `;
+        bodyHtml = balancesGov.map((row) => `
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.governorate || 'غير مصنف'}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.totalSales)}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.totalPaid)}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.remainingAmount)}</td>
+          </tr>
+        `).join('');
+      } else if (tab === 3) {
+        headersHtml = `
+          <tr>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">فئة المنفذ</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">إجمالي المبيعات</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">المسدد</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">المتبقي</th>
+          </tr>
+        `;
+        bodyHtml = balancesType.map((row) => `
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.outletTypeName}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.totalSales)}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.totalPaid)}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.remainingAmount)}</td>
+          </tr>
+        `).join('');
+      } else if (tab === 4) {
+        headersHtml = `
+          <tr>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">رمز الكتاب (SKU)</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">العنوان</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">التصنيف</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">الوارد الكلي</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">المبيعات الكلية</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">المرتجعات الكلية</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">التعديلات</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">المخزون الحالي</th>
+          </tr>
+        `;
+        bodyHtml = stockData.map((row) => `
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; font-family: monospace;">${row.productCode}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.productTitle}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.category || 'غير محدد'}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.totalReceived}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.totalSold}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.totalReturned}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.totalAdjusted}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; font-weight: bold; color: ${row.currentStock <= 5 ? '#dc2626' : '#16a34a'};">${row.currentStock}</td>
+          </tr>
+        `).join('');
+      } else if (tab === 5) {
+        headersHtml = `
+          <tr>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">المؤلف</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">الحالة</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">عدد العناوين</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">مبيعات كلي</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">إجمالي النسخ المباعة</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">المخزون المتوفر</th>
+          </tr>
+        `;
+        bodyHtml = authorData.map((row) => `
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.authorName}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.status === 'active' ? 'نشط' : 'معطل'}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.totalBooks}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">${formatCurrencyEGP(row.totalSales)}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.totalCopiesSold} نسخه</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.currentStock} نسخه</td>
+          </tr>
+        `).join('');
+      } else if (tab === 6) {
+        headersHtml = `
+          <tr>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">اسم المورد</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">عدد حركات التوريد</th>
+            <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">إجمالي الكمية الموردة</th>
+          </tr>
+        `;
+        bodyHtml = receiptData.map((row) => `
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 8px;">${row.supplierName}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${row.totalReceipts}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center; font-weight: bold;">${row.totalQuantity} نسخه</td>
+          </tr>
+        `).join('');
+      }
+
+      contentHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+          <thead>
+            <tr style="background-color: #f1f5f9;">
+              ${headersHtml}
+            </tr>
+          </thead>
+          <tbody>
+            ${bodyHtml}
+          </tbody>
+        </table>
+      `;
+    }
+
+    printWindow.document.write(`
+      <html dir="rtl" lang="ar">
+      <head>
+        <title>${currentTitle} - مطبعة حمزة</title>
+        <style>
+          @page { size: A4; margin: 15mm; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; color: #1e293b; line-height: 1.5; font-size: 13px; }
+          .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 20px; }
+          .header h2 { margin: 0; font-size: 20px; color: #1e3a8a; }
+          .header p { margin: 4px 0 0 0; font-size: 11px; color: #64748b; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th { background-color: #f8fafc; border: 1px solid #cbd5e1; padding: 8px; font-weight: bold; color: #334155; font-size: 12px; }
+          td { border: 1px solid #cbd5e1; padding: 8px; font-size: 12px; }
+          tr:nth-child(even) { background-color: #f8fafc; }
+          .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h2>${currentTitle}</h2>
+            <p>مطبعة حمزة للنشر والتوزيع - قسم الحسابات والإحصاء</p>
+          </div>
+          <div style="text-align: left;">
+            <p><strong>تاريخ الطباعة:</strong> ${new Date().toLocaleDateString('ar-EG')}</p>
+            <p>نظام الإدارة الداخلي</p>
+          </div>
+        </div>
+
+        ${filtersHtml}
+        ${contentHtml}
+
+        <div class="footer">
+          نظام إدارة دار الكتب ومطبعة حمزة - تم توليد وطباعة هذا التقرير تلقائياً.
+        </div>
+        <script>
+          window.onload = function() { window.print(); window.close(); }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const handleExportExcel = (type) => {
@@ -453,6 +750,12 @@ export const Reports = () => {
 
       {/* ───── TAB 0: FINANCIAL SUMMARY ───── */}
       <TabPanel value={tab} index={0}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>الخلاصة والمركز المالي العام</Typography>
+          <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
+            طباعة التقرير
+          </Button>
+        </Box>
         {summaryLoading ? <LoadingState /> : !summaryData ? <EmptyState title="لا توجد بيانات" /> : (
           <Stack spacing={3}>
             {/* Main Financial Metrics */}
@@ -527,11 +830,16 @@ export const Reports = () => {
 
       {/* ───── TAB 1: OUTLET BALANCES ───── */}
       <TabPanel value={tab} index={1}>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>أرصدة وذمم الفروع ومنافذ البيع</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('balances')}>
-            تصدير كملف Excel
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
+              طباعة التقرير
+            </Button>
+            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('balances')}>
+              تصدير كملف Excel
+            </Button>
+          </Box>
         </Box>
         {balancesOutletLoading ? <LoadingState /> : balancesOutlet.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
           <TableContainer className="scrollable-table-container" component={Paper}>
@@ -569,7 +877,12 @@ export const Reports = () => {
 
       {/* ───── TAB 2: BALANCES BY GOVERNORATE ───── */}
       <TabPanel value={tab} index={2}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>مبيعات المحافظات</Typography>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>مبيعات المحافظات</Typography>
+          <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
+            طباعة التقرير
+          </Button>
+        </Box>
         {balancesGovLoading ? <LoadingState /> : balancesGov.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
           <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
@@ -598,7 +911,12 @@ export const Reports = () => {
 
       {/* ───── TAB 3: BALANCES BY OUTLET TYPE ───── */}
       <TabPanel value={tab} index={3}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>مبيعات فئات منافذ البيع</Typography>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>مبيعات فئات منافذ البيع</Typography>
+          <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
+            طباعة التقرير
+          </Button>
+        </Box>
         {balancesTypeLoading ? <LoadingState /> : balancesType.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
           <TableContainer className="scrollable-table-container" component={Paper}>
             <Table size="small">
@@ -627,11 +945,16 @@ export const Reports = () => {
 
       {/* ───── TAB 4: STOCK REPORT ───── */}
       <TabPanel value={tab} index={4}>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تقرير المخزون التفصيلي للكتب والمنتجات</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('stock')}>
-            تصدير كملف Excel
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
+              طباعة التقرير
+            </Button>
+            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('stock')}>
+              تصدير كملف Excel
+            </Button>
+          </Box>
         </Box>
         {stockLoading ? <LoadingState /> : stockData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
           <TableContainer className="scrollable-table-container" component={Paper}>
@@ -671,11 +994,16 @@ export const Reports = () => {
 
       {/* ───── TAB 5: AUTHORS REPORT ───── */}
       <TabPanel value={tab} index={5}>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>تقرير مبيعات وأرصدة المؤلفين</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('authors')}>
-            تصدير كملف Excel
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
+              طباعة التقرير
+            </Button>
+            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('authors')}>
+              تصدير كملف Excel
+            </Button>
+          </Box>
         </Box>
         {authorLoading ? <LoadingState /> : authorData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
           <TableContainer className="scrollable-table-container" component={Paper}>
@@ -715,11 +1043,16 @@ export const Reports = () => {
 
       {/* ───── TAB 6: RECEIPTS REPORT ───── */}
       <TabPanel value={tab} index={6}>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold' }}>سجل توريدات الموردين وكمياتها</Typography>
-          <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('receipts')}>
-            تصدير كملف Excel
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
+              طباعة التقرير
+            </Button>
+            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('receipts')}>
+              تصدير كملف Excel
+            </Button>
+          </Box>
         </Box>
         {receiptLoading ? <LoadingState /> : receiptData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
           <TableContainer className="scrollable-table-container" component={Paper}>

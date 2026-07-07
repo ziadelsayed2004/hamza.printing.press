@@ -377,26 +377,16 @@ export const Exports = () => {
               <Grid container spacing={3}>
                 {sector.modules.map((mod, mIdx) => (
                   <Grid item xs={12} sm={6} md={4} key={mIdx}>
-                    <Card sx={{ 
+                    <Card className="exports-card" sx={{ 
                       height: '100%', 
                       display: 'flex', 
                       flexDirection: 'column', 
                       justifyContent: 'space-between', 
-                      transition: 'all 0.25s ease-in-out', 
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderTop: `4px solid ${sector.color}`,
-                      borderRadius: 2,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                      '&:hover': { 
-                        transform: 'translateY(-4px)',
-                        boxShadow: '0 12px 20px rgba(0,0,0,0.08)',
-                        borderColor: 'transparent'
-                      } 
+                      borderTop: `4px solid ${sector.color} !important`,
                     }}>
                       <CardContent sx={{ p: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-                          <Box sx={{ 
+                          <Box className="exports-icon-wrapper" sx={{ 
                             p: 1.5, 
                             borderRadius: '10px', 
                             bgcolor: `${sector.color}15`, 
@@ -437,11 +427,11 @@ export const Exports = () => {
 
       {/* Dynamic Export Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FilterIcon color="primary" />
+        <DialogTitle className="exports-dialog-header" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <FilterIcon />
           تصفية وتحديد خيارات التصدير
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent className="exports-dialog-content" dividers>
           {selectedMod && (
             <Stack spacing={3} sx={{ mt: 1 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>

@@ -62,7 +62,8 @@ import {
   LocalShipping as LocalShippingIcon,
   SettingsBackupRestore as SettingsBackupRestoreIcon,
   CheckCircle as CheckCircleIcon,
-  Receipt as ReceiptIcon
+  Receipt as ReceiptIcon,
+  Print as PrintIcon
 } from '@mui/icons-material';
 import '../styles/Invoices.css';
 
@@ -402,6 +403,212 @@ export const Invoices = () => {
     } catch (err) {
       console.error(err);
       showToast('فشل تحميل ملف الـ PDF للفاتورة.', 'error');
+    }
+  };
+
+  const handlePrintInvoice = (inv) => {
+    if (!inv) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('يرجى السماح بالنوافذ المنبثقة لطباعة الفاتورة.', 'warning');
+      return;
+    }
+
+    const itemsHtml = inv.items?.map((item, idx) => {
+      const billableQty = Math.max(0, item.quantity - (item.free_quantity || 0));
+      return `
+        <tr>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center;">${idx + 1}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; font-weight: 500;">${item.product_title}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center; font-family: monospace;">${item.product_code || '-'}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center; font-weight: bold;">${item.quantity}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center; color: #16a34a; font-weight: 500;">${item.free_quantity || 0}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: center;">${billableQty}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-family: monospace;">${formatCurrencyEGP(item.unit_price)}</td>
+          <td style="border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-family: monospace; font-weight: bold;">${formatCurrencyEGP(item.total_price)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const formattedDate = formatEgyptDateTime(inv.created_at);
+
+    printWindow.document.write(`
+      <html dir="rtl" lang="ar">
+      <head>
+        <title>فاتورة مبيعات - ${inv.invoice_number}</title>
+        <style>
+          @page { size: A4; margin: 15mm; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; color: #1e293b; background-color: #fff; line-height: 1.5; font-size: 14px; }
+          .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 25px; }
+          .logo-area { text-align: right; }
+          .logo-area h1 { margin: 0; font-size: 24px; color: #1e3a8a; font-weight: 800; letter-spacing: -0.5px; }
+          .logo-area p { margin: 4px 0 0 0; font-size: 12px; color: #64748b; }
+          .title-area { text-align: left; }
+          .title-area h2 { margin: 0; font-size: 20px; color: #0f172a; font-weight: 700; }
+          .title-area p { margin: 4px 0 0 0; font-size: 13px; font-family: monospace; font-weight: bold; color: #1e3a8a; }
+          
+          .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 25px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; }
+          .info-block h4 { margin: 0 0 8px 0; font-size: 13px; color: #64748b; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+          .info-block p { margin: 4px 0; font-size: 14px; }
+          .info-block p strong { color: #0f172a; }
+
+          .items-table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px; }
+          .items-table th { background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px; }
+          
+          .summary-container { display: flex; justify-content: space-between; align-items: flex-start; gap: 40px; margin-top: 15px; page-break-inside: avoid; }
+          .notes-box { flex: 1; border: 1px dashed #cbd5e1; padding: 12px; border-radius: 6px; background-color: #fafafa; }
+          .notes-box h5 { margin: 0 0 6px 0; font-size: 13px; color: #475569; }
+          .notes-box p { margin: 0; font-size: 12px; color: #64748b; }
+          
+          .totals-table { width: 280px; border-collapse: collapse; }
+          .totals-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+          .totals-table tr.grand-total td { font-weight: bold; font-size: 15px; border-bottom: 2px solid #0f172a; color: #1e3a8a; background-color: #f8fafc; }
+          
+          .signature-section { display: flex; justify-content: space-between; margin-top: 60px; padding: 0 20px; page-break-inside: avoid; }
+          .signature-box { text-align: center; width: 200px; }
+          .signature-box p { margin: 0; font-size: 13px; color: #475569; }
+          .signature-line { border-top: 1px dashed #94a3b8; margin-top: 40px; }
+
+          .footer { margin-top: 65px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; page-break-inside: avoid; }
+          
+          .qr-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+          .qr-wrapper img { width: 75px; height: 75px; margin-bottom: 4px; }
+          .qr-wrapper span { font-size: 9px; color: #64748b; }
+        </style>
+      </head>
+      <body>
+        <div class="header-container">
+          <div class="logo-area">
+            <h1>مطبعة حمزة</h1>
+            <p>للطباعة والنشر والتوزيع - إدارة المبيعات</p>
+          </div>
+          <div class="title-area">
+            <h2>فاتورة مبيعات</h2>
+            <p>رقم: ${inv.invoice_number}</p>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-block">
+            <h4>بيانات العميل / منفذ البيع</h4>
+            <p><strong>الاسم:</strong> ${inv.outlet_name}</p>
+            <p><strong>المحافظة:</strong> ${inv.governorate || '-'}</p>
+            <p><strong>نوع الدفع المعتمد:</strong> ${
+              inv.payment_status === 'paid' ? 'دفع كلي' :
+              inv.payment_status === 'partially_paid' ? 'دفع جزئي' :
+              inv.payment_type === 'cash' ? 'نقدي' :
+              inv.payment_type === 'deferred' ? 'آجل' : inv.payment_type
+            }</p>
+          </div>
+          <div class="info-block">
+            <h4>تفاصيل الفاتورة</h4>
+            <p><strong>تاريخ الإصدار:</strong> ${formattedDate}</p>
+            <p><strong>حالة الدفع:</strong> ${
+              inv.payment_status === 'paid' ? '<span style="color:#16a34a; font-weight:bold;">مسددة</span>' :
+              inv.payment_status === 'partially_paid' ? '<span style="color:#ca8a04; font-weight:bold;">مسددة جزئياً</span>' :
+              '<span style="color:#dc2626; font-weight:bold;">غير مسددة</span>'
+            }</p>
+            <p><strong>حالة الشحن والتسليم:</strong> ${
+              inv.shipping_status === 'delivered' || inv.shipping_status === 'shipped' ? '<span style="color:#16a34a; font-weight:bold;">تم الشحن والتسليم</span>' :
+              inv.shipping_status === 'partially_shipped' ? '<span style="color:#ca8a04; font-weight:bold;">شحن جزئي</span>' :
+              '<span style="color:#94a3b8;">قيد الانتظار</span>'
+            }</p>
+          </div>
+        </div>
+
+        <table class="items-table" style="width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 25px;">
+          <thead>
+            <tr>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px;">#</th>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px; text-align: right;">الكتاب / الصنف</th>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px;">الرمز (SKU)</th>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px;">الكمية الإجمالية</th>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px;">المجاني</th>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px;">المدفوع</th>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px; text-align: left;">سعر الوحدة</th>
+              <th style="background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; font-weight: 700; color: #334155; font-size: 13px; text-align: left;">الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+        </table>
+
+        <div class="summary-container">
+          <div class="notes-box">
+            <h5>ملاحظات وشروط:</h5>
+            <p>${inv.notes || 'لا يوجد ملاحظات إضافية.'}</p>
+            <div style="margin-top: 15px; display: flex; gap: 20px; align-items: center;">
+              <div class="qr-wrapper">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/invoices?search=' + inv.invoice_number)}" alt="Invoice QR" />
+                <span>امسح للتحقق</span>
+              </div>
+            </div>
+          </div>
+          
+          <table class="totals-table">
+            <tr>
+              <td>المجموع الفرعي:</td>
+              <td style="text-align: left; font-family: monospace;">${formatCurrencyEGP(inv.subtotal || 0)}</td>
+            </tr>
+            <tr>
+              <td style="color:#16a34a;">+ تكلفة الشحن:</td>
+              <td style="text-align: left; font-family: monospace; color:#16a34a;">${formatCurrencyEGP(inv.shipping_cost || 0)}</td>
+            </tr>
+            <tr>
+              <td style="color:#dc2626;">- الخصم المباشر:</td>
+              <td style="text-align: left; font-family: monospace; color:#dc2626;">${formatCurrencyEGP(inv.discount || 0)}</td>
+            </tr>
+            <tr class="grand-total">
+              <td>إجمالي الفاتورة:</td>
+              <td style="text-align: left; font-family: monospace;">${formatCurrencyEGP(inv.total_price)}</td>
+            </tr>
+            <tr>
+              <td style="color:#16a34a; font-weight:500;">المبلغ المسدد:</td>
+              <td style="text-align: left; font-family: monospace; color:#16a34a; font-weight:500;">${formatCurrencyEGP(inv.paid_amount || 0)}</td>
+            </tr>
+            <tr style="border-top:1px solid #cbd5e1;">
+              <td style="color:#dc2626; font-weight:bold;">المبلغ المتبقي (الذمة المالية):</td>
+              <td style="text-align: left; font-family: monospace; color:#dc2626; font-weight:bold;">${formatCurrencyEGP(inv.remaining_amount || 0)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-box">
+            <p>توقيع أمين المخزن المستلم</p>
+            <div class="signature-line"></div>
+          </div>
+          <div class="signature-box">
+            <p>توقيع العميل / المستلم</p>
+            <div class="signature-line"></div>
+          </div>
+          <div class="signature-box">
+            <p>الختم والاعتماد المالي</p>
+            <div class="signature-line"></div>
+          </div>
+        </div>
+
+        <div class="footer">
+          مطبعة حمزة للنشر والتوزيع - نظام إدارة المستودعات والمبيعات الإلكتروني
+        </div>
+        <script>
+          window.onload = function() { window.print(); window.close(); }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleFetchAndPrintInvoice = async (id) => {
+    try {
+      showToast('جاري تحميل تفاصيل الفاتورة للطباعة...', 'info');
+      const data = await apiClient.get(`/invoices/${id}`);
+      handlePrintInvoice(data);
+    } catch (err) {
+      console.error(err);
+      showToast(err.message || 'فشل تحميل بيانات الفاتورة للطباعة.', 'error');
     }
   };
 
@@ -1409,6 +1616,16 @@ export const Invoices = () => {
                             <DownloadIcon size="small" />
                           </IconButton>
                         )}
+
+                        {hasPermission('invoices.view') && (
+                          <IconButton
+                            color="primary"
+                            title="طباعة الفاتورة"
+                            onClick={() => handleFetchAndPrintInvoice(row.id)}
+                          >
+                            <PrintIcon size="small" />
+                          </IconButton>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -1535,6 +1752,17 @@ export const Invoices = () => {
                   onClick={() => handleSinglePdfExport(detailsInvoice.id)}
                 >
                   تنزيل PDF
+                </Button>
+              )}
+
+              {hasPermission('invoices.view') && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<PrintIcon />}
+                  onClick={() => handlePrintInvoice(detailsInvoice)}
+                >
+                  طباعة الفاتورة
                 </Button>
               )}
 
