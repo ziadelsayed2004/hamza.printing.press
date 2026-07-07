@@ -22,10 +22,18 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormHelperText
+  FormHelperText,
+  Tabs,
+  Tab,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  IconButton,
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import {
   Book as BookIcon,
@@ -38,7 +46,12 @@ import {
   FileDownload as DownloadIcon,
   Loop as ReturnIcon,
   LocalShipping as ShippingIcon,
-  FilterAlt as FilterIcon
+  FilterAlt as FilterIcon,
+  Delete as DeleteIcon,
+  Backup as BackupIcon,
+  SettingsBackupRestore as RestoreIcon,
+  Refresh as RefreshIcon,
+  CloudDownload as CloudDownloadIcon
 } from '@mui/icons-material';
 
 import '../styles/Exports.css';
@@ -47,11 +60,12 @@ export const Exports = () => {
   const { hasPermission } = useAuth();
   
   const getButtonStyle = (color) => ({
-    py: 1, 
+    py: 0.5, 
     fontWeight: 'bold', 
-    borderRadius: 2,
+    borderRadius: 1.5,
     borderColor: `${color}60`,
     color: 'text.primary',
+    fontSize: '0.8rem',
     transition: 'all 0.2s',
     '&:hover': {
       bgcolor: color,
@@ -66,6 +80,15 @@ export const Exports = () => {
   const [outlets, setOutlets] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Backup states
+  const [backups, setBackups] = useState([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [backupToRestore, setBackupToRestore] = useState(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [backupToDelete, setBackupToDelete] = useState(null);
   
   // Dialog state
   const [openDialog, setOpenDialog] = useState(false);
@@ -98,6 +121,24 @@ export const Exports = () => {
     setToastSeverity(severity); 
   };
 
+  const fetchBackups = async () => {
+    if (!hasPermission('backup.create') && !hasPermission('backup.restore')) return;
+    setBackupLoading(true);
+    try {
+      const res = await fetch('/api/admin/backups');
+      if (res.ok) {
+        const data = await res.json();
+        setBackups(data);
+      } else {
+        console.error('Failed to fetch backups');
+      }
+    } catch (err) {
+      console.error('Error fetching backups:', err);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Fetch outlets
     fetch('/api/outlets')
@@ -110,7 +151,96 @@ export const Exports = () => {
       .then(res => res.json())
       .then(data => setProducts(Array.isArray(data) ? data : []))
       .catch(err => console.error('Error fetching products:', err));
+
+    // Fetch backups
+    fetchBackups();
   }, []);
+
+  const handleCreateBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const res = await fetch('/api/admin/backup', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('تم إنشاء النسخة الاحتياطية بنجاح: ' + data.filename, 'success');
+        fetchBackups();
+      } else {
+        showToast(data.message || 'فشل إنشاء النسخة الاحتياطية', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleDownloadBackup = (filename) => {
+    window.open(`/api/admin/backups/${filename}/download`, '_blank');
+  };
+
+  const handleDeleteBackupClick = (filename) => {
+    setBackupToDelete(filename);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDeleteBackup = async () => {
+    setDeleteConfirmOpen(false);
+    setBackupLoading(true);
+    try {
+      const res = await fetch(`/api/admin/backups/${backupToDelete}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('تم حذف ملف النسخة الاحتياطية بنجاح.', 'success');
+        fetchBackups();
+      } else {
+        showToast(data.message || 'فشل الحذف', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
+    } finally {
+      setBackupLoading(false);
+      setBackupToDelete(null);
+    }
+  };
+
+  const handleRestoreBackupClick = (filename) => {
+    setBackupToRestore(filename);
+    setRestoreConfirmOpen(true);
+  };
+
+  const handleConfirmRestoreBackup = async () => {
+    setRestoreConfirmOpen(false);
+    setBackupLoading(true);
+    try {
+      const res = await fetch('/api/admin/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: backupToRestore })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('تم استعادة قاعدة البيانات وتحديث النظام بنجاح!', 'success');
+      } else {
+        showToast(data.message || 'فشل عملية استعادة النظام', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('حدث خطأ أثناء استعادة النظام', 'error');
+    } finally {
+      setBackupLoading(false);
+      setBackupToRestore(null);
+    }
+  };
+
+  const formatBytes = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const exportSectors = [
     {
@@ -121,17 +251,17 @@ export const Exports = () => {
         {
           id: 'invoices',
           title: 'سجل الفواتير الصادرة',
-          description: 'تصدير كامل فواتير البيع المصدرة متضمنة المنفذ، القيمة، والتاريخ وحالة السداد والشحن.',
-          icon: <InvoiceIcon sx={{ fontSize: 28, color: '#e67e22' }} />,
+          description: 'تصدير فواتير البيع المصدرة متضمنة المنفذ، محتويات الفاتورة، حالة السداد والشحن.',
+          icon: <InvoiceIcon sx={{ fontSize: 22, color: '#e67e22' }} />,
           endpoint: '/exports/invoices',
           filename: 'invoices_export',
           filters: ['dateRange', 'outlet', 'paymentStatus', 'shippingStatus', 'paymentType']
         },
         {
           id: 'invoice-items',
-          title: 'حركات أصناف الفواتير التفصيلية',
-          description: 'تصدير مبيعات الكتب التفصيلية سطر بسطر متضمنة الكميات المجانية والمدفوعة والأسعار والتاريخ.',
-          icon: <InvoiceIcon sx={{ fontSize: 28, color: '#d35400' }} />,
+          title: 'حركات أصناف الفواتير',
+          description: 'تصدير مبيعات الكتب التفصيلية سطر بسطر متضمنة الكميات والأسعار والتاريخ.',
+          icon: <InvoiceIcon sx={{ fontSize: 22, color: '#d35400' }} />,
           endpoint: '/exports/invoice-items',
           filename: 'invoice_items_export',
           filters: ['dateRange', 'outlet', 'product']
@@ -139,8 +269,8 @@ export const Exports = () => {
         {
           id: 'payments',
           title: 'سجل المقبوضات والدفعات',
-          description: 'تصدير حركات المقبوضات المالية والدفعات المضافة للنظام ووسائل الدفع وحالة التوريد للمقر.',
-          icon: <PaymentIcon sx={{ fontSize: 28, color: '#9b59b6' }} />,
+          description: 'تصدير حركات المقبوضات المالية والدفعات وحالة التوريد للمقر.',
+          icon: <PaymentIcon sx={{ fontSize: 22, color: '#9b59b6' }} />,
           endpoint: '/exports/payments',
           filename: 'payments_export',
           filters: ['dateRange', 'outlet', 'supplyStatus']
@@ -148,8 +278,8 @@ export const Exports = () => {
         {
           id: 'outlet-statement',
           title: 'كشف حساب معاملات منفذ',
-          description: 'تصدير كشف حساب تفصيلي لحركات الأرصدة والمدفوعات والمبيعات الخاصة بمنفذ توزيع محدد.',
-          icon: <StoreIcon sx={{ fontSize: 28, color: '#27ae60' }} />,
+          description: 'تصدير كشف حساب تفصيلي لحركات الأرصدة والمدفوعات والمبيعات لمنفذ بيع.',
+          icon: <StoreIcon sx={{ fontSize: 22, color: '#27ae60' }} />,
           endpoint: '/exports/outlet-statement',
           filename: 'outlet_statement_export',
           filters: ['dateRange', 'outletRequired']
@@ -164,26 +294,26 @@ export const Exports = () => {
         {
           id: 'inventory',
           title: 'دفتر حركات المخزون',
-          description: 'تصدير دفتر الأستاذ لحركات المستودعات (الوارد، الصادر، المرتجعات، التسويات المخزنية).',
-          icon: <LedgerIcon sx={{ fontSize: 28, color: '#1abc9c' }} />,
+          description: 'تصدير دفتر الأستاذ لحركات المستودعات (الوارد، الصادر، المرتجعات، التسويات).',
+          icon: <LedgerIcon sx={{ fontSize: 22, color: '#1abc9c' }} />,
           endpoint: '/exports/inventory',
           filename: 'inventory_export',
           filters: ['dateRange', 'product', 'transactionType']
         },
         {
           id: 'shipments',
-          title: 'سجل الشحنات والطرود الصادرة',
-          description: 'تصدير كامل بيانات الطرود والشحنات المرسلة للمنافذ مع أرقام التتبع وتكلفة الشحن.',
-          icon: <ShippingIcon sx={{ fontSize: 28, color: '#34495e' }} />,
+          title: 'سجل الشحنات والطرود',
+          description: 'تصدير كامل بيانات الطرود والشحنات المرسلة للمنافذ مع أرقام التتبع.',
+          icon: <ShippingIcon sx={{ fontSize: 22, color: '#34495e' }} />,
           endpoint: '/exports/shipments',
           filename: 'shipments_export',
           filters: ['dateRange', 'outlet', 'shipmentStatus']
         },
         {
           id: 'courier-sheet',
-          title: 'شيت شحن وتوصيل الطلبيات (Courier Sheet)',
-          description: 'تصدير شيت توصيل تفصيلي للمناديب وشركات الشحن يحتوي على العناوين، الأرقام، والكميات المطلوبة.',
-          icon: <ShippingIcon sx={{ fontSize: 28, color: '#2c3e50' }} />,
+          title: 'شيت شحن وتوصيل الطلبيات',
+          description: 'تصدير شيت توصيل للمناديب وشركات الشحن يحتوي على العناوين والكميات.',
+          icon: <ShippingIcon sx={{ fontSize: 22, color: '#2c3e50' }} />,
           endpoint: '/exports/courier-sheet',
           filename: 'courier_sheet_export',
           filters: ['dateRange', 'outlet', 'governorate', 'shipmentStatus']
@@ -191,8 +321,8 @@ export const Exports = () => {
         {
           id: 'returns',
           title: 'سجل المرتجعات والمسترجعات',
-          description: 'تصدير حركات مرتجعات مبيعات الكتب بالتفصيل مع قيمة المرتجع وسبب الارتجاع.',
-          icon: <ReturnIcon sx={{ fontSize: 28, color: '#e74c3c' }} />,
+          description: 'تصدير حركات مرتجعات مبيعات الكتب بالتفصيل مع قيمة وسبب الارتجاع.',
+          icon: <ReturnIcon sx={{ fontSize: 22, color: '#e74c3c' }} />,
           endpoint: '/exports/returns',
           filename: 'returns_export',
           filters: ['dateRange', 'outlet']
@@ -201,14 +331,14 @@ export const Exports = () => {
     },
     {
       name: 'قطاع البيانات الأساسية والتقارير العامة',
-      description: 'دليل الكتب والمنتجات، لوائح الأسعار المعتمدة، وسجلات المؤلفين ومنافذ التوزيع والتقارير العامة.',
+      description: 'دليل الكتب والمنتجات، لوائح الأسعار المعتمدة، وسجلات المؤلفين ومنافذ التوزيع.',
       color: '#f1c40f',
       modules: [
         {
           id: 'products',
           title: 'دليل المنتجات والكتب',
           description: 'تصدير كامل المنتجات والكتب المسجلة في النظام مع تفاصيل SKU والبيانات الفنية.',
-          icon: <BookIcon sx={{ fontSize: 28, color: 'primary.main' }} />,
+          icon: <BookIcon sx={{ fontSize: 22, color: 'primary.main' }} />,
           endpoint: '/exports/products',
           filename: 'products_export',
           filters: []
@@ -217,7 +347,7 @@ export const Exports = () => {
           id: 'prices',
           title: 'قوائم الأسعار التفصيلية',
           description: 'تصدير أسعار الكتب والمنتجات الموزعة والمخصصة لكل فئة منفذ بيع.',
-          icon: <PriceIcon sx={{ fontSize: 28, color: 'success.main' }} />,
+          icon: <PriceIcon sx={{ fontSize: 22, color: 'success.main' }} />,
           endpoint: '/exports/prices',
           filename: 'prices_export',
           filters: []
@@ -225,8 +355,8 @@ export const Exports = () => {
         {
           id: 'outlets',
           title: 'قائمة منافذ البيع والفروع',
-          description: 'تصدير دليل فروع ومنافذ البيع بالتفصيل مع المحافظات وأرقام الهواتف والتصنيف والائتمان.',
-          icon: <StoreIcon sx={{ fontSize: 28, color: 'secondary.main' }} />,
+          description: 'تصدير دليل فروع ومنافذ البيع بالتفصيل مع المحافظات وأرقام الهواتف والتصنيف.',
+          icon: <StoreIcon sx={{ fontSize: 22, color: 'secondary.main' }} />,
           endpoint: '/exports/outlets',
           filename: 'outlets_export',
           filters: []
@@ -235,43 +365,43 @@ export const Exports = () => {
           id: 'authors',
           title: 'سجل وأسماء المؤلفين',
           description: 'تصدير قائمة المؤلفين ومعلومات الاتصال وحسابات المؤلفين المرتبطة.',
-          icon: <PeopleIcon sx={{ fontSize: 28, color: 'info.main' }} />,
+          icon: <PeopleIcon sx={{ fontSize: 22, color: 'info.main' }} />,
           endpoint: '/exports/authors',
           filename: 'authors_export',
           filters: []
         },
         {
           id: 'report-balances',
-          title: 'تقرير الأرصدة والمبيعات والتحصيلات للمنافذ',
+          title: 'تقرير أرصدة ومبيعات المنافذ',
           description: 'تصدير تقرير الأرصدة الإجمالي لمبيعات ومقبوضات المنافذ.',
-          icon: <LedgerIcon sx={{ fontSize: 28, color: '#f39c12' }} />,
+          icon: <LedgerIcon sx={{ fontSize: 22, color: '#f39c12' }} />,
           endpoint: '/exports/reports?type=balances',
           filename: 'balances_report_export',
           filters: []
         },
         {
           id: 'report-stock',
-          title: 'تقرير جرد المخازن وحركة الكتب',
-          description: 'تصدير تقرير الجرد المخزني وتفاصيل الكميات الواردة والمنصرفة الحالية.',
-          icon: <LedgerIcon sx={{ fontSize: 28, color: '#d35400' }} />,
+          title: 'تقرير جرد حركة الكتب',
+          description: 'تصدير تقرير الجرد المخزني وتفاصيل الكميات الواردة والمنصرفة.',
+          icon: <LedgerIcon sx={{ fontSize: 22, color: '#d35400' }} />,
           endpoint: '/exports/reports?type=stock',
           filename: 'stock_report_export',
           filters: []
         },
         {
           id: 'report-authors',
-          title: 'تقرير مبيعات وأرصدة كتب المؤلفين',
+          title: 'تقرير مبيعات كتب المؤلفين',
           description: 'تصدير تقارير مبيعات الكتب ونسب التوزيع لكل مؤلف.',
-          icon: <PeopleIcon sx={{ fontSize: 28, color: '#8e44ad' }} />,
+          icon: <PeopleIcon sx={{ fontSize: 22, color: '#8e44ad' }} />,
           endpoint: '/exports/reports?type=authors',
           filename: 'authors_report_export',
           filters: []
         },
         {
           id: 'report-receipts',
-          title: 'تقرير توريد الكتب وأذونات الاستلام',
+          title: 'تقرير توريد الكتب والاستلام',
           description: 'تصدير سجلات استلام الكتب المطبوعة من المطابع والموردين.',
-          icon: <PriceIcon sx={{ fontSize: 28, color: '#16a085' }} />,
+          icon: <PriceIcon sx={{ fontSize: 22, color: '#16a085' }} />,
           endpoint: '/exports/reports?type=receipts',
           filename: 'receipts_report_export',
           filters: []
@@ -306,7 +436,6 @@ export const Exports = () => {
       return;
     }
 
-    // Validation for outletRequired
     if (selectedMod.filters.includes('outletRequired') && !formFilters.outletId) {
       setErrorMsg('يجب اختيار منفذ التوزيع أولاً');
       return;
@@ -324,12 +453,11 @@ export const Exports = () => {
     if (formFilters.shippingStatus) queryParams.append('shippingStatus', formFilters.shippingStatus);
     if (formFilters.paymentType) queryParams.append('paymentType', formFilters.paymentType);
     if (formFilters.supplyStatus) queryParams.append('supplyStatus', formFilters.supplyStatus);
-    if (formFilters.shipmentStatus) queryParams.append('status', formFilters.shipmentStatus); // shipments uses status
+    if (formFilters.shipmentStatus) queryParams.append('status', formFilters.shipmentStatus); 
     if (formFilters.transactionType) queryParams.append('transactionType', formFilters.transactionType);
     if (formFilters.governorate) queryParams.append('governorate', formFilters.governorate);
     queryParams.append('format', formFilters.format);
 
-    // If report has query string already, parse and append
     let downloadUrl = `/api${selectedMod.endpoint}`;
     if (downloadUrl.includes('?')) {
       downloadUrl += `&${queryParams.toString()}`;
@@ -343,75 +471,88 @@ export const Exports = () => {
     showToast('جاري تحضير وتنزيل الملف بالتنسيق المختار...', 'success');
   };
 
+  const currentSector = exportSectors[activeTab];
+
   return (
-    <Box>
-      <Box sx={{ mb: 4 }}>
+    <Box className="exports-container">
+      <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
           مركز تصدير التقارير المتقدم
         </Typography>
-        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-          تصفية واستخراج البيانات بالتنسيق المناسب كملفات Excel مهيأة أو ملفات CSV مع دعم كامل لاتجاه الصفحة RTL والجداول الملونة.
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          تصفية واستخراج البيانات بالتنسيق المناسب كملفات Excel مهيأة وموسطة الخلايا مع دعم كامل لاتجاه الصفحة RTL والجداول الملونة أو ملفات CSV.
         </Typography>
       </Box>
 
-      {!hasPermission('exports.run') ? (
+      {!hasPermission('exports.run') && !hasPermission('backup.create') ? (
         <Alert severity="error" sx={{ mb: 3 }}>
-          تنبيه: أنت لا تملك صلاحية `exports.run` لتصدير السجلات أو إجراء النسخ الاحتياطي للبيانات. يرجى مراجعة المسؤول.
+          تنبيه: أنت لا تملك صلاحية لتصدير السجلات أو إجراء النسخ الاحتياطي للبيانات. يرجى مراجعة المسؤول.
         </Alert>
       ) : (
-        <Stack spacing={5}>
-          {exportSectors.map((sector, sIdx) => (
-            <Box key={sIdx} sx={{ position: 'relative' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2.5, gap: 1.5 }}>
-                <Box sx={{ width: 6, height: 24, borderRadius: 1, bgcolor: sector.color }} />
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                    {sector.name}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.2 }}>
-                    {sector.description}
-                  </Typography>
-                </Box>
-              </Box>
+        <Box>
+          <Tabs
+            value={activeTab}
+            onChange={(e, val) => setActiveTab(val)}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab label="القطاع المالي والمبيعات" />
+            <Tab label="المستودعات والخدمات اللوجستية" />
+            <Tab label="البيانات الأساسية والتقارير العامة" />
+            {(hasPermission('backup.create') || hasPermission('backup.restore')) && (
+              <Tab label="النسخ الاحتياطي والاستعادة" />
+            )}
+          </Tabs>
+
+          {/* Export Sectors Tab Panels */}
+          {activeTab < 3 && currentSector && (
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 3 }}>
+                {currentSector.description}
+              </Typography>
               
-              <Grid container spacing={3}>
-                {sector.modules.map((mod, mIdx) => (
-                  <Grid item xs={12} sm={6} md={4} key={mIdx}>
+              <Grid container spacing={2}>
+                {currentSector.modules.map((mod, mIdx) => (
+                  <Grid item xs={12} sm={6} md={3} key={mIdx}>
                     <Card className="exports-card" sx={{ 
                       height: '100%', 
                       display: 'flex', 
                       flexDirection: 'column', 
                       justifyContent: 'space-between', 
-                      borderTop: `4px solid ${sector.color} !important`,
+                      borderTop: `4px solid ${currentSector.color} !important`,
                     }}>
-                      <CardContent sx={{ p: 3 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+                      <CardContent sx={{ p: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1.5 }}>
                           <Box className="exports-icon-wrapper" sx={{ 
-                            p: 1.5, 
-                            borderRadius: '10px', 
-                            bgcolor: `${sector.color}15`, 
+                            p: 1, 
+                            borderRadius: '8px', 
+                            bgcolor: `${currentSector.color}15`, 
                             display: 'flex', 
                             alignItems: 'center', 
                             justifyContent: 'center' 
                           }}>
                             {mod.icon}
                           </Box>
-                          <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '0.975rem', color: 'text.primary', lineHeight: 1.4 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary', lineHeight: 1.3 }}>
                             {mod.title}
                           </Typography>
                         </Box>
-                        <Divider sx={{ my: 1.5, opacity: 0.6 }} />
-                        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6, fontSize: '0.85rem' }}>
+                        <Divider sx={{ my: 1, opacity: 0.6 }} />
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', height: 40, overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.4 }}>
                           {mod.description}
                         </Typography>
                       </CardContent>
-                      <CardActions sx={{ p: 3, pt: 0 }}>
+                      <CardActions sx={{ p: 2, pt: 0 }}>
                         <Button
                           fullWidth
                           variant="outlined"
+                          size="small"
                           onClick={() => handleOpenFilters(mod)}
-                          startIcon={<FilterIcon />}
-                          sx={getButtonStyle(sector.color)}
+                          startIcon={<FilterIcon sx={{ fontSize: '0.9rem !important' }} />}
+                          sx={getButtonStyle(currentSector.color)}
                         >
                           تصفية وتصدير
                         </Button>
@@ -421,8 +562,118 @@ export const Exports = () => {
                 ))}
               </Grid>
             </Box>
-          ))}
-        </Stack>
+          )}
+
+          {/* Backup & Restore Tab Panel */}
+          {activeTab === 3 && (
+            <Paper sx={{ p: 3, borderRadius: 3 }} className="backup-panel">
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    إدارة النسخ الاحتياطي واستعادة النظام
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    قم بأخذ نسخ احتياطية لقاعدة البيانات وحفظها بأمان، أو تنزيلها محلياً، أو استرجاع النظام لحالة سابقة.
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={fetchBackups}
+                    disabled={backupLoading}
+                    size="small"
+                  >
+                    تحديث القائمة
+                  </Button>
+                  {hasPermission('backup.create') && (
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<BackupIcon />}
+                      onClick={handleCreateBackup}
+                      disabled={backupLoading}
+                      size="small"
+                    >
+                      إنشاء نسخة احتياطية
+                    </Button>
+                  )}
+                </Stack>
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {backupLoading && backups.length === 0 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={30} />
+                </Box>
+              ) : backups.length === 0 ? (
+                <Alert severity="info">لا توجد نسخ احتياطية مسجلة حالياً في المستودع. انقر على إنشاء نسخة احتياطية لتوليد ملف جديد.</Alert>
+              ) : (
+                <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                  <Table size="small">
+                    <TableHead sx={{ bgcolor: 'action.hover' }}>
+                      <TableRow>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم ملف النسخة الاحتياطية</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>تاريخ الإنشاء</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحجم</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>الإجراءات</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {backups.map((file) => (
+                        <TableRow key={file.filename} hover>
+                          <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{file.filename}</TableCell>
+                          <TableCell align="center" sx={{ fontSize: '0.85rem' }}>{new Date(file.createdAt).toLocaleString('ar-EG')}</TableCell>
+                          <TableCell align="center" sx={{ fontSize: '0.85rem' }}>{formatBytes(file.size)}</TableCell>
+                          <TableCell align="center">
+                            <Stack direction="row" spacing={1} justifyContent="center">
+                              <Tooltip title="تنزيل الملف">
+                                <IconButton 
+                                  color="primary" 
+                                  size="small" 
+                                  onClick={() => handleDownloadBackup(file.filename)}
+                                >
+                                  <CloudDownloadIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+
+                              {hasPermission('backup.restore') && (
+                                <Tooltip title="استعادة النظام لهذه الحالة">
+                                  <IconButton 
+                                    color="warning" 
+                                    size="small" 
+                                    onClick={() => handleRestoreBackupClick(file.filename)}
+                                    disabled={backupLoading}
+                                  >
+                                    <RestoreIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+
+                              {hasPermission('backup.restore') && (
+                                <Tooltip title="حذف النسخة الاحتياطية">
+                                  <IconButton 
+                                    color="error" 
+                                    size="small" 
+                                    onClick={() => handleDeleteBackupClick(file.filename)}
+                                    disabled={backupLoading}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Paper>
+          )}
+        </Box>
       )}
 
       {/* Dynamic Export Dialog */}
@@ -439,8 +690,6 @@ export const Exports = () => {
               </Typography>
 
               {errorMsg && <Alert severity="error">{errorMsg}</Alert>}
-
-
 
               {selectedMod.filters.length === 0 && (
                 <Typography variant="body2" color="text.secondary">
@@ -569,7 +818,7 @@ export const Exports = () => {
                 </FormControl>
               )}
 
-              {/* Shipment status filter (from shipments table) */}
+              {/* Shipment status filter */}
               {selectedMod.filters.includes('shipmentStatus') && (
                 <FormControl fullWidth>
                   <InputLabel id="export-shipment-status-label">حالة الشحنة</InputLabel>
@@ -639,6 +888,19 @@ export const Exports = () => {
                   </Select>
                 </FormControl>
               )}
+
+              {/* Format selection */}
+              <FormControl component="fieldset">
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>تنسيق الملف المستخرج</Typography>
+                <RadioGroup 
+                  row 
+                  value={formFilters.format} 
+                  onChange={(e) => setFormFilters({ ...formFilters, format: e.target.value })}
+                >
+                  <FormControlLabel value="xlsx" control={<Radio />} label="Excel (.xlsx) ملوّن ومهيأ" />
+                  <FormControlLabel value="csv" control={<Radio />} label="CSV (.csv) عربي قياسي" />
+                </RadioGroup>
+              </FormControl>
             </Stack>
           )}
         </DialogContent>
@@ -653,6 +915,43 @@ export const Exports = () => {
           >
             {loading ? 'جاري التحضير...' : 'تصدير وتنزيل'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>حذف نسخة احتياطية</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            هل أنت متأكد من رغبتك في حذف ملف النسخة الاحتياطية <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{backupToDelete}</span> نهائياً؟ لا يمكن التراجع عن هذا الإجراء.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmOpen(false)} color="inherit">إلغاء</Button>
+          <Button onClick={handleConfirmDeleteBackup} color="error" variant="contained">تأكيد الحذف</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Restore Confirmation Dialog */}
+      <Dialog open={restoreConfirmOpen} onClose={() => setRestoreConfirmOpen(false)}>
+        <DialogTitle sx={{ fontWeight: 'bold', color: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <RestoreIcon />
+          تأكيد استعادة النظام وقاعدة البيانات
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, fontWeight: 'bold' }}>
+            تنبيه هام جداً: سيتم استبدال قاعدة البيانات الحالية بالكامل بملف النسخة الاحتياطية:
+          </Typography>
+          <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider', mb: 2 }}>
+            {backupToRestore}
+          </Typography>
+          <Typography variant="body2" color="error" sx={{ fontWeight: 'bold' }}>
+            سيتم استرجاع النظام بالكامل إلى هذه اللحظة، وسيتم فقدان أي بيانات تم إدخالها بعد تاريخ إنشاء هذا الملف. هل ترغب بالتأكيد في المتابعة؟
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRestoreConfirmOpen(false)} color="inherit">إلغاء</Button>
+          <Button onClick={handleConfirmRestoreBackup} color="warning" variant="contained">تأكيد استعادة النظام</Button>
         </DialogActions>
       </Dialog>
 

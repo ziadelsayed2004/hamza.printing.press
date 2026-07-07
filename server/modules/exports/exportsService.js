@@ -64,7 +64,7 @@ function jsonToCsvArabic({ title, filters = [], arabicHeaders, englishKeys, rows
 async function jsonToExcelArabic({ title, filters = [], arabicHeaders, englishKeys, rows, summaryKeys = [] }) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(title ? title.substring(0, 31) : 'تقرير', {
-    views: [{ RTL: true, showGridLines: true }]
+    views: [{ rightToLeft: true, showGridLines: true }]
   });
 
   let currentRowNum = 1;
@@ -145,16 +145,12 @@ async function jsonToExcelArabic({ title, filters = [], arabicHeaders, englishKe
       const isMonetary = lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount') || lowerKey.includes('sales') || lowerKey.includes('paid') || lowerKey.includes('remaining') || lowerKey.includes('limit') || lowerKey.includes('value');
       const isQuantity = lowerKey.includes('quantity') || lowerKey.includes('count') || lowerKey.includes('copies') || lowerKey.includes('totalbooks') || lowerKey.includes('totalquantity') || lowerKey.includes('totalreceipts') || lowerKey.includes('shipped_quantity');
 
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+
       if (isMonetary && typeof val === 'number') {
-        cell.alignment = { horizontal: 'right', vertical: 'middle' };
         cell.numFmt = '#,##0.00" ج.م"';
       } else if (isQuantity && typeof val === 'number') {
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
         cell.numFmt = '#,##0';
-      } else if (typeof val === 'number') {
-        cell.alignment = { horizontal: 'right', vertical: 'middle' };
-      } else {
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
       }
 
       cell.border = {
@@ -182,15 +178,20 @@ async function jsonToExcelArabic({ title, filters = [], arabicHeaders, englishKe
     totalsRow.height = 28;
     totalsRow.font = { name: 'Segoe UI', size: 10, bold: true };
 
-    const totalsValues = englishKeys.map((key, idx) => {
-      if (idx === 0) {
-        return 'الإجمالي الكلي';
-      }
+    const firstSummaryIdx = englishKeys.findIndex(key => summaryKeys.includes(key));
+
+    const totalsValues = new Array(englishKeys.length).fill('');
+    if (firstSummaryIdx > 0) {
+      totalsValues[0] = 'الإجمالي الكلي';
+    } else {
+      totalsValues[0] = 'الإجمالي الكلي';
+    }
+
+    englishKeys.forEach((key, idx) => {
       if (summaryKeys.includes(key)) {
         const sum = rows.reduce((acc, r) => acc + (parseFloat(r[key]) || 0), 0);
-        return parseFloat(sum.toFixed(2));
+        totalsValues[idx] = parseFloat(sum.toFixed(2));
       }
-      return '';
     });
 
     totalsRow.values = totalsValues;
@@ -204,16 +205,12 @@ async function jsonToExcelArabic({ title, filters = [], arabicHeaders, englishKe
       const isMonetary = lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount') || lowerKey.includes('sales') || lowerKey.includes('paid') || lowerKey.includes('remaining') || lowerKey.includes('limit') || lowerKey.includes('value');
       const isQuantity = lowerKey.includes('quantity') || lowerKey.includes('count') || lowerKey.includes('copies') || lowerKey.includes('totalbooks') || lowerKey.includes('totalquantity') || lowerKey.includes('totalreceipts') || lowerKey.includes('shipped_quantity');
 
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+
       if (isMonetary && typeof val === 'number') {
-        cell.alignment = { horizontal: 'right', vertical: 'middle' };
         cell.numFmt = '#,##0.00" ج.م"';
       } else if (isQuantity && typeof val === 'number') {
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
         cell.numFmt = '#,##0';
-      } else if (col === 1) {
-        cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      } else {
-        cell.alignment = { horizontal: 'right', vertical: 'middle' };
       }
 
       cell.fill = {
@@ -227,6 +224,14 @@ async function jsonToExcelArabic({ title, filters = [], arabicHeaders, englishKe
         bottom: { style: 'double', color: { argb: 'FF94A3B8' } },
         right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
       };
+    }
+
+    // Merge empty cells before first summary column
+    if (firstSummaryIdx > 0) {
+      worksheet.mergeCells(currentRowNum, 1, currentRowNum, firstSummaryIdx);
+      const mergedCell = totalsRow.getCell(1);
+      mergedCell.value = 'الإجمالي الكلي';
+      mergedCell.alignment = { horizontal: 'center', vertical: 'middle' };
     }
   }
 
@@ -370,7 +375,14 @@ async function exportInvoices(query = {}, format = 'xlsx') {
   const filtersApplied = [];
   let sql = `
     SELECT 
-      i.id, i.invoice_number, o.name as outlet_name, i.subtotal, i.discount, i.shipping_cost, i.total_price,
+      i.id, i.invoice_number, o.name as outlet_name,
+      (
+        SELECT GROUP_CONCAT(p.title || ' (x' || ii.quantity || ')', ' | ')
+        FROM invoice_items ii
+        JOIN products p ON p.id = ii.product_id
+        WHERE ii.invoice_id = i.id
+      ) as invoice_contents,
+      i.subtotal, i.discount, i.shipping_cost, i.total_price,
       COALESCE(p.paid_amount, 0) as paid_amount,
       (i.total_price - COALESCE(p.paid_amount, 0)) as remaining_amount,
       i.payment_status, i.shipping_status, i.payment_type, i.notes, i.created_at
@@ -426,11 +438,11 @@ async function exportInvoices(query = {}, format = 'xlsx') {
     title: 'سجل مبيعات الفواتير والتحليلات المالية',
     filters: filtersApplied,
     arabicHeaders: [
-      'المعرف', 'رقم الفاتورة', 'اسم المنفذ', 'المجموع الفرعي (ج.م)', 'الخصم (ج.م)', 'تكلفة الشحن (ج.م)', 'المجموع الكلي (ج.م)',
+      'المعرف', 'رقم الفاتورة', 'اسم المنفذ', 'محتويات الفاتورة', 'المجموع الفرعي (ج.م)', 'الخصم (ج.م)', 'تكلفة الشحن (ج.م)', 'المجموع الكلي (ج.م)',
       'المبلغ المدفوع (ج.م)', 'المبلغ المتبقي (ج.م)', 'حالة الدفع', 'حالة الشحن', 'نوع الدفع', 'الملاحظات', 'تاريخ الإنشاء'
     ],
     englishKeys: [
-      'id', 'invoice_number', 'outlet_name', 'subtotal', 'discount', 'shipping_cost', 'total_price',
+      'id', 'invoice_number', 'outlet_name', 'invoice_contents', 'subtotal', 'discount', 'shipping_cost', 'total_price',
       'paid_amount', 'remaining_amount', 'payment_status', 'shipping_status', 'payment_type', 'notes', 'created_at'
     ],
     rows: formattedRows,

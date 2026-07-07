@@ -63,18 +63,49 @@ describe('Admin API Backup Integration Tests', () => {
     expect(res.status).toBe(403);
   });
 
-  it('should allow authorized backup request', async () => {
+  it('should allow authorized backup request and handle full backups lifecycle', async () => {
     const agent = request.agent(app);
     await agent.post('/api/auth/login').send({ username: adminUser.username, password: 'password123' });
 
+    // Create backup
     const res = await agent.post('/api/admin/backup');
     expect(res.status).toBe(200);
     expect(res.body.message).toContain('backup');
     expect(res.body.filename).toBeDefined();
 
-    // Cleanup generated backup file if exists
-    if (res.body.path && fs.existsSync(res.body.path)) {
-      fs.unlinkSync(res.body.path);
+    const filename = res.body.filename;
+    const backupPath = res.body.path;
+
+    try {
+      // 1. List backups
+      const listRes = await agent.get('/api/admin/backups');
+      expect(listRes.status).toBe(200);
+      expect(Array.isArray(listRes.body)).toBe(true);
+      expect(listRes.body.some(b => b.filename === filename)).toBe(true);
+
+      // 2. Download backup
+      const downloadRes = await agent.get(`/api/admin/backups/${filename}/download`);
+      expect(downloadRes.status).toBe(200);
+      expect(downloadRes.headers['content-type']).toBeDefined();
+
+      // 3. Restore backup
+      const restoreRes = await agent.post('/api/admin/restore').send({ filename });
+      expect(restoreRes.status).toBe(200);
+      expect(restoreRes.body.message).toContain('restored');
+
+      // 4. Delete backup
+      const deleteRes = await agent.delete(`/api/admin/backups/${filename}`);
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.message).toContain('deleted');
+
+      // Verify it is gone
+      const listResAfter = await agent.get('/api/admin/backups');
+      expect(listResAfter.body.some(b => b.filename === filename)).toBe(false);
+    } finally {
+      // Cleanup generated backup file if exists
+      if (fs.existsSync(backupPath)) {
+        fs.unlinkSync(backupPath);
+      }
     }
   });
 });

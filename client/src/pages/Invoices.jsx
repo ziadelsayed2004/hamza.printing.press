@@ -406,6 +406,59 @@ export const Invoices = () => {
     }
   };
 
+  // Single PDF Print (Open in new window to print)
+  const handleSinglePdfPrint = async (invoiceId) => {
+    try {
+      showToast('جاري تحضير ملف الـ PDF للطباعة...', 'info');
+      const rawResponse = await fetch('/api/invoices/export/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf'
+        },
+        body: JSON.stringify({ invoiceIds: [invoiceId] })
+      });
+      
+      if (!rawResponse.ok) throw new Error('فشل تصدير الفاتورة للطباعة');
+      const blob = await rawResponse.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const printWindow = window.open(blobUrl, '_blank');
+      if (!printWindow) {
+        showToast('يرجى السماح بالنوافذ المنبثقة لطباعة الفاتورة.', 'warning');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('فشل فتح ملف الـ PDF للطباعة.', 'error');
+    }
+  };
+
+  // Batch PDF Print (Open in new window to print)
+  const handleBatchPdfPrint = async () => {
+    if (selectedInvoiceIds.length === 0) return;
+    try {
+      showToast('جاري تحضير ملف الـ PDF للطباعة...', 'info');
+      const rawResponse = await fetch('/api/invoices/export/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf'
+        },
+        body: JSON.stringify({ invoiceIds: selectedInvoiceIds })
+      });
+      
+      if (!rawResponse.ok) throw new Error('فشل تصدير التقرير للطباعة');
+      const blob = await rawResponse.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const printWindow = window.open(blobUrl, '_blank');
+      if (!printWindow) {
+        showToast('يرجى السماح بالنوافذ المنبثقة للطباعة.', 'warning');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('حدث خطأ أثناء فتح ملف الـ PDF للطباعة.', 'error');
+    }
+  };
+
   const handlePrintInvoice = (inv) => {
     if (!inv) return;
     const printWindow = window.open('', '_blank');
@@ -1190,14 +1243,24 @@ export const Invoices = () => {
           )}
 
           {selectedInvoiceIds.length > 0 && hasPermission('invoices.export') && (
-            <Button
-              variant="outlined"
-              color="secondary"
-              startIcon={<DownloadIcon />}
-              onClick={handleBatchPdfExport}
-            >
-              تصدير المحددة ({selectedInvoiceIds.length}) PDF
-            </Button>
+            <>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<DownloadIcon />}
+                onClick={handleBatchPdfExport}
+              >
+                تصدير المحددة ({selectedInvoiceIds.length}) PDF
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<PrintIcon />}
+                onClick={handleBatchPdfPrint}
+              >
+                طباعة المحددة ({selectedInvoiceIds.length}) PDF
+              </Button>
+            </>
           )}
 
           {hasPermission('invoices.create') && (
@@ -1745,14 +1808,24 @@ export const Invoices = () => {
               )}
 
               {hasPermission('invoices.export') && (
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  startIcon={<DownloadIcon />}
-                  onClick={() => handleSinglePdfExport(detailsInvoice.id)}
-                >
-                  تنزيل PDF
-                </Button>
+                <>
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    startIcon={<DownloadIcon />}
+                    onClick={() => handleSinglePdfExport(detailsInvoice.id)}
+                  >
+                    تنزيل PDF
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    startIcon={<PrintIcon />}
+                    onClick={() => handleSinglePdfPrint(detailsInvoice.id)}
+                  >
+                    معاينة وطباعة PDF
+                  </Button>
+                </>
               )}
 
               {hasPermission('invoices.view') && (
