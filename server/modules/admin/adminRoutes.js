@@ -6,6 +6,8 @@ const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 const config = require('../../config');
 const { restoreDatabase } = require('../../db');
+const bcrypt = require('bcrypt');
+const usersService = require('../users/usersService');
 
 // POST /api/admin/backup - Trigger database copy/backup
 router.post('/backup', requireAuth, checkPermission('backup.create'), auditLog('create_backup', 'admin'), (req, res) => {
@@ -129,6 +131,30 @@ router.delete('/backups/:filename', requireAuth, checkPermission('backup.restore
     return res.status(200).json({
       message: 'Backup file successfully deleted.'
     });
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// POST /api/admin/backups/verify - Verify admin password before accessing backups
+router.post('/backups/verify', requireAuth, checkPermission('backup.create'), async (req, res) => {
+  const { password } = req.body;
+  if (!password) {
+    return res.status(400).json({ error: 'Bad Request', message: 'كلمة المرور مطلوبة.' });
+  }
+
+  try {
+    const user = await usersService.findByUsername(req.session.user.username);
+    if (!user) {
+      return res.status(404).json({ error: 'Not Found', message: 'المستخدم غير موجود.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'كلمة المرور غير صحيحة.' });
+    }
+
+    return res.status(200).json({ success: true, message: 'تم التحقق من كلمة المرور بنجاح.' });
   } catch (err) {
     return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }

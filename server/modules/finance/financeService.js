@@ -5,7 +5,10 @@ const paymentsService = require('../payments/paymentsService');
  * Record a manual financial adjustment (deposit, withdrawal, or receivable credit/debit adjustment).
  */
 async function recordManualAdjustment({ outletId, amount, adjustmentType, title, notes, userId }) {
-  if (!outletId) {
+  const isOutletRequired = adjustmentType !== 'salary';
+  const resolvedOutletId = outletId ? parseInt(outletId, 10) : null;
+
+  if (isOutletRequired && !resolvedOutletId) {
     throw new Error('Outlet ID is required');
   }
   const parsedAmount = parseFloat(amount);
@@ -19,9 +22,11 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, title,
     throw new Error('Notes/Reason is required for manual adjustments');
   }
 
-  const outlet = await db.get('SELECT id FROM outlets WHERE id = ?', [outletId]);
-  if (!outlet) {
-    throw new Error(`Outlet with ID ${outletId} does not exist`);
+  if (resolvedOutletId) {
+    const outlet = await db.get('SELECT id FROM outlets WHERE id = ?', [resolvedOutletId]);
+    if (!outlet) {
+      throw new Error(`Outlet with ID ${resolvedOutletId} does not exist`);
+    }
   }
 
   await db.exec('BEGIN TRANSACTION;');
@@ -36,7 +41,7 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, title,
       INSERT INTO manual_adjustments (outlet_id, amount, adjustment_type, title, notes, created_by)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
-    const adjResult = await db.run(adjSql, [outletId, signedAmount, adjustmentType, title ? title.trim() : null, notes.trim(), userId]);
+    const adjResult = await db.run(adjSql, [resolvedOutletId, signedAmount, adjustmentType, title ? title.trim() : null, notes.trim(), userId]);
     const adjId = adjResult.lastID;
 
     let cashImpact = 0;
@@ -61,12 +66,12 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, title,
         outlet_id, entry_type, reference_type, reference_id,
         cash_amount, receivable_amount, title, notes, created_by
       ) VALUES (?, 'manual_adjustment', 'manual', ?, ?, ?, ?, ?, ?)
-    `, [outletId, adjId, cashImpact, receivableImpact, title ? title.trim() : null, notes.trim(), userId]);
+    `, [resolvedOutletId, adjId, cashImpact, receivableImpact, title ? title.trim() : null, notes.trim(), userId]);
 
     await db.exec('COMMIT;');
     return {
       id: adjId,
-      outletId,
+      outletId: resolvedOutletId,
       amount: signedAmount,
       adjustmentType,
       title: title ? title.trim() : null,
@@ -288,7 +293,7 @@ async function getLedgerHistory({ limit = 50, offset = 0, outletId = null, start
   let sql = `
     SELECT fle.*, o.name as outlet_name, u.full_name as user_full_name
     FROM finance_ledger_entries fle
-    JOIN outlets o ON o.id = fle.outlet_id
+    LEFT JOIN outlets o ON o.id = fle.outlet_id
     LEFT JOIN users u ON u.id = fle.created_by
     WHERE 1=1
   `;

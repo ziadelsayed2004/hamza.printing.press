@@ -23,6 +23,7 @@ import { Exports } from './pages/Exports';
 import { Finance } from './pages/Finance';
 import { Returns } from './pages/Returns';
 import { Notifications } from './pages/Notifications';
+import { Backups } from './pages/Backups';
 import { Box, Typography, Paper } from '@mui/material';
 import { LoadingState } from './components/LoadingState';
 import './App.css';
@@ -119,6 +120,7 @@ export function App() {
                 <Route path="shipments" element={<Shipments />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="exports" element={<Exports />} />
+                <Route path="backups" element={<Backups />} />
                 <Route path="audit" element={<AuditLogs />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

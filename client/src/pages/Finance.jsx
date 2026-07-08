@@ -67,7 +67,7 @@ const adjustmentTypeTranslations = {
   'deposit': 'إيداع نقدي الخزينة',
   'withdrawal': 'سحب نقدي من الخزينة',
   'expense': 'مصاريف تشغيلية',
-  'salary': 'رواتب وأجور منفذ البيع',
+  'salary': 'رواتب وأجور الموظفين (المطبعة عامة)',
   'credit_adjustment': 'تسوية خصم ذمم (إبراء)',
   'debit_adjustment': 'تسوية إضافة ذمم (قيد مالي)'
 };
@@ -309,7 +309,8 @@ export const Finance = () => {
   // Submit Manual Adjustment
   const handleAdjSubmit = async (e) => {
     e.preventDefault();
-    if (!adjOutletId || !adjAmount || !adjTitle.trim() || !adjNotes.trim()) {
+    const isOutletRequired = adjType !== 'salary';
+    if ((isOutletRequired && !adjOutletId) || !adjAmount || !adjTitle.trim() || !adjNotes.trim()) {
       showToast('يرجى ملء جميع الحقول المطلوبة للتسوية بما في ذلك العنوان', 'error');
       return;
     }
@@ -1218,14 +1219,16 @@ export const Finance = () => {
       >
         <form id="manual-adjustment-form" onSubmit={handleAdjSubmit}>
           <Stack spacing={3}>
-            <FormControl fullWidth required size="small">
-              <InputLabel>اختر منفذ التوزيع / الفرع</InputLabel>
+            <FormControl fullWidth required={adjType !== 'salary'} size="small" disabled={submittingAdj || adjType === 'salary'}>
+              <InputLabel>
+                {adjType === 'salary' ? 'رواتب عامة للمطبعة (بدون منفذ مخصص)' : 'اختر منفذ التوزيع / الفرع'}
+              </InputLabel>
               <Select
-                value={adjOutletId}
+                value={adjType === 'salary' ? '' : adjOutletId}
                 onChange={(e) => setAdjOutletId(e.target.value)}
-                label="اختر منفذ التوزيع / الفرع"
-                disabled={submittingAdj}
+                label={adjType === 'salary' ? 'رواتب عامة للمطبعة (بدون منفذ مخصص)' : 'اختر منفذ التوزيع / الفرع'}
               >
+                <MenuItem value="">عام (المطبعة ككل)</MenuItem>
                 {outlets.map(o => (
                   <MenuItem key={o.id} value={o.id}>{o.name} ({o.governorate})</MenuItem>
                 ))}
@@ -1238,7 +1241,13 @@ export const Finance = () => {
                   <InputLabel>طبيعة التسوية</InputLabel>
                   <Select
                     value={adjType}
-                    onChange={(e) => setAdjType(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdjType(val);
+                      if (val === 'salary') {
+                        setAdjOutletId('');
+                      }
+                    }}
                     label="طبيعة التسوية"
                     disabled={submittingAdj}
                   >

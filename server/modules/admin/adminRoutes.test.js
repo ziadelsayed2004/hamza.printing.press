@@ -108,4 +108,18 @@ describe('Admin API Backup Integration Tests', () => {
       }
     }
   });
+
+  it('should verify password successfully for authorized admin user', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/login').send({ username: adminUser.username, password: 'password123' });
+
+    // Correct password
+    const res = await agent.post('/api/admin/backups/verify').send({ password: 'password123' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // Incorrect password
+    const failRes = await agent.post('/api/admin/backups/verify').send({ password: 'wrong_password' });
+    expect(failRes.status).toBe(401);
+  });
 });

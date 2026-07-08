@@ -33,7 +33,10 @@ import {
   TableBody,
   IconButton,
   Tooltip,
-  CircularProgress
+  CircularProgress,
+  RadioGroup,
+  FormControlLabel,
+  Radio
 } from '@mui/material';
 import {
   Book as BookIcon,
@@ -82,14 +85,6 @@ export const Exports = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
-  // Backup states
-  const [backups, setBackups] = useState([]);
-  const [backupLoading, setBackupLoading] = useState(false);
-  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
-  const [backupToRestore, setBackupToRestore] = useState(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [backupToDelete, setBackupToDelete] = useState(null);
-  
   // Dialog state
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedMod, setSelectedMod] = useState(null);
@@ -121,24 +116,6 @@ export const Exports = () => {
     setToastSeverity(severity); 
   };
 
-  const fetchBackups = async () => {
-    if (!hasPermission('backup.create') && !hasPermission('backup.restore')) return;
-    setBackupLoading(true);
-    try {
-      const res = await fetch('/api/admin/backups');
-      if (res.ok) {
-        const data = await res.json();
-        setBackups(data);
-      } else {
-        console.error('Failed to fetch backups');
-      }
-    } catch (err) {
-      console.error('Error fetching backups:', err);
-    } finally {
-      setBackupLoading(false);
-    }
-  };
-
   useEffect(() => {
     // Fetch outlets
     fetch('/api/outlets')
@@ -151,95 +128,27 @@ export const Exports = () => {
       .then(res => res.json())
       .then(data => setProducts(Array.isArray(data) ? data : []))
       .catch(err => console.error('Error fetching products:', err));
-
-    // Fetch backups
-    fetchBackups();
   }, []);
 
-  const handleCreateBackup = async () => {
-    setBackupLoading(true);
-    try {
-      const res = await fetch('/api/admin/backup', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        showToast('تم إنشاء النسخة الاحتياطية بنجاح: ' + data.filename, 'success');
-        fetchBackups();
-      } else {
-        showToast(data.message || 'فشل إنشاء النسخة الاحتياطية', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
-    } finally {
-      setBackupLoading(false);
-    }
-  };
 
-  const handleDownloadBackup = (filename) => {
-    window.open(`/api/admin/backups/${filename}/download`, '_blank');
-  };
 
-  const handleDeleteBackupClick = (filename) => {
-    setBackupToDelete(filename);
-    setDeleteConfirmOpen(true);
-  };
-
-  const handleConfirmDeleteBackup = async () => {
-    setDeleteConfirmOpen(false);
-    setBackupLoading(true);
-    try {
-      const res = await fetch(`/api/admin/backups/${backupToDelete}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (res.ok) {
-        showToast('تم حذف ملف النسخة الاحتياطية بنجاح.', 'success');
-        fetchBackups();
-      } else {
-        showToast(data.message || 'فشل الحذف', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('حدث خطأ أثناء الاتصال بالخادم', 'error');
-    } finally {
-      setBackupLoading(false);
-      setBackupToDelete(null);
-    }
-  };
-
-  const handleRestoreBackupClick = (filename) => {
-    setBackupToRestore(filename);
-    setRestoreConfirmOpen(true);
-  };
-
-  const handleConfirmRestoreBackup = async () => {
-    setRestoreConfirmOpen(false);
-    setBackupLoading(true);
-    try {
-      const res = await fetch('/api/admin/restore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: backupToRestore })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast('تم استعادة قاعدة البيانات وتحديث النظام بنجاح!', 'success');
-      } else {
-        showToast(data.message || 'فشل عملية استعادة النظام', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      showToast('حدث خطأ أثناء استعادة النظام', 'error');
-    } finally {
-      setBackupLoading(false);
-      setBackupToRestore(null);
-    }
-  };
-
-  const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const getGroupedModules = () => {
+    const allModules = exportSectors[2].modules;
+    
+    // Group 1: Catalog & Pricing
+    const catalogModules = allModules.filter(m => ['products', 'prices', 'authors'].includes(m.id));
+    
+    // Group 2: Inventory Ledger & Operations
+    const inventoryModules = allModules.filter(m => ['report-stock', 'report-receipts'].includes(m.id));
+    
+    // Group 3: Sales & Balances Reports
+    const salesModules = allModules.filter(m => ['report-balances', 'report-authors', 'outlets'].includes(m.id));
+    
+    return [
+      { title: 'بيانات الكتالوج والأسعار', modules: catalogModules, icon: <BookIcon sx={{ color: '#f1c40f', fontSize: '1.25rem' }} /> },
+      { title: 'تقارير حركة المخزون والعمليات', modules: inventoryModules, icon: <LedgerIcon sx={{ color: '#d35400', fontSize: '1.25rem' }} /> },
+      { title: 'تقارير وأرصدة المبيعات', modules: salesModules, icon: <PriceIcon sx={{ color: '#2ecc71', fontSize: '1.25rem' }} /> }
+    ];
   };
 
   const exportSectors = [
@@ -502,9 +411,6 @@ export const Exports = () => {
             <Tab label="القطاع المالي والمبيعات" />
             <Tab label="المستودعات والخدمات اللوجستية" />
             <Tab label="البيانات الأساسية والتقارير العامة" />
-            {(hasPermission('backup.create') || hasPermission('backup.restore')) && (
-              <Tab label="النسخ الاحتياطي والاستعادة" />
-            )}
           </Tabs>
 
           {/* Export Sectors Tab Panels */}
@@ -514,164 +420,119 @@ export const Exports = () => {
                 {currentSector.description}
               </Typography>
               
-              <Grid container spacing={2}>
-                {currentSector.modules.map((mod, mIdx) => (
-                  <Grid item xs={12} sm={6} md={3} key={mIdx}>
-                    <Card className="exports-card" sx={{ 
-                      height: '100%', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      justifyContent: 'space-between', 
-                      borderTop: `4px solid ${currentSector.color} !important`,
-                    }}>
-                      <CardContent sx={{ p: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1.5 }}>
-                          <Box className="exports-icon-wrapper" sx={{ 
-                            p: 1, 
-                            borderRadius: '8px', 
-                            bgcolor: `${currentSector.color}15`, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center' 
-                          }}>
-                            {mod.icon}
-                          </Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary', lineHeight: 1.3 }}>
-                            {mod.title}
-                          </Typography>
-                        </Box>
-                        <Divider sx={{ my: 1, opacity: 0.6 }} />
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', height: 40, overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.4 }}>
-                          {mod.description}
+              {activeTab === 2 ? (
+                // Grouped view for tab 2
+                <Stack spacing={4}>
+                  {getGroupedModules().map((group, gIdx) => (
+                    <Box key={gIdx}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        {group.icon}
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                          {group.title}
                         </Typography>
-                      </CardContent>
-                      <CardActions sx={{ p: 2, pt: 0 }}>
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          size="small"
-                          onClick={() => handleOpenFilters(mod)}
-                          startIcon={<FilterIcon sx={{ fontSize: '0.9rem !important' }} />}
-                          sx={getButtonStyle(currentSector.color)}
-                        >
-                          تصفية وتصدير
-                        </Button>
-                      </CardActions>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
-
-          {/* Backup & Restore Tab Panel */}
-          {activeTab === 3 && (
-            <Paper sx={{ p: 3, borderRadius: 3 }} className="backup-panel">
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    إدارة النسخ الاحتياطي واستعادة النظام
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                    قم بأخذ نسخ احتياطية لقاعدة البيانات وحفظها بأمان، أو تنزيلها محلياً، أو استرجاع النظام لحالة سابقة.
-                  </Typography>
-                </Box>
-                <Stack direction="row" spacing={1}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<RefreshIcon />}
-                    onClick={fetchBackups}
-                    disabled={backupLoading}
-                    size="small"
-                  >
-                    تحديث القائمة
-                  </Button>
-                  {hasPermission('backup.create') && (
-                    <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={<BackupIcon />}
-                      onClick={handleCreateBackup}
-                      disabled={backupLoading}
-                      size="small"
-                    >
-                      إنشاء نسخة احتياطية
-                    </Button>
-                  )}
-                </Stack>
-              </Box>
-
-              <Divider sx={{ my: 2 }} />
-
-              {backupLoading && backups.length === 0 ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress size={30} />
-                </Box>
-              ) : backups.length === 0 ? (
-                <Alert severity="info">لا توجد نسخ احتياطية مسجلة حالياً في المستودع. انقر على إنشاء نسخة احتياطية لتوليد ملف جديد.</Alert>
-              ) : (
-                <TableContainer component={Paper} sx={{ boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
-                  <Table size="small">
-                    <TableHead sx={{ bgcolor: 'action.hover' }}>
-                      <TableRow>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>اسم ملف النسخة الاحتياطية</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>تاريخ الإنشاء</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحجم</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>الإجراءات</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {backups.map((file) => (
-                        <TableRow key={file.filename} hover>
-                          <TableCell align="right" sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>{file.filename}</TableCell>
-                          <TableCell align="center" sx={{ fontSize: '0.85rem' }}>{new Date(file.createdAt).toLocaleString('ar-EG')}</TableCell>
-                          <TableCell align="center" sx={{ fontSize: '0.85rem' }}>{formatBytes(file.size)}</TableCell>
-                          <TableCell align="center">
-                            <Stack direction="row" spacing={1} justifyContent="center">
-                              <Tooltip title="تنزيل الملف">
-                                <IconButton 
-                                  color="primary" 
-                                  size="small" 
-                                  onClick={() => handleDownloadBackup(file.filename)}
+                      </Box>
+                      <Grid container spacing={2}>
+                        {group.modules.map((mod, mIdx) => (
+                          <Grid item xs={12} sm={6} md={3} key={mIdx}>
+                            <Card className="exports-card" sx={{ 
+                              height: '100%', 
+                              display: 'flex', 
+                              flexDirection: 'column', 
+                              justifyContent: 'space-between', 
+                              borderTop: `4px solid ${currentSector.color} !important`,
+                            }}>
+                              <CardContent sx={{ p: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1.5 }}>
+                                  <Box className="exports-icon-wrapper" sx={{ 
+                                    p: 1, 
+                                    borderRadius: '8px', 
+                                    bgcolor: `${currentSector.color}15`, 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center' 
+                                  }}>
+                                    {mod.icon}
+                                  </Box>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary', lineHeight: 1.3 }}>
+                                    {mod.title}
+                                  </Typography>
+                                </Box>
+                                <Divider sx={{ my: 1, opacity: 0.6 }} />
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', height: 40, overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.4 }}>
+                                  {mod.description}
+                                </Typography>
+                              </CardContent>
+                              <CardActions sx={{ p: 2, pt: 0 }}>
+                                <Button
+                                  fullWidth
+                                  variant="outlined"
+                                  size="small"
+                                  onClick={() => handleOpenFilters(mod)}
+                                  startIcon={<FilterIcon sx={{ fontSize: '0.9rem !important' }} />}
+                                  sx={getButtonStyle(currentSector.color)}
                                 >
-                                  <CloudDownloadIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-
-                              {hasPermission('backup.restore') && (
-                                <Tooltip title="استعادة النظام لهذه الحالة">
-                                  <IconButton 
-                                    color="warning" 
-                                    size="small" 
-                                    onClick={() => handleRestoreBackupClick(file.filename)}
-                                    disabled={backupLoading}
-                                  >
-                                    <RestoreIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-
-                              {hasPermission('backup.restore') && (
-                                <Tooltip title="حذف النسخة الاحتياطية">
-                                  <IconButton 
-                                    color="error" 
-                                    size="small" 
-                                    onClick={() => handleDeleteBackupClick(file.filename)}
-                                    disabled={backupLoading}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                                  تصفية وتصدير
+                                </Button>
+                              </CardActions>
+                            </Card>
+                          </Grid>
+                        ))}
+                      </Grid>
+                      {gIdx < 2 && <Divider sx={{ mt: 4 }} />}
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                // Flat grid view for tabs 0 and 1
+                <Grid container spacing={2}>
+                  {currentSector.modules.map((mod, mIdx) => (
+                    <Grid item xs={12} sm={6} md={3} key={mIdx}>
+                      <Card className="exports-card" sx={{ 
+                        height: '100%', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'space-between', 
+                        borderTop: `4px solid ${currentSector.color} !important`,
+                      }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1.5 }}>
+                            <Box className="exports-icon-wrapper" sx={{ 
+                              p: 1, 
+                              borderRadius: '8px', 
+                              bgcolor: `${currentSector.color}15`, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center' 
+                            }}>
+                              {mod.icon}
+                            </Box>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary', lineHeight: 1.3 }}>
+                              {mod.title}
+                            </Typography>
+                          </Box>
+                          <Divider sx={{ my: 1, opacity: 0.6 }} />
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', height: 40, overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.4 }}>
+                            {mod.description}
+                          </Typography>
+                        </CardContent>
+                        <CardActions sx={{ p: 2, pt: 0 }}>
+                          <Button
+                            fullWidth
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleOpenFilters(mod)}
+                            startIcon={<FilterIcon sx={{ fontSize: '0.9rem !important' }} />}
+                            sx={getButtonStyle(currentSector.color)}
+                          >
+                            تصفية وتصدير
+                          </Button>
+                        </CardActions>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
               )}
-            </Paper>
+            </Box>
           )}
         </Box>
       )}
@@ -918,42 +779,7 @@ export const Exports = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-        <DialogTitle sx={{ fontWeight: 'bold' }}>حذف نسخة احتياطية</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">
-            هل أنت متأكد من رغبتك في حذف ملف النسخة الاحتياطية <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{backupToDelete}</span> نهائياً؟ لا يمكن التراجع عن هذا الإجراء.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)} color="inherit">إلغاء</Button>
-          <Button onClick={handleConfirmDeleteBackup} color="error" variant="contained">تأكيد الحذف</Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Restore Confirmation Dialog */}
-      <Dialog open={restoreConfirmOpen} onClose={() => setRestoreConfirmOpen(false)}>
-        <DialogTitle sx={{ fontWeight: 'bold', color: 'warning.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-          <RestoreIcon />
-          تأكيد استعادة النظام وقاعدة البيانات
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 2, fontWeight: 'bold' }}>
-            تنبيه هام جداً: سيتم استبدال قاعدة البيانات الحالية بالكامل بملف النسخة الاحتياطية:
-          </Typography>
-          <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider', mb: 2 }}>
-            {backupToRestore}
-          </Typography>
-          <Typography variant="body2" color="error" sx={{ fontWeight: 'bold' }}>
-            سيتم استرجاع النظام بالكامل إلى هذه اللحظة، وسيتم فقدان أي بيانات تم إدخالها بعد تاريخ إنشاء هذا الملف. هل ترغب بالتأكيد في المتابعة؟
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRestoreConfirmOpen(false)} color="inherit">إلغاء</Button>
-          <Button onClick={handleConfirmRestoreBackup} color="warning" variant="contained">تأكيد استعادة النظام</Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar open={!!toastMsg} autoHideDuration={4000} onClose={() => setToastMsg('')} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
         <Alert onClose={() => setToastMsg('')} severity={toastSeverity} sx={{ width: '100%' }}>{toastMsg}</Alert>

@@ -85,8 +85,10 @@ router.get('/balances/history', requireAuth, checkPermission('finance.view'), as
 router.post('/manual-adjustments', requireAuth, checkPermission('finance.adjust'), auditLog('manual_finance_adjustment', 'finance'), async (req, res) => {
   const { outletId, amount, adjustmentType, title, notes } = req.body;
 
-  if (!outletId || amount === undefined || !adjustmentType || !notes) {
-    return res.status(400).json({ error: 'Bad Request', message: 'outletId, amount, adjustmentType, and notes are required.' });
+  const isOutletRequired = adjustmentType !== 'salary';
+
+  if ((isOutletRequired && !outletId) || amount === undefined || !adjustmentType || !notes) {
+    return res.status(400).json({ error: 'Bad Request', message: 'outletId (for non-salary), amount, adjustmentType, and notes are required.' });
   }
 
   try {

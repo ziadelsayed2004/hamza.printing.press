@@ -7,6 +7,7 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { APP_CONFIG } from '../config/appConfig';
 import { useColorMode } from '../theme/ThemeConfig';
 import { t } from '../locales/t';
+import logoImg from '../assets/logo.png';
 import {
   AppBar,
   Box,
@@ -46,6 +47,7 @@ import {
   Assessment as AssessmentIcon,
   CloudDownload as CloudDownloadIcon,
   History as HistoryIcon,
+  SettingsBackupRestore as SettingsBackupRestoreIcon,
   ExitToApp as ExitToAppIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
@@ -138,6 +140,7 @@ export const MainLayout = () => {
       'categories': t('nav.categories'),
       'inventory': t('nav.inventory'),
       'invoices': t('nav.invoices'),
+      'returns': t('nav.returns'),
       'payments': t('nav.payments'),
       'finance': t('nav.finance'),
       'shipments': t('nav.shipments'),
@@ -237,6 +240,7 @@ export const MainLayout = () => {
       title: 'الإدارة',
       items: [
         { textKey: 'nav.users', text: 'المستخدمين والأدوار', icon: <PeopleIcon />, path: '/users', permission: 'users.view' },
+        { textKey: 'nav.backups', text: 'النسخ الاحتياطي والاستعادة', icon: <SettingsBackupRestoreIcon />, path: '/backups', permission: 'backup.create' },
         { textKey: 'nav.audit', text: 'سجل العمليات', icon: <HistoryIcon />, path: '/audit', permission: 'audit.view' }
       ]
     }
@@ -321,8 +325,8 @@ export const MainLayout = () => {
         <Box
           className={`sidebar-header ${isCollapsedView ? 'sidebar-header--collapsed' : 'sidebar-header--expanded'}`}
         >
-          <Box className="sidebar-logo-box">
-            <StoreIcon className="sidebar-logo-icon" />
+          <Box className="sidebar-logo-box" sx={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 0.5 }}>
+            <img src={logoImg} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </Box>
           {!isCollapsedView && (
             <Box className="sidebar-brand-container">
@@ -347,27 +351,66 @@ export const MainLayout = () => {
         <Divider />
 
         {/* ── Profile Card ── */}
-        <ListItemButton
-          onClick={() => {
-            navigate('/profile');
-            if (isMobileLayout) setMobileOpen(false);
-          }}
-          className={`profile-card ${isCollapsedView ? 'profile-card--collapsed' : 'profile-card--expanded'}`}
-        >
-          <Avatar className="main-layout__avatar">
-            {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
-          </Avatar>
-          {!isCollapsedView && (
-            <Box className="profile-card__info">
-              <Typography variant="body2" noWrap className="profile-card__name">
-                {user?.fullName || user?.username}
-              </Typography>
-              <Typography variant="caption" noWrap className="profile-card__role">
-                {user?.roles?.join(' • ') || t('common.user')}
-              </Typography>
-            </Box>
-          )}
-        </ListItemButton>
+        {isCollapsedView ? (
+          <ListItem key="profile" disablePadding className="sidebar-list-item">
+            <Tooltip title={user?.fullName || user?.username || 'الملف الشخصي'} placement="left">
+              <ListItemButton
+                onClick={() => {
+                  navigate('/profile');
+                  if (isMobileLayout) setMobileOpen(false);
+                }}
+                selected={location.pathname === '/profile'}
+                className={`sidebar-item-btn sidebar-item-btn--collapsed ${location.pathname === '/profile' ? 'Mui-selected' : ''}`}
+                sx={{
+                  marginLeft: 'var(--space-2)',
+                  marginRight: 'var(--space-2)',
+                  justifyContent: 'center',
+                  paddingLeft: '12px',
+                  paddingRight: '12px',
+                }}
+              >
+                <ListItemIcon className="sidebar-item-icon" sx={{ minWidth: 0, justifyContent: 'center' }}>
+                  <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>
+                    {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
+                  </Avatar>
+                </ListItemIcon>
+              </ListItemButton>
+            </Tooltip>
+          </ListItem>
+        ) : (
+          <ListItem key="profile" disablePadding className="sidebar-list-item">
+            <ListItemButton
+              onClick={() => {
+                navigate('/profile');
+                if (isMobileLayout) setMobileOpen(false);
+              }}
+              selected={location.pathname === '/profile'}
+              className={`sidebar-item-btn sidebar-item-btn--expanded ${location.pathname === '/profile' ? 'Mui-selected' : ''}`}
+              sx={{
+                marginLeft: '12px',
+                marginRight: '12px',
+                paddingLeft: 'var(--space-4)',
+                paddingRight: 'var(--space-4)',
+                minHeight: '48px',
+                gap: 'var(--space-3)'
+              }}
+            >
+              <ListItemIcon className="sidebar-item-icon" sx={{ minWidth: 0 }}>
+                <Avatar sx={{ width: 28, height: 28, fontSize: '0.85rem' }}>
+                  {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
+                </Avatar>
+              </ListItemIcon>
+              <Box className="profile-card__info" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" noWrap className="profile-card__name" sx={{ fontWeight: 600, fontSize: '0.825rem' }}>
+                  {user?.fullName || user?.username}
+                </Typography>
+                <Typography variant="caption" noWrap className="profile-card__role" sx={{ fontSize: '0.675rem' }}>
+                  {user?.roles?.join(' • ') || t('common.user')}
+                </Typography>
+              </Box>
+            </ListItemButton>
+          </ListItem>
+        )}
 
         {/* ── Menu Items ── */}
         <Box className="sidebar-menu-wrapper">
