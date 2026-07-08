@@ -8,6 +8,10 @@ import { APP_CONFIG } from '../config/appConfig';
 import { useColorMode } from '../theme/ThemeConfig';
 import { t } from '../locales/t';
 import logoImg from '../assets/logo.png';
+import codzHubSparkDark from '../assets/CodzHub_Code_Spark_Mark_Dark.svg';
+import codzHubSparkLight from '../assets/CodzHub_Code_Spark_Mark_Light.svg';
+import codzHubWordmarkDark from '../assets/CodzHub_Wordmark_Dark.svg';
+import codzHubWordmarkLight from '../assets/CodzHub_Wordmark_Light.svg';
 import {
   AppBar,
   Box,
@@ -687,6 +691,36 @@ export const MainLayout = () => {
         <Box className="main-layout__content">
           <Breadcrumbs />
           <Outlet />
+        </Box>
+        <Box component="footer" className="main-layout__footer">
+          <Box className="footer-left">
+            <img 
+              src={mode === 'dark' ? codzHubSparkDark : codzHubSparkLight} 
+              alt="CodzHub Spark" 
+              className="footer-logo-spark" 
+            />
+            <img 
+              src={mode === 'dark' ? codzHubWordmarkDark : codzHubWordmarkLight} 
+              alt="CodzHub Wordmark" 
+              className="footer-logo-wordmark" 
+            />
+          </Box>
+          <Box className="footer-right">
+            <Typography variant="caption" className="footer-copyright">
+              © {new Date().getFullYear()} CodzHub. All rights reserved.
+            </Typography>
+            <Typography variant="caption" className="footer-developer">
+              Developed by{' '}
+              <a 
+                href="https://wa.me/201020572730" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="footer-developer-link"
+              >
+                Ziad Elsayed
+              </a>
+            </Typography>
+          </Box>
         </Box>
       </Box>
     </Box>
