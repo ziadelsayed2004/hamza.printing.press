@@ -23,7 +23,7 @@
     "users": "المستخدمين والأدوار",
     "backups": "النسخ الاحتياطي والاستعادة",
     "audit": "سجل العمليات",
-    "notifications": "التنبيهات",
+    "notifications": "الاشعارات",
     "profile": "الملف الشخصي",
     "logout": "تسجيل الخروج",
     "main": "الرئيسية",
@@ -35,7 +35,7 @@
     "shippingSection": "الشحن",
     "reportsSection": "التقارير والتصدير",
     "managementSection": "الإدارة",
-    "expandMenu": "توسيع القائمة",
+    "expandMenu": "تكبير القائمة",
     "collapseMenu": "تصغير القائمة",
     "openMenu": "فتح القائمة",
     "lightMode": "الوضع المضيء",
@@ -73,13 +73,13 @@
   "dashboard": {
     "title": "لوحة التحكم",
     "welcome": "مرحبًا، {name}",
-    "subtitle": "لوحة تشغيل وماليات متكاملة لإدارة دار الكتب",
+    "subtitle": "لوحة تشغيل وماليات متكاملة لإدارة المطبعة",
     "activeBooks": "إجمالي الكتب النشطة",
     "activeOutlets": "إجمالي المنافذ النشطة",
     "todayInvoices": "فواتير اليوم",
     "todaySales": "إجمالي مبيعات اليوم",
-    "todayPayments": "مقبوضات اليوم",
-    "criticalAlerts": "تنبيهات حرجة",
+    "todayPayments": "مدفوعات اليوم",
+    "criticalAlerts": "اشعارات هامة",
     "newInvoice": "فاتورة مبيعات جديدة",
     "addStock": "توريد مخزون وارد",
     "addOutlet": "إضافة فرع / منفذ",
@@ -110,18 +110,18 @@
   },
   "finance": {
     "title": "الخزينة والمالية",
-    "ledger": "دفتر الأستاذ المالي"
+    "ledger": "دفتر الماليات"
   },
   "inventory": {
     "title": "المخزون وواردات الكتب",
-    "adjust": "تسوية مخزنية"
+    "adjust": "تسوية المخزون"
   },
   "notifications": {
-    "title": "التنبيهات",
+    "title": "الاشعارات",
     "markAsRead": "مقروء",
     "resolve": "حل",
-    "noNotifications": "لا توجد تنبيهات",
-    "viewAll": "عرض جميع التنبيهات"
+    "noNotifications": "لا توجد اشعارات",
+    "viewAll": "عرض جميع الاشعارات"
   },
   "reports": {
     "title": "التقارير",

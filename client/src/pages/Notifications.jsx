@@ -54,7 +54,7 @@ const categoryLabels = {
 };
 
 const severityLabels = {
-  'critical': 'حرج',
+  'critical': 'هام',
   'warning': 'تحذير',
   'info': 'معلومة',
   'success': 'نجاح'
@@ -71,12 +71,12 @@ export const Notifications = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Filters
   const [statusTab, setStatusTab] = useState('all'); // 'all', 'unread', 'read', 'resolved'
   const [category, setCategory] = useState('');
   const [severity, setSeverity] = useState('');
-  
+
   // Pagination
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
@@ -89,7 +89,7 @@ export const Notifications = () => {
       const queryParams = new URLSearchParams();
       queryParams.append('limit', limit);
       queryParams.append('offset', (page - 1) * limit);
-      
+
       if (statusTab !== 'all') {
         queryParams.append('status', statusTab);
       }
@@ -157,7 +157,7 @@ export const Notifications = () => {
     return (
       <Box sx={{ p: 3 }}>
         <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="error">لا تمتلك صلاحية لعرض التنبيهات.</Typography>
+          <Typography color="error">لا تمتلك صلاحية لعرض الاشعارات.</Typography>
         </Paper>
       </Box>
     );
@@ -167,7 +167,7 @@ export const Notifications = () => {
     <Box>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          مركز التنبيهات وإدارة العمليات
+          مركز الاشعارات وإدارة العمليات
         </Typography>
       </Box>
 
@@ -223,7 +223,7 @@ export const Notifications = () => {
           scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab value="all" label="جميع التنبيهات" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab value="all" label="جميع الاشعارات" sx={{ whiteSpace: 'nowrap' }} />
           <Tab value="unread" label="غير المقروءة" sx={{ whiteSpace: 'nowrap' }} />
           <Tab value="read" label="المقروءة" sx={{ whiteSpace: 'nowrap' }} />
           <Tab value="resolved" label="المتجاهلة / المؤرشفة" sx={{ whiteSpace: 'nowrap' }} />
@@ -231,7 +231,7 @@ export const Notifications = () => {
 
         {loading ? (
           <Box sx={{ py: 8 }}>
-            <LoadingState message="جاري تحميل التنبيهات..." />
+            <LoadingState message="جاري تحميل الاشعارات..." />
           </Box>
         ) : (
           <TableContainer className="scrollable-table-container">
@@ -250,7 +250,7 @@ export const Notifications = () => {
                 {notifications.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} sx={{ textAlign: 'center', py: 6, color: 'text.secondary' }}>
-                      لا توجد تنبيهات تطابق خيارات البحث الحالية.
+                      لا توجد اشعارات تطابق خيارات البحث الحالية.
                     </TableCell>
                   </TableRow>
                 ) : (

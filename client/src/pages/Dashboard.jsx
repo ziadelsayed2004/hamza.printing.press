@@ -61,7 +61,7 @@ export const Dashboard = () => {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [shipments, setShipments] = useState([]);
   const [recentReturns, setRecentReturns] = useState([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [cairoTime, setCairoTime] = useState('');
 
@@ -198,9 +198,9 @@ export const Dashboard = () => {
   const totalPaid = financeSummary ? financeSummary.totalCollected : (financials ? financials.totalPaid : 0);
   const totalRemaining = financeSummary ? financeSummary.totalReceivables : (financials ? financials.totalRemaining : 0);
   const totalOverdue = financeSummary ? financeSummary.totalOverdue : 0;
-  
+
   const isDatabaseFresh = stock.length === 0 && (!financeSummary || financeSummary.totalInvoices === 0) && (!financials || financials.totalSales === 0);
-  
+
   // Date calculation
   const todayStr = new Date().toISOString().split('T')[0];
   const invoicesTodayCount = recentInvoices.filter(inv => {
@@ -218,7 +218,7 @@ export const Dashboard = () => {
   const activeBooksCount = stock.length;
   const activeOutletsCount = outlets.filter(o => o.status === 'active').length;
   const collectionRate = totalSales > 0 ? (totalPaid / totalSales) * 100 : 0;
-  
+
   // Exceeded limits outlets count
   const exceededLimitsCount = outlets.filter(o => o.credit_limit > 0 && o.balance > o.credit_limit).length;
 
@@ -307,7 +307,7 @@ export const Dashboard = () => {
       {activeAlerts.length > 0 && (
         <Box sx={{ mb: 4 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AlertIcon /> تحذيرات تشغيلية حرجة
+            <AlertIcon /> تحذيرات تشغيلية هامة
           </Typography>
           {activeAlerts.map((alert) => (
             <Alert
@@ -361,7 +361,7 @@ export const Dashboard = () => {
           { title: 'المرتجعات المعتمدة', value: formatCurrencyEGP(returnsMetric), sub: 'إجمالي قيمة المرتجعات المعتمدة بالكامل', icon: <HistoryIcon />, theme: 'danger' },
           { title: 'المبيعات والفواتير', value: formatCurrencyEGP(invoicesAmountVal), sub: `عدد الفواتير المصدرة: ${invoicesCountVal}`, icon: <ReceiptIcon />, theme: 'primary' },
           { title: 'شحنات جزئية معلقة', value: `${partialShipmentsVal} شحنة`, sub: 'شحنات جزئية معلقة للمنافذ والفروع', icon: <ShippingIcon />, theme: 'warning' },
-          { title: 'تنبيهات المخزون', value: `${stockAlertsVal} كتاب`, sub: 'كتب تخطت حد الأمان أو ذات رصيد سالب', icon: <AlertIcon />, theme: 'danger' }
+          { title: 'اشعارات المخزون', value: `${stockAlertsVal} كتاب`, sub: 'كتب تخطت حد الأمان أو ذات رصيد سالب', icon: <AlertIcon />, theme: 'danger' }
         ].map((card, i) => (
           <Card className={`kpi-card kpi-card--${card.theme}`} key={i}>
             <CardContent className="kpi-card__body">
@@ -392,7 +392,7 @@ export const Dashboard = () => {
             <TrendingUpIcon color="primary" /> ملخص المركز المالي والحسابات
           </Typography>
           <Divider sx={{ mb: 3 }} />
-          
+
           <Box className="snapshot-panel__progress-box">
             <Box className="snapshot-panel__progress-label">
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>نسبة تحصيل الديون والمبيعات</Typography>
@@ -437,7 +437,7 @@ export const Dashboard = () => {
             <StoreIcon color="primary" /> ملخص حركة الجرد والكميات اللوجستية
           </Typography>
           <Divider sx={{ mb: 3 }} />
-          
+
           <Box className="snapshot-panel__grid" sx={{ height: '100%', alignContent: 'center' }}>
             <Box className="snapshot-panel__stat-box">
               <Typography className="snapshot-panel__stat-title">تحت حد التنبيه ({"<= 10"})</Typography>
@@ -621,8 +621,8 @@ export const Dashboard = () => {
             <List disablePadding>
               {recentReturns.map((ret, idx) => (
                 <React.Fragment key={ret.id}>
-                  <ListItem 
-                    className="activity-item" 
+                  <ListItem
+                    className="activity-item"
                     sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
                     onClick={() => navigate(`/returns?search=${ret.return_number}`)}
                   >
