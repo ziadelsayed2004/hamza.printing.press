@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatCurrencyEGP, formatEgyptDate, formatEgyptDateTime } from '../utils/formatters';
+import { compressImageAndConvertToBase64 } from '../utils/fileCompressor';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
 import { t } from '../locales/t';
@@ -2442,12 +2443,15 @@ export const Invoices = () => {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            setFormReceiptName(file.name);
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              setFormReceiptData(reader.result);
-                            };
-                            reader.readAsDataURL(file);
+                            try {
+                              const result = await compressImageAndConvertToBase64(file);
+                              setFormReceiptName(result.name);
+                              setFormReceiptData(result.data);
+                            } catch (err) {
+                              console.error('Error processing file:', err);
+                              setToastMsg('حدث خطأ أثناء معالجة الملف المرفوع.');
+                              setToastSeverity('error');
+                            }
                           }
                         }}
                       />

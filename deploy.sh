@@ -180,7 +180,29 @@ ufw allow OpenSSH
 ufw --force enable
 echo "✅ Firewall active."
 
-# 12. Setup Automated 2:00 AM SQLite Daily Backups
+# 12. Configure SSL via Let's Encrypt Certbot (Optional but highly recommended)
+echo "------------------------------------------------------------"
+echo "🔒 SSL / HTTPS Configuration (Let's Encrypt)"
+echo "------------------------------------------------------------"
+read -p "Would you like to install and configure SSL (HTTPS) for $DOMAIN_NAME? (y/N): " SETUP_SSL
+if [[ "$SETUP_SSL" =~ ^[Yy]$ ]]; then
+  echo "⏳ Installing Certbot and plugins..."
+  apt install -y certbot python3-certbot-nginx
+  
+  echo "⏳ Requesting SSL Certificate for $DOMAIN_NAME..."
+  # Run certbot non-interactively, agree to terms, redirect HTTP to HTTPS
+  certbot --nginx -d "$DOMAIN_NAME" --non-interactive --agree-tos --register-unsafely-without-email --redirect
+  
+  if [ $? -eq 0 ]; then
+    echo "✅ SSL Certificate successfully installed and Nginx configured for HTTPS!"
+  else
+    echo "⚠️ Certbot failed to obtain SSL certificate. Please ensure your domain DNS (A record) points to this server's IP address."
+  fi
+else
+  echo "ℹ️ Skipping SSL Configuration. You can configure it manually later using Certbot."
+fi
+
+# 13. Setup Automated 2:00 AM SQLite Daily Backups
 echo "⏳ Configuring Automated Database Backups (Cron)..."
 chmod +x "$APP_DIR/scripts/backup-db-safe.sh"
 

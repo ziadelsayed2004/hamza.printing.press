@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { formatCurrencyEGP, formatEgyptDate } from '../utils/formatters';
+import { compressImageAndConvertToBase64 } from '../utils/fileCompressor';
 import '../styles/Payments.css';
 import { useAuth } from '../app/AuthContext';
 import { apiClient } from '../services/apiClient';
@@ -1244,15 +1245,17 @@ export const Payments = () => {
                 className="hidden-file-input"
                 id="receipt-file-upload"
                 type="file"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files[0];
                   if (!file) return;
-                  setPayFormReceiptName(file.name);
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    setPayFormReceiptData(reader.result);
-                  };
-                  reader.readAsDataURL(file);
+                  try {
+                    const result = await compressImageAndConvertToBase64(file);
+                    setPayFormReceiptName(result.name);
+                    setPayFormReceiptData(result.data);
+                  } catch (err) {
+                    console.error('Error processing file:', err);
+                    showToast('حدث خطأ أثناء معالجة الملف المرفوع.', 'error');
+                  }
                 }}
               />
               <label htmlFor="receipt-file-upload">

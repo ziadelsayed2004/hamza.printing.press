@@ -7,6 +7,11 @@ const apiRoutes = require('./server/routes');
 
 const app = express();
 
+// Trust proxy if running behind Nginx reverse proxy in production
+if (config.isProduction) {
+  app.set('trust proxy', 1);
+}
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -17,7 +22,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: config.isProduction, // Require HTTPS in production
+    secure: config.isProduction ? 'auto' : false, // Auto-detect secure HTTPS in production, allow HTTP fallback
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 1 day
   }
