@@ -7,7 +7,7 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { APP_CONFIG } from '../config/appConfig';
 import { useColorMode } from '../theme/ThemeConfig';
 import { t } from '../locales/t';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/logo.svg';
 import codzHubSparkDark from '../assets/CodzHub_Code_Spark_Mark_Dark.svg';
 import codzHubSparkLight from '../assets/CodzHub_Code_Spark_Mark_Light.svg';
 import codzHubWordmarkDark from '../assets/CodzHub_Wordmark_Dark.svg';

@@ -13,7 +13,7 @@ import {
   CircularProgress,
   alpha
 } from '@mui/material';
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/logo.svg';
 
 export const Login = () => {
   const { login, isAuthenticated } = useAuth();
