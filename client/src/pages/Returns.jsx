@@ -534,13 +534,13 @@ export const Returns = ({ standalone = true }) => {
                   <TableBody>
                     {detailsReturn.items?.map((item) => (
                       <TableRow key={item.id}>
-                        <td style={{ padding: '8px 16px' }}>{item.product_title}</td>
-                        <td style={{ padding: '8px 16px', fontFamily: 'monospace' }}>{item.product_code || '-'}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'center', fontWeight: 'bold' }}>{item.quantity}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right' }}>{formatCurrencyEGP(item.unit_price)}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 'bold', color: 'error.main' }}>
+                        <TableCell>{item.product_title}</TableCell>
+                        <TableCell className="font-monospace">{item.product_code || '-'}</TableCell>
+                        <TableCell align="center" className="font-bold">{item.quantity}</TableCell>
+                        <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>
+                        <TableCell align="right" className="font-bold text-error">
                           {formatCurrencyEGP(item.total_price)}
-                        </td>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

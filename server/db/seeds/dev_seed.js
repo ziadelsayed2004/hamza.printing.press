@@ -38,25 +38,18 @@ async function seed() {
   }
 
   // 2. Seed Roles
-  // In production fresh start, we only seed super_admin.
-  // In test environment, we seed all legacy roles expected by integration tests.
-  const rolesList = isTest
-    ? [
-        { name: 'super_admin', desc: 'System Super Administrator' },
-        { name: 'admin', desc: 'Administrator' },
-        { name: 'accountant', desc: 'Financial Accountant' },
-        { name: 'inventory_manager', desc: 'Inventory Manager' },
-        { name: 'sales_staff', desc: 'Sales Representative' },
-        { name: 'shipping_user', desc: 'Shipping and Logistics User' },
-        { name: 'readonly_viewer', desc: 'Read Only Auditor' },
-        { name: 'author', desc: 'Book Author View' },
-        { name: 'outlet', desc: 'Outlet Partner Account' }
-      ]
-    : [
-        { name: 'super_admin', desc: 'System Super Administrator' },
-        { name: 'author', desc: 'Book Author View' },
-        { name: 'outlet', desc: 'Outlet Partner Account' }
-      ];
+  // Always seed all 9 legacy and core roles expected by the system.
+  const rolesList = [
+    { name: 'super_admin', desc: 'System Super Administrator' },
+    { name: 'admin', desc: 'Administrator' },
+    { name: 'accountant', desc: 'Financial Accountant' },
+    { name: 'inventory_manager', desc: 'Inventory Manager' },
+    { name: 'sales_staff', desc: 'Sales Representative' },
+    { name: 'shipping_user', desc: 'Shipping and Logistics User' },
+    { name: 'readonly_viewer', desc: 'Read Only Auditor' },
+    { name: 'author', desc: 'Book Author View' },
+    { name: 'outlet', desc: 'Outlet Partner Account' }
+  ];
 
   console.log('Seeding roles...');
   for (const r of rolesList) {
@@ -80,8 +73,8 @@ async function seed() {
     }
   }
 
-  // For testing, we also assign permissions to other roles
-  if (isTest) {
+  // Seed and link permissions for all roles
+  if (true) {
     const roles = await dbHelper.all('SELECT id, name FROM roles');
     const permMap = new Map(permissions.map(p => [p.name, p.id]));
     const roleMap = new Map(roles.map(r => [r.name, r.id]));

@@ -759,6 +759,7 @@ export const Exports = () => {
                   onChange={(e) => setFormFilters({ ...formFilters, format: e.target.value })}
                 >
                   <FormControlLabel value="xlsx" control={<Radio />} label="Excel (.xlsx) ملوّن ومهيأ" />
+                  <FormControlLabel value="pdf" control={<Radio />} label="PDF (.pdf) تقرير طباعة منسّق" />
                   <FormControlLabel value="csv" control={<Radio />} label="CSV (.csv) عربي قياسي" />
                 </RadioGroup>
               </FormControl>

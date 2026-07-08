@@ -1,3 +1,4 @@
+const pdf = require('html-pdf-node');
 const db = require('../../db');
 const reportsService = require('../reports/reportsService');
 const ExcelJS = require('exceljs');
@@ -61,6 +62,163 @@ function jsonToCsvArabic({ title, filters = [], arabicHeaders, englishKeys, rows
 /**
  * Converts a list of JSON objects into a professional styled Excel file using ExcelJS.
  */
+
+/**
+ * Converts a list of JSON objects into a professional styled PDF document using html-pdf-node.
+ */
+async function jsonToPdfArabic({ title, filters = [], arabicHeaders, englishKeys, rows, summaryKeys = [] }) {
+  const headerHtml = arabicHeaders.map(h => `<th>${h}</th>`).join('');
+
+  let rowsHtml = '';
+  rows.forEach((row, idx) => {
+    const cellsHtml = englishKeys.map(key => {
+      const val = row[key];
+      const lowerKey = key.toLowerCase();
+      const isMonetary = lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount') || lowerKey.includes('sales') || lowerKey.includes('paid') || lowerKey.includes('remaining') || lowerKey.includes('limit') || lowerKey.includes('value');
+      
+      let formattedVal = val === null || val === undefined ? '' : val;
+      if (isMonetary && typeof val === 'number') {
+        formattedVal = val.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+      } else if (typeof val === 'number') {
+        formattedVal = val.toLocaleString('ar-EG');
+      }
+      return `<td>${formattedVal}</td>`;
+    }).join('');
+    
+    rowsHtml += `<tr>${cellsHtml}</tr>`;
+  });
+
+  let totalsHtml = '';
+  if (summaryKeys && summaryKeys.length > 0 && rows.length > 0) {
+    const firstSummaryIdx = englishKeys.findIndex(key => summaryKeys.includes(key));
+    const cellsHtml = englishKeys.map((key, idx) => {
+      if (idx === 0) {
+        return `<td colspan="${firstSummaryIdx > 0 ? firstSummaryIdx : 1}" style="font-weight: bold; background: #e2e8f0; text-align: center;">الإجمالي الكلي</td>`;
+      }
+      if (idx < firstSummaryIdx) {
+        return '';
+      }
+      if (summaryKeys.includes(key)) {
+        const sum = rows.reduce((acc, r) => acc + (parseFloat(r[key]) || 0), 0);
+        const lowerKey = key.toLowerCase();
+        const isMonetary = lowerKey.includes('price') || lowerKey.includes('cost') || lowerKey.includes('amount') || lowerKey.includes('sales') || lowerKey.includes('paid') || lowerKey.includes('remaining') || lowerKey.includes('limit') || lowerKey.includes('value');
+        let formattedSum = sum;
+        if (isMonetary) {
+          formattedSum = sum.toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+        } else {
+          formattedSum = sum.toLocaleString('ar-EG');
+        }
+        return `<td style="font-weight: bold; background: #e2e8f0;">${formattedSum}</td>`;
+      }
+      return `<td style="background: #e2e8f0;"></td>`;
+    }).filter(c => c !== '').join('');
+    
+    totalsHtml = `<tfoot><tr>${cellsHtml}</tr></tfoot>`;
+  }
+
+  const filtersText = filters && filters.length > 0 ? `<div class="filters">الفلاتر المطبقة: ${filters.join(' | ')}</div>` : '';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8">
+      <title>${title || 'تقرير'}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+        body {
+          font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 20px;
+          color: #1e293b;
+          direction: rtl;
+        }
+        .header-container {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 3px solid #1e3a8a;
+          padding-bottom: 10px;
+        }
+        .report-title {
+          font-size: 20px;
+          font-weight: bold;
+          color: #1e3a8a;
+          margin: 0 0 5px 0;
+        }
+        .filters {
+          font-size: 11px;
+          color: #475569;
+          font-style: italic;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+          font-size: 10px;
+          page-break-inside: auto;
+        }
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+        }
+        th {
+          background-color: #1e3a8a;
+          color: white;
+          font-weight: bold;
+          padding: 8px 10px;
+          border: 1px solid #cbd5e1;
+          text-align: center;
+        }
+        td {
+          padding: 6px 10px;
+          border: 1px solid #e2e8f0;
+          text-align: center;
+        }
+        tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        tfoot td {
+          border-top: 2px solid #94a3b8;
+          border-bottom: 3px double #94a3b8;
+        }
+        .footer {
+          margin-top: 20px;
+          text-align: left;
+          font-size: 9px;
+          color: #64748b;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header-container">
+        <h1 class="report-title">${title || 'تقرير النظام'}</h1>
+        ${filtersText}
+      </div>
+      <table>
+        <thead>
+          <tr>
+            ${headerHtml}
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+        ${totalsHtml}
+      </table>
+      <div class="footer">
+        تم استخراج التقرير تلقائياً بتاريخ: ${new Date().toLocaleString('ar-EG')} - مطبعة حمزة
+      </div>
+    </body>
+    </html>
+  `;
+
+  const options = {
+    format: 'A4',
+    margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
+  };
+  const file = { content: htmlContent };
+  return await pdf.generatePdf(file, options);
+}
+
 async function jsonToExcelArabic({ title, filters = [], arabicHeaders, englishKeys, rows, summaryKeys = [] }) {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(title ? title.substring(0, 31) : 'تقرير', {
@@ -284,6 +442,8 @@ async function exportProducts(format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -311,6 +471,8 @@ async function exportPrices(format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -336,6 +498,8 @@ async function exportAuthors(format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -362,6 +526,8 @@ async function exportOutlets(format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -451,6 +617,8 @@ async function exportInvoices(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -521,6 +689,8 @@ async function exportPayments(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -579,6 +749,8 @@ async function exportInventory(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -658,6 +830,8 @@ async function exportReport(reportType, query = {}, sessionUser = null, format =
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -713,6 +887,8 @@ async function exportReturns(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -773,6 +949,8 @@ async function exportShipments(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(config);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(config);
   } else {
     return await jsonToExcelArabic(config);
   }
@@ -836,6 +1014,8 @@ async function exportInvoiceItems(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(configObj);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(configObj);
   } else {
     return await jsonToExcelArabic(configObj);
   }
@@ -929,6 +1109,8 @@ async function exportCourierSheet(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(configObj);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(configObj);
   } else {
     return await jsonToExcelArabic(configObj);
   }
@@ -993,6 +1175,8 @@ async function exportOutletStatement(query = {}, format = 'xlsx') {
 
   if (format === 'csv') {
     return jsonToCsvArabic(configObj);
+  } else if (format === 'pdf') {
+    return await jsonToPdfArabic(configObj);
   } else {
     return await jsonToExcelArabic(configObj);
   }

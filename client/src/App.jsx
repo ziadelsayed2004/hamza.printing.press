@@ -26,7 +26,7 @@ import { Notifications } from './pages/Notifications';
 import { Backups } from './pages/Backups';
 import { Box, Typography, Paper } from '@mui/material';
 import { LoadingState } from './components/LoadingState';
-import './App.css';
+import './styles/App.css';
 
 // Guard for routes that require authentication
 const ProtectedRoute = ({ children }) => {

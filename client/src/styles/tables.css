@@ -106,3 +106,16 @@
   overflow: hidden;
   margin-bottom: 24px;
 }
+
+/* Helper utility classes for tables */
+.font-monospace {
+  font-family: monospace !important;
+}
+
+.font-bold {
+  font-weight: bold !important;
+}
+
+.text-error {
+  color: var(--color-error, #ef4444) !important;
+}

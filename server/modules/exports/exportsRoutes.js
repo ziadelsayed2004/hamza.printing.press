@@ -11,6 +11,10 @@ function sendExportDownload(res, filenameBase, format, contentOrBuffer) {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filenameBase}.csv"`);
     return res.status(200).send(contentOrBuffer);
+  } else if (fileFormat === 'pdf') {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filenameBase}.pdf"`);
+    return res.status(200).send(contentOrBuffer);
   } else {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filenameBase}.xlsx"`);

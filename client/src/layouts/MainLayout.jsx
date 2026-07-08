@@ -60,7 +60,7 @@ import {
   Inventory as InventoryIcon,
   Person as PersonIcon
 } from '@mui/icons-material';
-import './MainLayout.css';
+import '../styles/MainLayout.css';
 
 export const MainLayout = () => {
   const { user, logout, hasPermission } = useAuth();
@@ -352,7 +352,7 @@ export const MainLayout = () => {
 
         {/* ── Profile Card ── */}
         {isCollapsedView ? (
-          <ListItem key="profile" disablePadding className="sidebar-list-item">
+          <ListItem key="profile" disablePadding className="sidebar-list-item sidebar-profile-item">
             <Tooltip title={user?.fullName || user?.username || 'الملف الشخصي'} placement="left">
               <ListItemButton
                 onClick={() => {
@@ -360,17 +360,10 @@ export const MainLayout = () => {
                   if (isMobileLayout) setMobileOpen(false);
                 }}
                 selected={location.pathname === '/profile'}
-                className={`sidebar-item-btn sidebar-item-btn--collapsed ${location.pathname === '/profile' ? 'Mui-selected' : ''}`}
-                sx={{
-                  marginLeft: 'var(--space-2)',
-                  marginRight: 'var(--space-2)',
-                  justifyContent: 'center',
-                  paddingLeft: '12px',
-                  paddingRight: '12px',
-                }}
+                className={`sidebar-item-btn sidebar-item-btn--collapsed sidebar-profile-btn ${location.pathname === '/profile' ? 'Mui-selected' : ''}`}
               >
-                <ListItemIcon className="sidebar-item-icon" sx={{ minWidth: 0, justifyContent: 'center' }}>
-                  <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>
+                <ListItemIcon className="sidebar-item-icon sidebar-profile-icon-wrap">
+                  <Avatar className="sidebar-profile-avatar-collapsed">
                     {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
                   </Avatar>
                 </ListItemIcon>
@@ -378,33 +371,25 @@ export const MainLayout = () => {
             </Tooltip>
           </ListItem>
         ) : (
-          <ListItem key="profile" disablePadding className="sidebar-list-item">
+          <ListItem key="profile" disablePadding className="sidebar-list-item sidebar-profile-item">
             <ListItemButton
               onClick={() => {
                 navigate('/profile');
                 if (isMobileLayout) setMobileOpen(false);
               }}
               selected={location.pathname === '/profile'}
-              className={`sidebar-item-btn sidebar-item-btn--expanded ${location.pathname === '/profile' ? 'Mui-selected' : ''}`}
-              sx={{
-                marginLeft: '12px',
-                marginRight: '12px',
-                paddingLeft: 'var(--space-4)',
-                paddingRight: 'var(--space-4)',
-                minHeight: '48px',
-                gap: 'var(--space-3)'
-              }}
+              className={`sidebar-item-btn sidebar-item-btn--expanded sidebar-profile-btn ${location.pathname === '/profile' ? 'Mui-selected' : ''}`}
             >
-              <ListItemIcon className="sidebar-item-icon" sx={{ minWidth: 0 }}>
-                <Avatar sx={{ width: 28, height: 28, fontSize: '0.85rem' }}>
+              <ListItemIcon className="sidebar-item-icon sidebar-profile-icon-wrap-expanded">
+                <Avatar className="sidebar-profile-avatar-expanded">
                   {user?.fullName?.charAt(0) || user?.username?.charAt(0) || 'U'}
                 </Avatar>
               </ListItemIcon>
-              <Box className="profile-card__info" sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" noWrap className="profile-card__name" sx={{ fontWeight: 600, fontSize: '0.825rem' }}>
+              <Box className="profile-card__info profile-card__info-box">
+                <Typography variant="body2" noWrap className="profile-card__name profile-card__name-text">
                   {user?.fullName || user?.username}
                 </Typography>
-                <Typography variant="caption" noWrap className="profile-card__role" sx={{ fontSize: '0.675rem' }}>
+                <Typography variant="caption" noWrap className="profile-card__role profile-card__role-text">
                   {user?.roles?.join(' • ') || t('common.user')}
                 </Typography>
               </Box>
