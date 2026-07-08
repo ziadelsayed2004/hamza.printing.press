@@ -161,9 +161,10 @@
 }
 
 .sidebar-logo-box {
-  width: 38px;
-  height: 38px;
-  border-radius: 25px;
+  width: 42px;
+  height: 42px;
+  padding: 0 !important;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;

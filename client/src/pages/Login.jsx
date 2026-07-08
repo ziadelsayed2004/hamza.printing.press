@@ -13,8 +13,7 @@ import {
   CircularProgress,
   alpha
 } from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import StoreIcon from '@mui/icons-material/Store';
+import logoImg from '../assets/logo.png';
 
 export const Login = () => {
   const { login, isAuthenticated } = useAuth();
@@ -51,55 +50,26 @@ export const Login = () => {
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        backgroundColor: 'background.default',
-        p: 2,
-      }}
-    >
-      <Paper
-        className="login-dialog"
-        elevation={0}
-        sx={{
-          p: { xs: 3, sm: 5 },
-          borderRadius: 4,
-          textAlign: 'center',
-          backgroundColor: 'background.paper',
-          border: (theme) => `1px solid ${theme.palette.divider}`,
-        }}
-      >
-        {/* Logo */}
-        <Box
-          sx={{
-            width: 52,
-            height: 52,
-            borderRadius: 3,
-            background: (theme) =>
-              `linear-gradient(135deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`,
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mx: 'auto',
-            mb: 2,
-          }}
-        >
-          <StoreIcon sx={{ fontSize: 28 }} />
+    <Box className="login-page-container">
+      <Paper className="login-dialog" elevation={0}>
+        <Box className="login-logo-container">
+          <Box
+            component="img"
+            src={logoImg}
+            alt="Logo"
+            className="login-logo-img"
+          />
         </Box>
 
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5, color: 'text.primary' }}>
+        <Typography variant="h5" className="login-title">
           تسجيل الدخول
         </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3, fontSize: '0.85rem' }}>
+        <Typography variant="body2" className="login-subtitle">
           {APP_CONFIG.loginSubtitle}
         </Typography>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+          <Alert severity="error" className="login-error-alert">
             {error}
           </Alert>
         )}
@@ -117,7 +87,7 @@ export const Login = () => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             disabled={loading}
-            sx={{ mb: 2 }}
+            className="login-field"
           />
           <TextField
             margin="normal"
@@ -131,7 +101,7 @@ export const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
-            sx={{ mb: 3 }}
+            className="login-field-last"
           />
           <Button
             type="submit"
@@ -139,23 +109,13 @@ export const Login = () => {
             variant="contained"
             size="large"
             disabled={loading}
-            sx={{
-              py: 1.5,
-              fontWeight: 700,
-              fontSize: '1rem',
-              borderRadius: 2.5,
-              backgroundColor: 'secondary.main',
-              color: 'secondary.contrastText',
-              '&:hover': {
-                backgroundColor: 'secondary.dark',
-              },
-            }}
+            className="login-submit-button"
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : 'تسجيل الدخول'}
           </Button>
         </form>
 
-        <Typography variant="caption" sx={{ color: 'text.disabled', mt: 3, display: 'block' }}>
+        <Typography variant="caption" className="login-footer-text">
           {APP_CONFIG.companyName}
         </Typography>
       </Paper>

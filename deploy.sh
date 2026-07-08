@@ -57,18 +57,15 @@ if ! command -v pm2 >/dev/null 2>&1; then
 fi
 echo "✅ PM2 installed: $(pm2 -v)"
 
-# 4. Prompt for Server Domain or IP
+# 4. Prompt for Server Domain
 echo "------------------------------------------------------------"
 echo "🌐 Domain Configuration"
 echo "------------------------------------------------------------"
-read -p "Enter your domain (e.g., hamzapress.com) or press [ENTER] to use public IP: " DOMAIN_NAME
+read -p "Enter your domain [default: hamzaprintingpress.cloud]: " DOMAIN_NAME
 if [ -z "$DOMAIN_NAME" ]; then
-  PUBLIC_IP=$(curl -s https://ifconfig.me)
-  DOMAIN_NAME="${PUBLIC_IP:-_}"
-  echo "ℹ️ No domain entered. Configuring server block with public IP: $DOMAIN_NAME"
-else
-  echo "ℹ️ Configuring server block with domain: $DOMAIN_NAME"
+  DOMAIN_NAME="hamzaprintingpress.cloud"
 fi
+echo "ℹ️ Configuring server block with domain: $DOMAIN_NAME"
 
 # 5. Configure Production Environment variables (.env)
 echo "⏳ Configuring Environment File (.env)..."
