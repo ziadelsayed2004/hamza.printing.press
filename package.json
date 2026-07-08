@@ -9,6 +9,7 @@
     "setup": "npm run db:reset && npm run build",
     "start": "node app.js",
     "dev": "concurrently \"nodemon app.js\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
     "prod": "npm run db:migrate && npm run build && node app.js",
     "db:migrate": "node server/db/migrate.js",
     "db:reset": "node server/db/reset.js",
@@ -17,13 +18,11 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
-    "body-parser": "^1.20.3",
     "dotenv": "^16.4.7",
     "exceljs": "^4.4.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "html-pdf-node": "^1.0.8",
-    "luxon": "^3.5.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {

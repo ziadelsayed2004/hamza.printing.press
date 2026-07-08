@@ -34,8 +34,7 @@ The platform is designed as a unified Node.js Monolith, optimized for direct hos
 ├── package.json                    # Package metadata & script commands
 ├── .env.example                    # Template environment configuration file
 ├── scripts/                        # Automation helper scripts
-│   ├── backup-db.js                # Manual DB backup tool
-│   └── copy-client-build.js        # Moves react production bundle to public/
+│   └── backup-db.js                # Manual DB backup tool
 ├── public/                         # Output destination for frontend build files
 ├── storage/                        # Decoupled storage folder (git ignored)
 │   ├── database.sqlite             # Active production SQLite file

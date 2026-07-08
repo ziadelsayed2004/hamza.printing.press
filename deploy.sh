@@ -91,11 +91,8 @@ sed -i "s|^PORT=.*|PORT=5000|" .env # 5000 is matching ecosystem.config.js port
 echo "✅ Environment configured (.env file updated)."
 
 # 6. Install Project Dependencies & Compile React Frontend
-echo "⏳ Installing Root dependencies..."
+echo "⏳ Installing all project dependencies (Root and Client)..."
 npm install
-
-echo "⏳ Installing Client (React) dependencies..."
-npm install --prefix client
 
 echo "⏳ Compiling React static production files (Vite build)..."
 npm run build
