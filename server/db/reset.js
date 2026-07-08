@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 // Resolve db path from env directly, without loading config/index which might trigger imports
-const rootDir = path.resolve(__dirname, '../../..');
+const rootDir = path.resolve(__dirname, '../..');
 const dbFile = path.resolve(rootDir, process.env.DATABASE_PATH || './storage/database.sqlite');
 
 console.log('--- Database Reset Starting ---');

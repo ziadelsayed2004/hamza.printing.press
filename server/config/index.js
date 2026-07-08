@@ -9,7 +9,7 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 const isProd = nodeEnv === 'production';
 
 // Root directory of the application
-const rootDir = path.resolve(__dirname, '../../..');
+const rootDir = path.resolve(__dirname, '../..');
 
 const databasePath = path.resolve(rootDir, process.env.DATABASE_PATH || './storage/database.sqlite');
 const backupDir = path.resolve(rootDir, process.env.BACKUP_DIR || './storage/backups');
