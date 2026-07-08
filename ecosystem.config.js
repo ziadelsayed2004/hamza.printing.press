@@ -10,10 +10,7 @@ module.exports = {
       max_memory_restart: "500M",
       env_production: {
         NODE_ENV: "production",
-        PORT: 5000,
-        SESSION_SECRET: "hamza-press-secure-session-key-2026-vps",
-        DATABASE_PATH: "./storage/database.sqlite",
-        BACKUP_DIR: "./storage/backups"
+        PORT: 5000
       }
     }
   ]
