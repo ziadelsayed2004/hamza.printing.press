@@ -14,6 +14,7 @@ import {
   alpha
 } from '@mui/material';
 import logoImg from '../assets/logo.svg';
+import { t } from '../locales/t';
 
 export const Login = () => {
   const { login, isAuthenticated } = useAuth();
@@ -33,7 +34,7 @@ export const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) {
-      setError('يرجى إدخال اسم المستخدم وكلمة المرور');
+      setError(t('auth.usernameRequired'));
       return;
     }
 
@@ -43,7 +44,7 @@ export const Login = () => {
       await login(username, password);
     } catch (err) {
       console.error(err);
-      setError(err.message || 'فشل تسجيل الدخول. يرجى التحقق من اسم المستخدم وكلمة المرور.');
+      setError(err.message || t('auth.loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -62,7 +63,7 @@ export const Login = () => {
         </Box>
 
         <Typography variant="h5" className="login-title">
-          تسجيل الدخول
+          {t('auth.login')}
         </Typography>
         <Typography variant="body2" className="login-subtitle">
           {APP_CONFIG.loginSubtitle}
@@ -80,7 +81,7 @@ export const Login = () => {
             required
             fullWidth
             id="username"
-            label="اسم المستخدم"
+            label={t('auth.username')}
             name="username"
             autoComplete="username"
             autoFocus
@@ -94,7 +95,7 @@ export const Login = () => {
             required
             fullWidth
             name="password"
-            label="كلمة المرور"
+            label={t('auth.password')}
             type="password"
             id="password"
             autoComplete="current-password"
@@ -111,7 +112,7 @@ export const Login = () => {
             disabled={loading}
             className="login-submit-button"
           >
-            {loading ? <CircularProgress size={24} color="inherit" /> : 'تسجيل الدخول'}
+            {loading ? <CircularProgress size={24} color="inherit" /> : t('auth.login')}
           </Button>
         </form>
 

@@ -502,6 +502,8 @@
   display: flex;
   flex-direction: column;
   transition: width 0.2s ease, margin 0.2s ease;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .main-layout__content-wrapper--expanded {
@@ -535,6 +537,9 @@
 .main-layout__content {
   flex-grow: 1;
   padding: 16px 10px 16px 20px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 @media (min-width: 600px) {
@@ -720,4 +725,25 @@
   .footer-copyright::after {
     display: none;
   }
+}
+
+/* ══════ Helper layout fixes for mobile & horizontal scrollable content ══════ */
+
+/* Force MUI Tabs wrapper to constrain itself inside viewport instead of stretching parent */
+.MuiTabs-root {
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Force standard MUI Paper/Card to never stretch past content area */
+.MuiPaper-root {
+  max-width: 100% !important;
+}
+
+/* Make sure scrollable table container has native horizontal scrolling on touch/mouse */
+.scrollable-table-container {
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
