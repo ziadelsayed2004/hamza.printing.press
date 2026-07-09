@@ -418,7 +418,15 @@ export const Inventory = () => {
           )}
 
           {/* Pagination */}
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(224,224,224,1)' }}>
+          <Box sx={{
+            p: 2,
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderTop: '1px solid rgba(224,224,224,1)'
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2" color="textSecondary">عدد:</Typography>
               <Select size="small" value={stockLimit} onChange={(e) => { setStockLimit(e.target.value); setStockOffset(0); }} sx={{ minWidth: 60 }}>
@@ -512,7 +520,15 @@ export const Inventory = () => {
           )}
 
           {/* Pagination */}
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(224,224,224,1)' }}>
+          <Box sx={{
+            p: 2,
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderTop: '1px solid rgba(224,224,224,1)'
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2" color="textSecondary">عدد:</Typography>
               <Select size="small" value={txLimit} onChange={(e) => { setTxLimit(e.target.value); setTxOffset(0); }} sx={{ minWidth: 60 }}>
@@ -580,7 +596,15 @@ export const Inventory = () => {
           )}
 
           {/* Pagination */}
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(224,224,224,1)' }}>
+          <Box sx={{
+            p: 2,
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderTop: '1px solid rgba(224,224,224,1)'
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography variant="body2" color="textSecondary">عدد:</Typography>
               <Select size="small" value={receiptsLimit} onChange={(e) => { setReceiptsLimit(e.target.value); setReceiptsOffset(0); }} sx={{ minWidth: 60 }}>

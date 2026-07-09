@@ -521,7 +521,7 @@ export const Shipments = () => {
         )}
 
         {/* Pagination */}
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(224,224,224,1)' }}>
+        <Box sx={{ p: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 0 }, justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(224,224,224,1)' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="body2" color="textSecondary">عدد:</Typography>
             <Select size="small" value={limit} onChange={(e) => { setLimit(e.target.value); setOffset(0); }} sx={{ minWidth: 60 }}>

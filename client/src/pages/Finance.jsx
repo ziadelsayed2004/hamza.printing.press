@@ -674,6 +674,8 @@ export const Finance = () => {
                 sx={{
                   p: 2,
                   display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  gap: { xs: 2, sm: 0 },
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   borderTop: '1px solid rgba(224, 224, 224, 1)',

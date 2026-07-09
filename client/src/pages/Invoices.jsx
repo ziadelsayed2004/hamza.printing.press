@@ -1023,7 +1023,8 @@ export const Invoices = () => {
       updated[index].freeQuantity = parsedQty;
     }
 
-    // Validate stock quantity if policy is track
+    // Validate stock quantity if policy is track (disabled to allow negative inventory)
+    /*
     if (updated[index].stockPolicy === 'track' && parsedQty > updated[index].stock) {
       updated[index].error = `الكمية المدخلة (${parsedQty}) تتجاوز المتوفر بالمخزن (${updated[index].stock})`;
     } else {
@@ -1031,6 +1032,10 @@ export const Invoices = () => {
       if (updated[index].error && updated[index].error.includes('المتوفر')) {
         updated[index].error = '';
       }
+    }
+    */
+    if (updated[index].error && updated[index].error.includes('المتوفر')) {
+      updated[index].error = '';
     }
     setFormItems(updated);
   };
@@ -1704,6 +1709,8 @@ export const Invoices = () => {
           sx={{
             p: 2,
             display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
             justifyContent: 'space-between',
             alignItems: 'center',
             borderTop: '1px solid rgba(224, 224, 224, 1)'

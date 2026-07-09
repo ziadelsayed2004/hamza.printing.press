@@ -146,6 +146,8 @@ async function createInvoice({
       // Validate stock if policy is track
       if (product.stock_policy === 'track') {
         const currentStock = await inventoryService.getRealTimeStock(productId);
+        // Stock checks are disabled to allow negative inventory on sales
+        /*
         if (currentStock < qty) {
           const err = new Error(`المخزون غير كافٍ للكتاب "${product.title}". المتاح: ${currentStock}، المطلوب: ${qty}`);
           err.productId = productId;
@@ -154,6 +156,7 @@ async function createInvoice({
           err.qty = qty;
           throw err;
         }
+        */
       }
 
       const billableQty = qty - freeQty;
@@ -437,6 +440,8 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
         const oldQty = oldItem ? oldItem.quantity : 0;
         const currentStock = await inventoryService.getRealTimeStock(productId);
         const availableStock = currentStock + oldQty;
+        // Stock checks are disabled to allow negative inventory on sales
+        /*
         if (availableStock < qty) {
           const err = new Error(`المخزون غير كافٍ للكتاب "${product.title}". المتاح: ${availableStock}، المطلوب: ${qty}`);
           err.productId = productId;
@@ -445,6 +450,7 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
           err.qty = qty;
           throw err;
         }
+        */
       }
 
       const itemTotalPrice = qty * unitPrice;
