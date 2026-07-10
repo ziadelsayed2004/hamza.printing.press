@@ -183,6 +183,21 @@ pm2 restart bookstore-manager
   pm2 logs bookstore-manager --lines 100
   ```
 
+### ⚠️ استكشاف الأخطاء وإصلاحها: فشل تصدير ملفات الـ PDF (خطأ Puppeteer/Chromium)
+إذا ظهر لك خطأ 500 عند تصدير الفواتير إلى ملف PDF، ووجدت في سجلات الأخطاء رسالة مثل:
+`error while loading shared libraries: libnss3.so: cannot open shared object file`
+هذا يعني أن نظام التشغيل Ubuntu على السيرفر يفتقد لبعض المكتبات المشتركة اللازمة لتشغيل متصفح Chromium المدمج في Puppeteer.
+
+**الحل:**
+قم بالاتصال بالسيرفر عبر SSH وتشغيل الأمر التالي لتثبيت كافة المكتبات اللازمة:
+```bash
+sudo apt-get update && sudo apt-get install -y libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2
+```
+بعد انتهاء التثبيت، أعد تشغيل التطبيق لتطبيق التغييرات:
+```bash
+pm2 restart bookstore-manager
+```
+
 ---
 
 🎉 **النظام الآن مهيأ ويعمل بالكامل!**

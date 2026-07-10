@@ -28,7 +28,7 @@ echo "------------------------------------------------------------"
 
 # 1. Update system packages
 echo "⏳ Updating system packages..."
-apt update && apt install -y curl git build-essential sqlite3 nginx ufw
+apt update && apt install -y curl git build-essential sqlite3 nginx ufw libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2
 echo "✅ System packages updated."
 
 # 2. Install Node.js v20 if not installed or older
