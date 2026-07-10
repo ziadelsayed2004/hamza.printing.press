@@ -1,4 +1,28 @@
 const db = require('../../db');
+
+/**
+ * Calculate the actual physical stock currently present in the warehouse for a product.
+ * Physical Stock = (Total Receipts + Returns + Adjustments) - Total Shipped
+ */
+async function getPhysicalStock(productId) {
+  // Sum of receipts, returns, and adjustments
+  const incomingRow = await db.get(`
+    SELECT COALESCE(SUM(quantity), 0) as qty
+    FROM inventory_transactions
+    WHERE product_id = ? AND transaction_type IN ('receipt', 'return', 'adjustment')
+  `, [productId]);
+
+  // Sum of shipped items in non-cancelled shipments
+  const shippedRow = await db.get(`
+    SELECT COALESCE(SUM(si.quantity), 0) as qty
+    FROM shipment_items si
+    JOIN shipments s ON s.id = si.shipment_id
+    JOIN invoice_items ii ON ii.id = si.invoice_item_id
+    WHERE ii.product_id = ? AND s.status != 'cancelled'
+  `, [productId]);
+
+  return incomingRow.qty - shippedRow.qty;
+}
 const fs = require('fs');
 const path = require('path');
 const inventoryService = require('../inventory/inventoryService');
@@ -963,6 +987,80 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) 
       }
       
       if (shippingStatus !== invoice.shipping_status) {
+        // If updating status to 'shipped' or 'delivered', validate physical stock and create shipments automatically
+        if (shippingStatus === 'shipped' || shippingStatus === 'delivered') {
+          const invoiceItems = await db.all('SELECT * FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
+          const shipmentItemsToCreate = [];
+          
+          for (const item of invoiceItems) {
+            const product = await db.get('SELECT title, stock_policy FROM products WHERE id = ?', [item.product_id]);
+            if (product && product.stock_policy === 'track') {
+              // Calculate already shipped quantity
+              const shippedRow = await db.get(`
+                SELECT COALESCE(SUM(si.quantity), 0) as qty
+                FROM shipment_items si
+                JOIN shipments s ON s.id = si.shipment_id
+                WHERE si.invoice_item_id = ? AND s.status != 'cancelled'
+              `, [item.id]);
+              
+              const remainingQty = Math.max(0, item.quantity - shippedRow.qty);
+              if (remainingQty > 0) {
+                const physicalStock = await getPhysicalStock(item.product_id);
+                if (physicalStock < remainingQty) {
+                  throw new Error(`المخزون الفعلي المتاح للكتاب "${product.title}" في المستودع هو ${physicalStock}، وهو غير كافٍ لشحن الكمية المتبقية (${remainingQty}) للفاتورة رقم ${invoice.invoice_number}.`);
+                }
+                shipmentItemsToCreate.push({
+                  invoiceItemId: item.id,
+                  quantity: remainingQty
+                });
+              }
+            } else {
+              // For non-tracked products, we can ship remaining items without check
+              const shippedRow = await db.get(`
+                SELECT COALESCE(SUM(si.quantity), 0) as qty
+                FROM shipment_items si
+                JOIN shipments s ON s.id = si.shipment_id
+                WHERE si.invoice_item_id = ? AND s.status != 'cancelled'
+              `, [item.id]);
+              
+              const remainingQty = Math.max(0, item.quantity - shippedRow.qty);
+              if (remainingQty > 0) {
+                shipmentItemsToCreate.push({
+                  invoiceItemId: item.id,
+                  quantity: remainingQty
+                });
+              }
+            }
+          }
+          
+          // Create a shipment automatically so physical stock is correctly deducted in the ledger
+          if (shipmentItemsToCreate.length > 0) {
+            const shipmentNumber = `SHP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+            const shipmentSql = `
+              INSERT INTO shipments (shipment_number, invoice_id, shipping_carrier, tracking_number, status, created_by)
+              VALUES (?, ?, 'Bulk Update', NULL, 'delivered', ?)
+            `;
+            const shipmentResult = await db.run(shipmentSql, [
+              shipmentNumber,
+              invoiceId,
+              userId
+            ]);
+            const shipmentId = shipmentResult.lastID;
+            
+            for (const shipItem of shipmentItemsToCreate) {
+              await db.run(
+                `INSERT INTO shipment_items (shipment_id, invoice_item_id, quantity) VALUES (?, ?, ?)`,
+                [shipmentId, shipItem.invoiceItemId, shipItem.quantity]
+              );
+            }
+            
+            await db.run(`
+              INSERT INTO shipment_status_history (shipment_id, old_status, new_status, changed_by, notes)
+              VALUES (?, 'delivered', 'delivered', ?, 'Shipment created automatically via bulk shipping status update.')
+            `, [shipmentId, userId]);
+          }
+        }
+
         await db.run('UPDATE invoices SET shipping_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [shippingStatus, invoiceId]);
         
         await db.run(`

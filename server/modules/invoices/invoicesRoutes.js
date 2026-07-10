@@ -243,6 +243,10 @@ router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.updat
       message: 'Shipping status updated successfully for selected invoices.'
     });
   } catch (err) {
+    const msg = (err.message || '').toLowerCase();
+    if (msg.includes('المخزون') || msg.includes('كاف') || msg.includes('exceeds') || msg.includes('insufficient')) {
+      return res.status(400).json({ error: 'Bad Request', message: err.message });
+    }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
