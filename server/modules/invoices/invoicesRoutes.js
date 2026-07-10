@@ -313,6 +313,7 @@ router.post('/export/pdf', requireAuth, checkPermission('invoices.export'), asyn
     if (err.message.includes('No invoices found') || err.message.includes('non-empty array')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
+    console.error('PDF Generation Error:', err);
     return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
