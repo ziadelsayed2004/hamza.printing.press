@@ -28,7 +28,7 @@ echo "------------------------------------------------------------"
 
 # 1. Update system packages
 echo "⏳ Updating system packages..."
-apt update && apt install -y curl git build-essential sqlite3 nginx ufw libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 libx11-6 libx11-xcb1 libxcb1 libxfixes3 libxrender1 libxext6 libxss1 libxtst6 libxcursor1 libxi6
+apt update && apt install -y curl git build-essential sqlite3 nginx ufw libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2t64 libx11-6 libx11-xcb1 libxcb1 libxfixes3 libxrender1 libxext6 libxss1 libxtst6 libxcursor1 libxi6 libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libglib2.0-0 libgtk-3-0 libdbus-1-3 fonts-liberation
 echo "✅ System packages updated."
 
 # 2. Install Node.js v20 if not installed or older
