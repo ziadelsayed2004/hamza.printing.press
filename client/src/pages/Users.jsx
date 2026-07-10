@@ -221,6 +221,9 @@ export const Users = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [userIdToArchive, setUserIdToArchive] = useState(null);
 
+  const [roleDeleteConfirmOpen, setRoleDeleteConfirmOpen] = useState(false);
+  const [roleIdToDelete, setRoleIdToDelete] = useState(null);
+
   // Role Designer state
   const [openRoleDrawer, setOpenRoleDrawer] = useState(false);
   const [roleModalMode, setRoleModalMode] = useState('create'); // 'create' or 'edit'
@@ -422,15 +425,23 @@ export const Users = () => {
   };
 
   // Safe delete role handler
-  const handleDeleteRole = async (roleId) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا الدور الوظيفي نهائياً؟')) return;
+  const handleDeleteRole = (roleId) => {
+    setRoleIdToDelete(roleId);
+    setRoleDeleteConfirmOpen(true);
+  };
+
+  const executeDeleteRole = async () => {
+    if (!roleIdToDelete) return;
     try {
-      await apiClient.delete(`/users/roles/${roleId}`);
+      await apiClient.delete(`/users/roles/${roleIdToDelete}`);
       showToast('تم حذف الدور الوظيفي بنجاح.');
       fetchData();
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل حذف الدور الوظيفي.', 'error');
+    } finally {
+      setRoleDeleteConfirmOpen(false);
+      setRoleIdToDelete(null);
     }
   };
 
@@ -768,6 +779,17 @@ export const Users = () => {
         message="هل أنت متأكد من أرشفة هذا الحساب؟ لا يمكن التراجع عن هذا الإجراء."
         severity="error"
         confirmText="أرشفة"
+      />
+
+      {/* Role Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={roleDeleteConfirmOpen}
+        onClose={() => setRoleDeleteConfirmOpen(false)}
+        onConfirm={executeDeleteRole}
+        title="تأكيد حذف الدور الوظيفي"
+        message="هل أنت متأكد من حذف هذا الدور الوظيفي نهائياً؟"
+        severity="error"
+        confirmText="حذف"
       />
 
       {/* Role Editor Drawer */}

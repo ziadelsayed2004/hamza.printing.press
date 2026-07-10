@@ -139,6 +139,11 @@
   border-radius: 8px;
 }
 
+[data-theme='dark'] .invoice-item-card {
+  background-color: #1e1e1e;
+  border-color: #3c4043;
+}
+
 .invoice-item-row {
   display: flex;
   flex-direction: row;
@@ -163,6 +168,10 @@
   border-top: 1px solid #f1f5f9;
 }
 
+[data-theme='dark'] .invoice-item-footer {
+  border-top-color: #3c4043;
+}
+
 .invoice-item-stock-error {
   display: flex;
   justify-content: space-between;
@@ -180,6 +189,11 @@
   border-radius: 8px;
   margin-top: 24px;
   margin-right: auto;
+}
+
+[data-theme='dark'] .invoice-summary-card {
+  background-color: #1e1e1e;
+  border-color: #3c4043;
 }
 
 .invoice-summary-card-content {
@@ -210,6 +224,11 @@
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   text-align: center;
+}
+
+[data-theme='dark'] .invoice-summary-callout {
+  background-color: #121212;
+  border-color: #3c4043;
 }
 
 .invoice-summary-callout-label {

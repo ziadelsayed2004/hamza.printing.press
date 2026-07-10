@@ -8,6 +8,7 @@ import { t } from '../locales/t';
 import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { FormSection } from '../components/forms/FormSection';
 import { FieldGrid } from '../components/forms/FieldGrid';
 import { EGYPT_GOVERNORATES } from '../constants/governorates';
@@ -64,7 +65,9 @@ import {
   SettingsBackupRestore as SettingsBackupRestoreIcon,
   CheckCircle as CheckCircleIcon,
   Receipt as ReceiptIcon,
-  Print as PrintIcon
+  Print as PrintIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon
 } from '@mui/icons-material';
 import '../styles/Invoices.css';
 
@@ -136,6 +139,10 @@ export const Invoices = () => {
   const [openDetailsModal, setOpenDetailsModal] = useState(false);
   const [detailsInvoice, setDetailsInvoice] = useState(null);
   const [detailsTabValue, setDetailsTabValue] = useState(0);
+
+  // Supply payment confirmation states
+  const [supplyConfirmOpen, setSupplyConfirmOpen] = useState(false);
+  const [paymentIdToSupply, setPaymentIdToSupply] = useState(null);
 
   // Form state loading
   const [scheduleLoading, setScheduleLoading] = useState(false);
@@ -679,6 +686,32 @@ export const Invoices = () => {
     }
   };
 
+  // Navigate between invoices in details drawer
+  const handleNavigateInvoice = async (direction) => {
+    if (!detailsInvoice || !invoices || invoices.length === 0) return;
+    const currentIndex = invoices.findIndex(inv => inv.id === detailsInvoice.id);
+    if (currentIndex === -1) return;
+
+    let targetIndex = currentIndex;
+    if (direction === 'next') {
+      targetIndex = currentIndex + 1;
+    } else if (direction === 'prev') {
+      targetIndex = currentIndex - 1;
+    }
+
+    if (targetIndex >= 0 && targetIndex < invoices.length) {
+      setDetailsTabValue(0);
+      try {
+        const targetInvoice = invoices[targetIndex];
+        const data = await apiClient.get(`/invoices/${targetInvoice.id}`);
+        setDetailsInvoice(data);
+      } catch (err) {
+        console.error(err);
+        showToast('فشل تحميل الفاتورة.', 'error');
+      }
+    }
+  };
+
   // Operational drawer handoffs and validations
   const handlePayHandoff = (invoice) => {
     if (!hasPermission('payments.create')) {
@@ -835,10 +868,15 @@ export const Invoices = () => {
     }
   };
 
-  const handleMarkPaymentSupplied = async (paymentId) => {
-    if (!window.confirm('هل أنت متأكد من تأكيد توريد هذه الدفعة للخزينة؟')) return;
+  const handleMarkPaymentSupplied = (paymentId) => {
+    setPaymentIdToSupply(paymentId);
+    setSupplyConfirmOpen(true);
+  };
+
+  const executeMarkPaymentSupplied = async () => {
+    if (!paymentIdToSupply) return;
     try {
-      await apiClient.post(`/payments/${paymentId}/supply`);
+      await apiClient.post(`/payments/${paymentIdToSupply}/supply`);
       showToast('تم تأكيد توريد الدفعة بنجاح.');
       
       // Refresh current details invoice to update the list of payments
@@ -850,6 +888,9 @@ export const Invoices = () => {
     } catch (err) {
       console.error(err);
       showToast(err.message || 'فشل تأكيد توريد الدفعة.', 'error');
+    } finally {
+      setSupplyConfirmOpen(false);
+      setPaymentIdToSupply(null);
     }
   };
 
@@ -1754,7 +1795,43 @@ export const Invoices = () => {
       <EntityDrawer
         open={openDetailsModal}
         onClose={() => setOpenDetailsModal(false)}
-        title={detailsInvoice ? `عرض تفاصيل الفاتورة: ${detailsInvoice.invoice_number}` : ''}
+        title={
+          detailsInvoice ? (() => {
+            const currentIndex = invoices.findIndex(inv => inv.id === detailsInvoice.id);
+            const hasPrevInvoice = currentIndex > 0;
+            const hasNextInvoice = currentIndex !== -1 && currentIndex < invoices.length - 1;
+            return (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  عرض تفاصيل الفاتورة: {detailsInvoice.invoice_number}
+                </Typography>
+                {invoices.length > 1 && currentIndex !== -1 && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mr: 'auto', ml: 2 }}>
+                    <IconButton 
+                      size="small" 
+                      disabled={!hasPrevInvoice} 
+                      onClick={() => handleNavigateInvoice('prev')}
+                      title="الفاتورة السابقة"
+                    >
+                      <ChevronRightIcon />
+                    </IconButton>
+                    <Typography variant="body2" sx={{ minWidth: 50, textAlign: 'center', fontWeight: 'medium', color: 'text.secondary' }}>
+                      {currentIndex + 1} / {invoices.length}
+                    </Typography>
+                    <IconButton 
+                      size="small" 
+                      disabled={!hasNextInvoice} 
+                      onClick={() => handleNavigateInvoice('next')}
+                      title="الفاتورة التالية"
+                    >
+                      <ChevronLeftIcon />
+                    </IconButton>
+                  </Box>
+                )}
+              </Box>
+            );
+          })() : ''
+        }
         size="full"
         actions={
           detailsInvoice && (
@@ -1930,7 +2007,7 @@ export const Invoices = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1.5 }}>أصناف ومواد الفاتورة:</Typography>
                 <TableContainer className="scrollable-table-container" component={Paper} variant="outlined">
                   <Table size="small">
-                    <TableHead sx={{ backgroundColor: '#f8fafc' }}>
+                    <TableHead sx={{ backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#2d2f31' : '#f8fafc' }}>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 'bold' }}>اسم الكتاب</TableCell>
                         <TableCell align="center" sx={{ fontWeight: 'bold' }}>الإجمالي المطلوب</TableCell>
@@ -1971,7 +2048,7 @@ export const Invoices = () => {
               </Box>
 
               {/* Totals Section */}
-              <Box sx={{ width: '100%', mb: 4, border: '1px solid #e2e8f0', borderRadius: '8px', p: 2.5, backgroundColor: '#f8fafc' }}>
+              <Box sx={{ width: '100%', mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 2.5, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="body2" color="text.secondary">المجموع الفرعي:</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(detailsInvoice.subtotal || 0)}</Typography>
@@ -2353,7 +2430,7 @@ export const Invoices = () => {
             </Box>
 
             {selectedOutlet && (
-              <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: '#f8fafc', borderColor: 'primary.light' }}>
+              <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc', borderColor: (theme) => theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' }}>
                 <Grid container spacing={2}>
                   <Grid item xs={6} sm={3}>
                     <Typography variant="caption" color="textSecondary" display="block">فئة المنفذ</Typography>
@@ -2393,8 +2470,8 @@ export const Invoices = () => {
             )}
 
             {formMode === 'create' && formCollectionType !== 'none' && (
-              <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: '#f8fafc', borderColor: 'secondary.light' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: 'secondary.dark' }}>
+              <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc', borderColor: (theme) => theme.palette.mode === 'dark' ? 'secondary.dark' : 'secondary.light' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: (theme) => theme.palette.mode === 'dark' ? 'secondary.light' : 'secondary.dark' }}>
                   تفاصيل تحصيل النقدية عند الإنشاء
                 </Typography>
                 <Grid container spacing={2}>
@@ -2778,6 +2855,17 @@ export const Invoices = () => {
           </form>
         )}
       </EntityDrawer>
+
+      {/* Supply Payment Confirmation Dialog */}
+      <ConfirmDialog
+        open={supplyConfirmOpen}
+        onClose={() => setSupplyConfirmOpen(false)}
+        onConfirm={executeMarkPaymentSupplied}
+        title="تأكيد توريد الدفعة"
+        message="هل أنت متأكد من تأكيد توريد هذه الدفعة للخزينة؟"
+        severity="warning"
+        confirmText="تأكيد التوريد"
+      />
 
       {/* Bulk Shipping Status Dialog */}
       <Dialog

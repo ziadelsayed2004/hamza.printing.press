@@ -113,7 +113,7 @@ router.post('/', requireAuth, checkPermission('shipments.create'), auditLog('cre
     if (msg.includes('does not exist')) {
       return res.status(404).json({ error: 'Not Found', message: err.message });
     }
-    if (msg.includes('required') || msg.includes('positive') || msg.includes('exceeds')) {
+    if (msg.includes('required') || msg.includes('positive') || msg.includes('exceeds') || msg.includes('المخزون') || msg.includes('كاف')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

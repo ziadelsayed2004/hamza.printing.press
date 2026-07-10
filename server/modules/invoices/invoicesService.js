@@ -402,9 +402,6 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
   await db.exec('BEGIN TRANSACTION;');
 
   try {
-    // Delete only the old invoice_items (represents mutable invoice state, not historical log)
-    await db.run('DELETE FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
-
     let subtotal = 0;
     const validatedItems = [];
 
@@ -412,8 +409,16 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
     for (const item of items) {
       const { productId, quantity } = item;
       const qty = parseInt(quantity, 10);
+      const freeQty = parseInt(item.freeQuantity || item.free_quantity, 10) || 0;
+
       if (!productId || isNaN(qty) || qty <= 0) {
         throw new Error('Valid Product ID and a positive quantity are required for all items');
+      }
+      if (freeQty < 0) {
+        throw new Error('Free quantity cannot be negative');
+      }
+      if (freeQty > qty) {
+        throw new Error('Free quantity cannot exceed physical quantity');
       }
 
       const product = await db.get('SELECT * FROM products WHERE id = ?', [productId]);
@@ -441,24 +446,16 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
         const currentStock = await inventoryService.getRealTimeStock(productId);
         const availableStock = currentStock + oldQty;
         // Stock checks are disabled to allow negative inventory on sales
-        /*
-        if (availableStock < qty) {
-          const err = new Error(`المخزون غير كافٍ للكتاب "${product.title}". المتاح: ${availableStock}، المطلوب: ${qty}`);
-          err.productId = productId;
-          err.productTitle = product.title;
-          err.currentStock = availableStock;
-          err.qty = qty;
-          throw err;
-        }
-        */
       }
 
-      const itemTotalPrice = qty * unitPrice;
+      const billableQty = qty - freeQty;
+      const itemTotalPrice = billableQty * unitPrice;
       subtotal += itemTotalPrice;
 
       validatedItems.push({
         productId,
         quantity: qty,
+        freeQuantity: freeQty,
         unitPrice,
         totalPrice: itemTotalPrice,
         stockPolicy: product.stock_policy
@@ -492,13 +489,41 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
       invoiceId
     ]);
 
-    // Save items
+    // Save/update items
+    const keptItemIds = [];
     for (const item of validatedItems) {
-      const itemSql = `
-        INSERT INTO invoice_items (invoice_id, product_id, quantity, unit_price, total_price)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      await db.run(itemSql, [invoiceId, item.productId, item.quantity, item.unitPrice, item.totalPrice]);
+      const oldItem = oldItems.find(i => i.product_id === item.productId);
+      if (oldItem) {
+        // Update existing item in place to preserve its ID and not break foreign key references
+        await db.run(
+          `UPDATE invoice_items 
+           SET quantity = ?, free_quantity = ?, unit_price = ?, total_price = ? 
+           WHERE id = ?`,
+          [item.quantity, item.freeQuantity, item.unitPrice, item.totalPrice, oldItem.id]
+        );
+        keptItemIds.push(oldItem.id);
+      } else {
+        // Insert new item
+        const itemSql = `
+          INSERT INTO invoice_items (invoice_id, product_id, quantity, free_quantity, unit_price, total_price)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        await db.run(itemSql, [
+          invoiceId,
+          item.productId,
+          item.quantity,
+          item.freeQuantity,
+          item.unitPrice,
+          item.totalPrice
+        ]);
+      }
+    }
+
+    // Process deleted items
+    for (const oldItem of oldItems) {
+      if (!keptItemIds.includes(oldItem.id)) {
+        await db.run('DELETE FROM invoice_items WHERE id = ?', [oldItem.id]);
+      }
     }
 
     // Compute and save delta stock transactions (append-only ledger)

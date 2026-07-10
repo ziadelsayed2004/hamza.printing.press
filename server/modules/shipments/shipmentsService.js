@@ -2,6 +2,30 @@ const db = require('../../db');
 const notificationsService = require('../notifications/notificationsService');
 
 /**
+ * Calculate the actual physical stock currently present in the warehouse for a product.
+ * Physical Stock = (Total Receipts + Returns + Adjustments) - Total Shipped
+ */
+async function getPhysicalStock(productId) {
+  // Sum of receipts, returns, and adjustments
+  const incomingRow = await db.get(`
+    SELECT COALESCE(SUM(quantity), 0) as qty
+    FROM inventory_transactions
+    WHERE product_id = ? AND transaction_type IN ('receipt', 'return', 'adjustment')
+  `, [productId]);
+
+  // Sum of shipped items in non-cancelled shipments
+  const shippedRow = await db.get(`
+    SELECT COALESCE(SUM(si.quantity), 0) as qty
+    FROM shipment_items si
+    JOIN shipments s ON s.id = si.shipment_id
+    JOIN invoice_items ii ON ii.id = si.invoice_item_id
+    WHERE ii.product_id = ? AND s.status != 'cancelled'
+  `, [productId]);
+
+  return incomingRow.qty - shippedRow.qty;
+}
+
+/**
  * Recalculate invoice shipping status based on non-cancelled shipments.
  */
 async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
@@ -123,6 +147,15 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
     const remainingQty = Math.max(0, invoiceItem.quantity - allocatedRow.qty);
     if (qty > remainingQty) {
       throw new Error(`Requested shipment quantity for product "${invoiceItem.product_title}" exceeds the remaining unshipped quantity of ${remainingQty}.`);
+    }
+
+    // Check physical warehouse stock before shipping
+    const product = await db.get('SELECT stock_policy FROM products WHERE id = ?', [invoiceItem.product_id]);
+    if (product && product.stock_policy === 'track') {
+      const physicalStock = await getPhysicalStock(invoiceItem.product_id);
+      if (physicalStock < qty) {
+        throw new Error(`المخزون الفعلي المتاح للكتاب "${invoiceItem.product_title}" في المستودع هو ${physicalStock}، وهو غير كافٍ لشحن الكمية المطلوبة (${qty}).`);
+      }
     }
 
     validatedItems.push({
