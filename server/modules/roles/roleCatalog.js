@@ -24,7 +24,7 @@ const ROLE_DEFINITIONS = Object.freeze({
   super_admin: Object.freeze({
     description: 'System owner with unrestricted access',
     isSystem: true,
-    isAssignable: false,
+    isAssignable: true,
     isActive: true,
     permissions: '*'
   }),

@@ -118,7 +118,8 @@ describe('022_unify_roles_and_archive_users.sql', () => {
     `);
     const byName = new Map(roles.map(role => [role.name, role]));
 
-    for (const roleName of ASSIGNABLE_SYSTEM_ROLE_NAMES) {
+    const expectedAssignable = ASSIGNABLE_SYSTEM_ROLE_NAMES.filter(name => name !== 'super_admin');
+    for (const roleName of expectedAssignable) {
       expect(byName.get(roleName)).toMatchObject({
         is_system: 1,
         is_assignable: 1,

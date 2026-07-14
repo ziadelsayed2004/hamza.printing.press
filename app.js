@@ -60,15 +60,24 @@ app.get('*', (req, res) => {
 });
 
 const { scheduleAutoBackups } = require('./server/modules/admin/backupScheduler');
+const runMigrations = require('./server/db/migrate');
 
 // Start the server if this file is run directly
 if (require.main === module) {
   const port = config.port;
-  app.listen(port, () => {
-    console.log(`Server is running on port ${port} in ${config.env} mode`);
-    // Start automated daily backup scheduler (triggers daily at 2:00 AM)
-    scheduleAutoBackups();
-  });
+  runMigrations()
+    .then(() => {
+      app.listen(port, () => {
+        console.log(`Server is running on port ${port} in ${config.env} mode`);
+        // Start automated daily backup scheduler (triggers daily at 2:00 AM)
+        scheduleAutoBackups();
+      });
+    })
+    .catch((err) => {
+      console.error('Failed to run database migrations, server startup aborted:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = app;
+

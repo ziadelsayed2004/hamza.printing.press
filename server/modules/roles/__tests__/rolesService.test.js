@@ -60,6 +60,10 @@ describe('rolesService fixed and assignable roles', () => {
       path.join(migrations, '022_unify_roles_and_archive_users.sql'),
       'utf8'
     ));
+    await db.exec(fs.readFileSync(
+      path.join(migrations, '023_make_super_admin_assignable.sql'),
+      'utf8'
+    ));
 
     jest.resetModules();
     jest.doMock('../../../db', () => db);
@@ -76,27 +80,26 @@ describe('rolesService fixed and assignable roles', () => {
     const names = roles.map(role => role.name);
 
     expect(names).toEqual(expect.arrayContaining([
-      'assistant', 'readonly_viewer', 'shipping_user',
+      'super_admin', 'assistant', 'readonly_viewer', 'shipping_user',
       'inventory_manager', 'author', 'outlet'
     ]));
-    expect(names).not.toContain('super_admin');
     expect(names).not.toContain('admin');
     expect(roles.every(role => typeof role.isSystem === 'boolean')).toBe(true);
   });
 
   test('rejects assignment of internal and deprecated roles', async () => {
-    await expect(rolesService.getAssignableRolesByNames(['super_admin']))
-      .rejects.toMatchObject({ statusCode: 400, code: 'ROLE_NOT_ASSIGNABLE' });
     await expect(rolesService.getAssignableRolesByNames(['admin']))
       .rejects.toMatchObject({ statusCode: 400, code: 'ROLE_NOT_ASSIGNABLE' });
 
     const roles = await rolesService.getAssignableRolesByNames([
+      'super_admin',
       'shipping_user',
       'inventory_manager'
     ]);
     expect(roles.map(role => role.name).sort()).toEqual([
       'inventory_manager',
-      'shipping_user'
+      'shipping_user',
+      'super_admin'
     ]);
   });
 

@@ -5,8 +5,6 @@ const dbHelper = require('./index');
 const migrationsDir = path.join(__dirname, 'migrations');
 
 async function runMigrations() {
-  console.log('--- Database Migration Runner Starting ---');
-  
   // 1. Ensure migrations tracking table exists
   await dbHelper.run(`
     CREATE TABLE IF NOT EXISTS _migrations (
@@ -18,15 +16,12 @@ async function runMigrations() {
   
   // 2. Read migration files
   if (!fs.existsSync(migrationsDir)) {
-    console.log('Migrations directory does not exist.');
     return;
   }
   
   const files = fs.readdirSync(migrationsDir)
     .filter(file => file.endsWith('.sql'))
     .sort();
-  
-  console.log(`Found ${files.length} migration file(s) in migrations folder.`);
   
   // 3. Get executed migrations
   const executedRows = await dbHelper.all('SELECT name FROM _migrations');
@@ -36,11 +31,10 @@ async function runMigrations() {
   
   for (const file of files) {
     if (executedSet.has(file)) {
-      console.log(`- Migration ${file} is already executed.`);
       continue;
     }
     
-    console.log(`Running migration: ${file}...`);
+    console.log(`Running database migration: ${file}...`);
     const sqlPath = path.join(migrationsDir, file);
     const sqlContent = fs.readFileSync(sqlPath, 'utf8');
     
@@ -63,7 +57,9 @@ async function runMigrations() {
     }
   }
   
-  console.log(`--- Migration finished: ${migratedCount} new migration(s) executed ---`);
+  if (migratedCount > 0) {
+    console.log(`--- Migration finished: ${migratedCount} new migration(s) executed ---`);
+  }
 }
 
 if (require.main === module) {

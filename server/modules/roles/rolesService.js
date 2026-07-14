@@ -169,7 +169,6 @@ async function getAllRoles({
   `;
   const params = [];
   if (!includeInactive) sql += ' AND is_active = 1';
-  if (!includeInternal) sql += " AND name != 'super_admin'";
   if (assignableOnly) sql += ' AND is_assignable = 1 AND is_active = 1';
   sql += ' ORDER BY is_system DESC, name ASC';
 

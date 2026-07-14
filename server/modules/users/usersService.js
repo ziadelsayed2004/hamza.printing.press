@@ -247,11 +247,27 @@ async function updateUser(id, { fullName, roleIds }) {
     );
   }
   if (roleIds !== undefined && await userHasRole(id, 'super_admin')) {
-    throw new UserServiceError(
-      'The system owner role cannot be reassigned through user management.',
-      403,
-      'SUPER_ADMIN_ROLE_PROTECTED'
-    );
+    const superAdminRole = await db.get("SELECT id FROM roles WHERE name = 'super_admin'");
+    if (superAdminRole && !roleIds.map(Number).includes(superAdminRole.id)) {
+      const otherActiveOwner = await db.get(
+        `SELECT 1 AS found
+         FROM users u
+         JOIN user_roles ur ON ur.role_id = u.id
+         JOIN roles r ON r.id = ur.role_id
+         WHERE r.name = 'super_admin'
+           AND u.status = 'active'
+           AND u.id != ?
+         LIMIT 1`,
+        [id]
+      );
+      if (!otherActiveOwner) {
+        throw new UserServiceError(
+          'The last active system owner cannot be reassigned to a different role.',
+          409,
+          'LAST_SUPER_ADMIN'
+        );
+      }
+    }
   }
 
   await db.exec('BEGIN IMMEDIATE TRANSACTION;');
