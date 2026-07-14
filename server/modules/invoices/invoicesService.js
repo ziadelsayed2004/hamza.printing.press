@@ -771,7 +771,9 @@ async function getInvoices({
   minRemaining = null,
   maxRemaining = null,
   authorIds = null,
-  outletIds = null
+  outletIds = null,
+  allowedShippingStatuses = null,
+  excludeCancelled = false
 } = {}) {
   let sql = `
     SELECT i.*, o.name as outlet_name, o.governorate, o.outlet_type_id,
@@ -787,6 +789,19 @@ async function getInvoices({
     WHERE 1=1
   `;
   const params = [];
+
+  if (Array.isArray(allowedShippingStatuses)) {
+    if (allowedShippingStatuses.length > 0) {
+      sql += ` AND i.shipping_status IN (${allowedShippingStatuses.map(() => '?').join(',')})`;
+      params.push(...allowedShippingStatuses);
+    } else {
+      sql += ` AND 0=1`;
+    }
+  }
+
+  if (excludeCancelled) {
+    sql += ` AND i.payment_status != 'cancelled'`;
+  }
 
   if (outletIds && outletIds.length > 0) {
     sql += ` AND i.outlet_id IN (${outletIds.map(() => '?').join(',')})`;
@@ -887,6 +902,20 @@ async function getInvoices({
   params.push(limit, offset);
 
   return await db.all(sql, params);
+}
+
+/**
+ * Retrieve only the fields needed to evaluate invoice visibility.
+ */
+async function getInvoiceVisibilityRecords(invoiceIds) {
+  if (!Array.isArray(invoiceIds) || invoiceIds.length === 0) return [];
+
+  const placeholders = invoiceIds.map(() => '?').join(',');
+  return await db.all(`
+    SELECT id, payment_status, shipping_status
+    FROM invoices
+    WHERE id IN (${placeholders})
+  `, invoiceIds);
 }
 
 /**
@@ -1102,6 +1131,7 @@ module.exports = {
   updateInvoice,
   getInvoiceById,
   getInvoices,
+  getInvoiceVisibilityRecords,
   cancelInvoice,
   bulkUpdateShippingStatus
 };

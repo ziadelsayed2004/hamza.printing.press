@@ -4,6 +4,27 @@ const reportsService = require('../reports/reportsService');
 const ExcelJS = require('exceljs');
 const { formatEgyptDateTime, formatEgyptDate } = require('../../utils/formatters');
 
+function applyInvoiceVisibilityFilters(sql, params, options = {}, invoiceAlias = 'i') {
+  const { allowedShippingStatuses, excludeCancelled } = options;
+
+  if (Array.isArray(allowedShippingStatuses)) {
+    if (allowedShippingStatuses.length === 0) {
+      sql += ' AND 1=0';
+    } else {
+      const placeholders = allowedShippingStatuses.map(() => '?').join(', ');
+      sql += ` AND ${invoiceAlias}.shipping_status IN (${placeholders})`;
+      params.push(...allowedShippingStatuses);
+    }
+  }
+
+  if (excludeCancelled) {
+    sql += ` AND ${invoiceAlias}.payment_status != ?`;
+    params.push('cancelled');
+  }
+
+  return sql;
+}
+
 /**
  * Escapes CSV values and wraps them in double quotes.
  */
@@ -536,7 +557,7 @@ async function exportOutlets(format = 'xlsx') {
 /**
  * Export invoices list with financial breakdowns.
  */
-async function exportInvoices(query = {}, format = 'xlsx') {
+async function exportInvoices(query = {}, format = 'xlsx', accessOptions = {}) {
   const params = [];
   const filtersApplied = [];
   let sql = `
@@ -561,6 +582,7 @@ async function exportInvoices(query = {}, format = 'xlsx') {
     ) p ON p.invoice_id = i.id
     WHERE 1=1
   `;
+  sql = applyInvoiceVisibilityFilters(sql, params, accessOptions);
   if (query.outletId) {
     sql += ` AND i.outlet_id = ?`;
     params.push(query.outletId);
@@ -959,7 +981,7 @@ async function exportShipments(query = {}, format = 'xlsx') {
 /**
  * Export invoice items detailed catalog.
  */
-async function exportInvoiceItems(query = {}, format = 'xlsx') {
+async function exportInvoiceItems(query = {}, format = 'xlsx', accessOptions = {}) {
   const params = [];
   const filtersApplied = [];
   let sql = `
@@ -972,6 +994,7 @@ async function exportInvoiceItems(query = {}, format = 'xlsx') {
     JOIN products p ON p.id = ii.product_id
     WHERE 1=1
   `;
+  sql = applyInvoiceVisibilityFilters(sql, params, accessOptions);
   if (query.outletId) {
     sql += ` AND i.outlet_id = ?`;
     params.push(query.outletId);

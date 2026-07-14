@@ -114,11 +114,15 @@ async function seed() {
 
     // Inventory Manager permissions
     const inventoryPerms = [
-      'products.view', 'products.create', 'products.update', 'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create'
+      'products.view', 'products.create', 'products.update', 'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
+      'invoices.view'
     ];
     for (const p of inventoryPerms) {
       await linkPerm('inventory_manager', p);
     }
+
+    // Shipping User permissions
+    await linkPerm('shipping_user', 'invoices.view');
 
     // Author permissions
     const authorPerms = [

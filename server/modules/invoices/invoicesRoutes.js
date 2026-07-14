@@ -6,8 +6,16 @@ const pdfService = require('./pdfService');
 const usersService = require('../users/usersService');
 const authorsService = require('../authors/authorsService');
 const outletsService = require('../outlets/outletsService');
+const { getInvoiceVisibilityScope, isInvoiceVisible } = require('./invoiceAccessPolicy');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+function sendInvoiceVisibilityForbidden(res) {
+  return res.status(403).json({
+    error: 'Forbidden',
+    message: 'Access denied. You do not have permission to view this invoice.'
+  });
+}
 
 // 1. GET /api/invoices - List and filter invoices
 router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) => {
@@ -30,6 +38,7 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
     const isAuthor = userRoles.some(r => r.name === 'author');
     const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
@@ -74,7 +83,9 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
       minRemaining,
       maxRemaining,
       authorIds: filterAuthorIds,
-      outletIds: filterOutletIds
+      outletIds: filterOutletIds,
+      allowedShippingStatuses: visibilityScope.allowedShippingStatuses,
+      excludeCancelled: visibilityScope.excludeCancelled
     });
     res.status(200).json(list);
   } catch (err) {
@@ -94,6 +105,11 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
 
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+    if (!isInvoiceVisible(invoice, visibilityScope)) {
+      return sendInvoiceVisibilityForbidden(res);
+    }
+
     const isAuthor = userRoles.some(r => r.name === 'author');
     const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
@@ -291,9 +307,26 @@ router.put('/:id', requireAuth, checkPermission('invoices.update'), auditLog('up
 
 // 5. GET /api/invoices/:id/payments - Get payments list for a specific invoice
 router.get('/:id/payments', requireAuth, checkPermission('invoices.view'), async (req, res) => {
-  const invoiceId = parseInt(req.params.id, 10);
+  const invoiceId = Number(req.params.id);
+
+  if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
+    return res.status(400).json({
+      error: 'Bad Request',
+      message: 'Invoice ID must be a positive integer.'
+    });
+  }
 
   try {
+    const userRoles = await usersService.getUserRoles(req.session.user.id);
+    const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+    const [invoice] = await invoicesService.getInvoiceVisibilityRecords([invoiceId]);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Not Found', message: 'Invoice not found.' });
+    }
+    if (!isInvoiceVisible(invoice, visibilityScope)) {
+      return sendInvoiceVisibilityForbidden(res);
+    }
+
     const list = await paymentsService.getPayments({ invoiceId });
     res.status(200).json(list);
   } catch (err) {
@@ -308,8 +341,40 @@ router.post('/export/pdf', requireAuth, checkPermission('invoices.export'), asyn
     return res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must be a non-empty array.' });
   }
 
+  const normalizedInvoiceIds = invoiceIds.map(invoiceId => Number(invoiceId));
+  if (normalizedInvoiceIds.some(invoiceId => !Number.isInteger(invoiceId) || invoiceId <= 0)) {
+    return res.status(400).json({
+      error: 'Bad Request',
+      message: 'Invoice IDs must contain positive integers only.'
+    });
+  }
+
+  const uniqueInvoiceIds = [...new Set(normalizedInvoiceIds)];
+
   try {
-    const pdfBuffer = await pdfService.generateInvoicesPdf(invoiceIds);
+    const userRoles = await usersService.getUserRoles(req.session.user.id);
+    const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+    const invoices = await invoicesService.getInvoiceVisibilityRecords(uniqueInvoiceIds);
+
+    if (
+      visibilityScope.restricted &&
+      (invoices.length !== uniqueInvoiceIds.length ||
+        invoices.some(invoice => !isInvoiceVisible(invoice, visibilityScope)))
+    ) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied. One or more selected invoices cannot be exported.'
+      });
+    }
+
+    if (invoices.length !== uniqueInvoiceIds.length) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: 'One or more selected invoices were not found.'
+      });
+    }
+
+    const pdfBuffer = await pdfService.generateInvoicesPdf(uniqueInvoiceIds);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="invoices_report.pdf"');
     return res.status(200).send(pdfBuffer);

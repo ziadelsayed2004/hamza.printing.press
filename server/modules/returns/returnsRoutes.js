@@ -3,8 +3,16 @@ const router = express.Router();
 const returnsService = require('./returnsService');
 const outletsService = require('../outlets/outletsService');
 const usersService = require('../users/usersService');
+const { getInvoiceVisibilityScope } = require('../invoices/invoiceAccessPolicy');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+function sendRestrictedInvoiceRoleForbidden(res) {
+  return res.status(403).json({
+    error: 'Forbidden',
+    message: 'Access denied. This role is limited to incomplete invoices.'
+  });
+}
 
 // 1. GET /api/returns - List and filter returns
 router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) => {
@@ -16,6 +24,11 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
+    const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+    if (visibilityScope.restricted) {
+      return sendRestrictedInvoiceRoleForbidden(res);
+    }
+
     const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff'].includes(r.name));
 
@@ -44,13 +57,18 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
   }
 
   try {
+    const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+    if (visibilityScope.restricted) {
+      return sendRestrictedInvoiceRoleForbidden(res);
+    }
+
     const ret = await returnsService.getReturnById(id);
     if (!ret) {
       return res.status(404).json({ error: 'Not Found', message: `Return with ID ${id} does not exist.` });
     }
 
-    const userId = req.session.user.id;
-    const userRoles = await usersService.getUserRoles(userId);
     const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff'].includes(r.name));
 

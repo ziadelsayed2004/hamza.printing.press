@@ -1,3 +1,4 @@
+@import './variables.css';
 /* 
   Material UI CSS layout overrides & utility classes.
   DEBT NOTE: Core component overrides (MuiInputBase, MuiOutlinedInput, MuiCard, MuiListItemButton) 

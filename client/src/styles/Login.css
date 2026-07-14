@@ -1,3 +1,4 @@
+@import './variables.css';
 :root {
   --login-bg: var(--color-bg);
   --login-surface: var(--color-surface);

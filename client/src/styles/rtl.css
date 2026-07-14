@@ -1,3 +1,4 @@
+@import './variables.css';
 /* 
   RTL Layout & Text Alignment Rules.
   The root Emotion cache is prepended, so these external rules follow MUI styles

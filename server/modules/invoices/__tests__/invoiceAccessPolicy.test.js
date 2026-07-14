@@ -1,0 +1,75 @@
+const {
+  INCOMPLETE_SHIPPING_STATUSES,
+  getInvoiceVisibilityScope,
+  isInvoiceVisible
+} = require('../invoiceAccessPolicy');
+
+describe('invoice access policy', () => {
+  test.each(['inventory_manager', 'shipping_user'])(
+    'restricts incomplete-invoice role %s',
+    role => {
+      expect(getInvoiceVisibilityScope([role])).toEqual({
+        restricted: true,
+        allowedShippingStatuses: INCOMPLETE_SHIPPING_STATUSES,
+        excludeCancelled: true
+      });
+    }
+  );
+
+  test.each(['super_admin', 'admin', 'accountant', 'sales_staff'])(
+    'lets bypass role %s see the normal invoice scope',
+    role => {
+      expect(getInvoiceVisibilityScope([role])).toEqual({
+        restricted: false,
+        allowedShippingStatuses: null,
+        excludeCancelled: false
+      });
+    }
+  );
+
+  test('keeps two restricted roles restricted', () => {
+    expect(getInvoiceVisibilityScope(['inventory_manager', 'shipping_user']).restricted).toBe(true);
+  });
+
+  test.each(['super_admin', 'admin', 'accountant', 'sales_staff'])(
+    'gives bypass role %s precedence in a mixed-role user',
+    bypassRole => {
+      expect(getInvoiceVisibilityScope(['shipping_user', bypassRole]).restricted).toBe(false);
+    }
+  );
+
+  test('does not restrict unrelated roles or malformed role input', () => {
+    expect(getInvoiceVisibilityScope(['author']).restricted).toBe(false);
+    expect(getInvoiceVisibilityScope(null).restricted).toBe(false);
+  });
+
+  test.each([
+    ['pending', 'unpaid', true],
+    ['partially_shipped', 'paid', true],
+    ['shipped', 'unpaid', false],
+    ['delivered', 'paid', false],
+    ['pending', 'cancelled', false],
+    ['partially_shipped', 'cancelled', false]
+  ])(
+    'evaluates shipping=%s payment=%s as visible=%s for restricted users',
+    (shippingStatus, paymentStatus, expected) => {
+      const scope = getInvoiceVisibilityScope(['inventory_manager']);
+      const invoice = {
+        shipping_status: shippingStatus,
+        payment_status: paymentStatus
+      };
+
+      expect(isInvoiceVisible(invoice, scope)).toBe(expected);
+    }
+  );
+
+  test('does not apply invoice-state filtering to an unrestricted scope', () => {
+    const scope = getInvoiceVisibilityScope(['sales_staff']);
+    const completedCancelledInvoice = {
+      shipping_status: 'delivered',
+      payment_status: 'cancelled'
+    };
+
+    expect(isInvoiceVisible(completedCancelledInvoice, scope)).toBe(true);
+  });
+});

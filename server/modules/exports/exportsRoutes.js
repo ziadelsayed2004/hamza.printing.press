@@ -1,8 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const exportsService = require('./exportsService');
+const usersService = require('../users/usersService');
+const { getInvoiceVisibilityScope } = require('../invoices/invoiceAccessPolicy');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+async function getInvoiceExportOptions(userId) {
+  const userRoles = await usersService.getUserRoles(userId);
+  const scope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+
+  return {
+    allowedShippingStatuses: scope.allowedShippingStatuses,
+    excludeCancelled: scope.excludeCancelled
+  };
+}
 
 // Helper to handle sending downloads based on format
 function sendExportDownload(res, filenameBase, format, contentOrBuffer) {
@@ -70,7 +82,8 @@ router.get('/outlets', requireAuth, checkPermission('exports.run'), auditLog('ex
 router.get('/invoices', requireAuth, checkPermission('exports.run'), auditLog('export_invoices', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
-    const content = await exportsService.exportInvoices(req.query, format);
+    const accessOptions = await getInvoiceExportOptions(req.session.user.id);
+    const content = await exportsService.exportInvoices(req.query, format, accessOptions);
     sendExportDownload(res, 'invoices_export', format, content);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -81,7 +94,8 @@ router.get('/invoices', requireAuth, checkPermission('exports.run'), auditLog('e
 router.get('/invoice-items', requireAuth, checkPermission('exports.run'), auditLog('export_invoice_items', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
-    const content = await exportsService.exportInvoiceItems(req.query, format);
+    const accessOptions = await getInvoiceExportOptions(req.session.user.id);
+    const content = await exportsService.exportInvoiceItems(req.query, format, accessOptions);
     sendExportDownload(res, 'invoice_items_export', format, content);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

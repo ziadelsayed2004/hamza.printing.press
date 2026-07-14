@@ -9,6 +9,9 @@ import LoadingState from '../components/LoadingState';
 import EmptyState from '../components/EmptyState';
 import EntityDrawer from '../components/EntityDrawer';
 import ConfirmDialog from '../components/ConfirmDialog';
+import InvoiceDetailsDrawer from '../components/invoices/InvoiceDetailsDrawer';
+import InvoiceWizardDrawer from '../components/invoices/InvoiceWizardDrawer';
+import InvoiceReturnDrawer from '../components/invoices/InvoiceReturnDrawer';
 import { FormSection } from '../components/forms/FormSection';
 import { FieldGrid } from '../components/forms/FieldGrid';
 import { EGYPT_GOVERNORATES } from '../constants/governorates';
@@ -72,9 +75,19 @@ import {
 import '../styles/Invoices.css';
 
 export const Invoices = () => {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const userRoles = Array.isArray(user?.roles) ? user.roles : [];
+  const hasRestrictedInvoiceRole = userRoles.some((role) =>
+    ['inventory_manager', 'shipping_user'].includes(role)
+  );
+  const hasUnrestrictedInvoiceRole = userRoles.some((role) =>
+    ['super_admin', 'admin', 'accountant', 'sales_staff'].includes(role)
+  );
+  const isInvoiceVisibilityRestricted =
+    hasRestrictedInvoiceRole && !hasUnrestrictedInvoiceRole;
 
   const kpiCardStyle = {
     p: 2,
@@ -1323,6 +1336,12 @@ export const Invoices = () => {
         </Box>
       </Box>
 
+      {isInvoiceVisibilityRestricted && (
+        <Alert severity="info" variant="outlined" sx={{ mb: 3 }}>
+          المعروض هنا يقتصر على الفواتير غير الملغاة التي ما زالت قيد الانتظار أو تم شحنها جزئياً.
+        </Alert>
+      )}
+
       {/* Expandable Search & Filter Panel */}
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
@@ -1471,7 +1490,9 @@ export const Invoices = () => {
                     <MenuItem value="">الكل</MenuItem>
                     <MenuItem value="pending">قيد الانتظار</MenuItem>
                     <MenuItem value="partially_shipped">شحن جزئي</MenuItem>
-                    <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
+                    {!isInvoiceVisibilityRestricted && (
+                      <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -1792,1069 +1813,86 @@ export const Invoices = () => {
       </Paper>
 
       {/* --- modal details view --- */}
-      <EntityDrawer
+      <InvoiceDetailsDrawer
         open={openDetailsModal}
         onClose={() => setOpenDetailsModal(false)}
-        title={
-          detailsInvoice ? (() => {
-            const currentIndex = invoices.findIndex(inv => inv.id === detailsInvoice.id);
-            const hasPrevInvoice = currentIndex > 0;
-            const hasNextInvoice = currentIndex !== -1 && currentIndex < invoices.length - 1;
-            return (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  عرض تفاصيل الفاتورة: {detailsInvoice.invoice_number}
-                </Typography>
-                {invoices.length > 1 && currentIndex !== -1 && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mr: 'auto', ml: 2 }}>
-                    <IconButton 
-                      size="small" 
-                      disabled={!hasPrevInvoice} 
-                      onClick={() => handleNavigateInvoice('prev')}
-                      title="الفاتورة السابقة"
-                    >
-                      <ChevronRightIcon />
-                    </IconButton>
-                    <Typography variant="body2" sx={{ minWidth: 50, textAlign: 'center', fontWeight: 'medium', color: 'text.secondary' }}>
-                      {currentIndex + 1} / {invoices.length}
-                    </Typography>
-                    <IconButton 
-                      size="small" 
-                      disabled={!hasNextInvoice} 
-                      onClick={() => handleNavigateInvoice('next')}
-                      title="الفاتورة التالية"
-                    >
-                      <ChevronLeftIcon />
-                    </IconButton>
-                  </Box>
-                )}
-              </Box>
-            );
-          })() : ''
-        }
-        size="full"
-        actions={
-          detailsInvoice && (
-            <>
-              {detailsInvoice.payment_status !== 'cancelled' && detailsInvoice.remaining_amount > 0 && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<PaymentsIcon />}
-                  onClick={() => {
-                    setOpenDetailsModal(false);
-                    handlePayHandoff(detailsInvoice);
-                  }}
-                >
-                  تسجيل دفع
-                </Button>
-              )}
-
-              {detailsInvoice.payment_status !== 'cancelled' && detailsInvoice.remaining_amount > 0 && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  startIcon={<CheckCircleIcon />}
-                  onClick={() => {
-                    setOpenDetailsModal(false);
-                    handleMarkPaidHandoff(detailsInvoice);
-                  }}
-                >
-                  إغلاق كمدفوع كلياً
-                </Button>
-              )}
-
-              {detailsInvoice.payment_status !== 'cancelled' && (
-                <Button
-                  variant="contained"
-                  color="warning"
-                  startIcon={<LocalShippingIcon />}
-                  onClick={() => {
-                    setOpenDetailsModal(false);
-                    handleShipHandoff(detailsInvoice);
-                  }}
-                >
-                  تحديث حالة الشحن
-                </Button>
-              )}
-
-              {detailsInvoice.payment_status !== 'cancelled' && (
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={<SettingsBackupRestoreIcon />}
-                  onClick={() => {
-                    setOpenDetailsModal(false);
-                    handleReturnClick(detailsInvoice);
-                  }}
-                >
-                  إنشاء مرتجع (Return)
-                </Button>
-              )}
-
-              {hasPermission('invoices.export') && (
-                <>
-                  <Button
-                    variant="outlined"
-                    color="secondary"
-                    startIcon={<DownloadIcon />}
-                    onClick={() => handleSinglePdfExport(detailsInvoice.id)}
-                  >
-                    تنزيل PDF
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="info"
-                    startIcon={<PrintIcon />}
-                    onClick={() => handleSinglePdfPrint(detailsInvoice.id)}
-                  >
-                    معاينة وطباعة PDF
-                  </Button>
-                </>
-              )}
-
-              {hasPermission('invoices.view') && (
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<PrintIcon />}
-                  onClick={() => handlePrintInvoice(detailsInvoice)}
-                >
-                  طباعة الفاتورة
-                </Button>
-              )}
-
-              <Button onClick={() => setOpenDetailsModal(false)} variant="contained" color="inherit">
-                إغلاق
-              </Button>
-            </>
-          )
-        }
-      >
-        {detailsInvoice && (
-          <Box sx={{ flexGrow: 1, pr: 1, pl: 1 }}>
-              {/* Responsive summary KPI cards */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={2.4}>
-                  <Card variant="outlined" sx={kpiCardStyle}>
-                    <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>العميل / المنفذ</Typography>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 0.5 }}>{detailsInvoice.outlet_name}</Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5 }}>
-                      المحافظة: {detailsInvoice.governorate || '-'}
-                    </Typography>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
-                  <Card variant="outlined" sx={getRemainingCardStyle(detailsInvoice.remaining_amount)}>
-                    <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>المبلغ المتبقي (ذمة)</Typography>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: detailsInvoice.remaining_amount > 0 ? 'error.main' : 'success.main', mt: 0.5 }}>
-                      {formatCurrencyEGP(detailsInvoice.remaining_amount)}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5 }}>
-                      المدفوع: {formatCurrencyEGP(detailsInvoice.paid_amount)}
-                    </Typography>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
-                  <Card variant="outlined" sx={kpiCardStyle}>
-                    <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>الشحن والتوزيع</Typography>
-                    <Box sx={{ mt: 0.5 }}>
-                      {getShippingStatusChip(detailsInvoice.shipping_status)}
-                    </Box>
-                    <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
-                      طريقة الدفع: {
-                        detailsInvoice.payment_status === 'paid' ? 'دفع كلي' :
-                        detailsInvoice.payment_status === 'partially_paid' ? 'دفع جزئي' :
-                        translatePaymentType(detailsInvoice.payment_type)
-                      }
-                    </Typography>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
-                  <Card variant="outlined" sx={kpiCardStyle}>
-                    <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>القيمة الإجمالية للفاتورة</Typography>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mt: 0.5 }}>
-                      {formatCurrencyEGP(detailsInvoice.total_price)}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5 }}>
-                      تاريخ الفاتورة: {formatEgyptDateTime(detailsInvoice.created_at)}
-                    </Typography>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
-                  <Card variant="outlined" sx={{ ...kpiCardStyle, alignItems: 'center', p: 1, height: '100%' }}>
-                    <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500, mb: 0.5 }}>{t('system.qrCode')}</Typography>
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(window.location.origin + '/invoices?search=' + detailsInvoice.invoice_number)}`} 
-                      alt="Invoice QR Code"
-                      className="invoice-qr-code"
-                    />
-                    <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, fontSize: '0.65rem' }}>{t('system.scanToViewInvoice')}</Typography>
-                  </Card>
-                </Grid>
-              </Grid>
-
-              {/* Additional notes/conditions section */}
-              {detailsInvoice.notes && (
-                <Alert severity="info" variant="outlined" icon={false} sx={{ mb: 3 }}>
-                  <Typography variant="caption" color="textSecondary" display="block">ملاحظات وشروط إضافية:</Typography>
-                  <Typography variant="body2">{detailsInvoice.notes}</Typography>
-                </Alert>
-              )}
-
-              {/* Items Table */}
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1.5 }}>أصناف ومواد الفاتورة:</Typography>
-                <TableContainer className="scrollable-table-container" component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead sx={{ backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#2d2f31' : '#f8fafc' }}>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 'bold' }}>اسم الكتاب</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>الإجمالي المطلوب</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>المدفوع</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>المجاني</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>المشحون</TableCell>
-                        <TableCell align="center" sx={{ fontWeight: 'bold' }}>المرتجع</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الإجمالي</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {detailsInvoice.items?.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.product_title}</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold' }}>{item.quantity}</TableCell>
-                          <TableCell align="center">{item.quantity - (item.free_quantity || 0)}</TableCell>
-                          <TableCell align="center" sx={{ color: item.free_quantity > 0 ? 'success.main' : 'text.secondary', fontWeight: item.free_quantity > 0 ? 'bold' : 'normal' }}>
-                            {item.free_quantity || 0}
-                          </TableCell>
-                          <TableCell align="center">
-                            <Chip
-                              label={item.shipped_quantity || 0}
-                              size="small"
-                              color={item.shipped_quantity >= item.quantity ? 'success' : item.shipped_quantity > 0 ? 'warning' : 'default'}
-                            />
-                          </TableCell>
-                          <TableCell align="center" sx={{ color: item.returned_quantity > 0 ? 'error.main' : 'text.secondary' }}>
-                            {item.returned_quantity || 0}
-                          </TableCell>
-                          <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(item.total_price)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-
-              {/* Totals Section */}
-              <Box sx={{ width: '100%', mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 2.5, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">المجموع الفرعي:</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(detailsInvoice.subtotal || 0)}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">تكلفة الشحن:</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>+{formatCurrencyEGP(detailsInvoice.shipping_cost || 0)}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary">الخصم الممنوح:</Typography>
-                  <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 'bold' }}>
-                    -{formatCurrencyEGP(detailsInvoice.discount || 0)}
-                  </Typography>
-                </Box>
-                <Divider sx={{ my: 1.5 }} />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>المجموع النهائي:</Typography>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                    {formatCurrencyEGP(detailsInvoice.total_price)}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: 'success.main' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>المجموع المسدد:</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    {formatCurrencyEGP(detailsInvoice.paid_amount || 0)}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, color: 'error.main' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>المبلغ المتبقي:</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    {formatCurrencyEGP(detailsInvoice.remaining_amount || 0)}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-                <Tabs value={detailsTabValue} onChange={(e, val) => setDetailsTabValue(val)}>
-                  <Tab label="سجل التحصيلات والمدفوعات" icon={<PaymentsIcon />} iconPosition="start" />
-                  <Tab label="شحنات التوصيل" icon={<LocalShippingIcon />} iconPosition="start" />
-                  <Tab label="مرتجع المبيعات" icon={<SettingsBackupRestoreIcon />} iconPosition="start" />
-                  <Tab label="سجل حالات الفاتورة" icon={<EventNoteIcon />} iconPosition="start" />
-                </Tabs>
-              </Box>
-
-              {/* TAB 0: Payments */}
-              {detailsTabValue === 0 && (
-                <Box>
-                  {detailsInvoice.payments && detailsInvoice.payments.length > 0 ? (
-                    <TableContainer className="scrollable-table-container" component={Paper}>
-                      <Table size="small">
-                        <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                          <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>رقم العملية</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>تاريخ السداد</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>طريقة السداد</TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 'bold' }}>القيمة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>حالة التوريد</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>سجلت بواسطة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>ملاحظات</TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 'bold' }}>إجراءات</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {detailsInvoice.payments.map((p) => (
-                            <TableRow key={p.id}>
-                              <TableCell sx={{ fontFamily: 'monospace' }}>{p.receipt_number || p.id}</TableCell>
-                              <TableCell>{formatEgyptDate(p.payment_date)}</TableCell>
-                              <TableCell>{translatePaymentType(p.payment_type)}</TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                                {formatCurrencyEGP(p.amount)}
-                              </TableCell>
-                              <TableCell>
-                                {p.supply_status === 'supplied' ? (
-                                  <Chip label="مورد" color="success" size="small" variant="outlined" />
-                                ) : (
-                                  <Chip label="غير مورد" color="warning" size="small" variant="outlined" />
-                                )}
-                              </TableCell>
-                              <TableCell>{p.user_full_name || 'غير معروف'}</TableCell>
-                              <TableCell>{p.notes}</TableCell>
-                              <TableCell align="center">
-                                {p.supply_status === 'not_supplied' && hasPermission('payments.mark_supplied') && (
-                                  <Button
-                                    variant="contained"
-                                    color="success"
-                                    size="small"
-                                    onClick={() => handleMarkPaymentSupplied(p.id)}
-                                  >
-                                    تأكيد التوريد
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: 'text.secondary', p: 2, textAlign: 'center' }}>
-                      لا يوجد دفعات مسددة مسجلة لهذه الفاتورة حتى الآن.
-                    </Typography>
-                  )}
-                </Box>
-              )}
-
-              {/* TAB 1: Shipments */}
-              {detailsTabValue === 1 && (
-                <Box>
-                  {detailsInvoice.shipments && detailsInvoice.shipments.length > 0 ? (
-                    <TableContainer className="scrollable-table-container" component={Paper}>
-                      <Table size="small">
-                        <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                          <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>رقم الشحنة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الشحن</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>شركة الشحن</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>رقم التتبع</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>الأصناف المشحونة</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {detailsInvoice.shipments.map((s) => (
-                            <TableRow key={s.id}>
-                              <TableCell sx={{ fontFamily: 'monospace' }}>{s.shipment_number}</TableCell>
-                              <TableCell>{formatEgyptDateTime(s.created_at)}</TableCell>
-                              <TableCell>{s.shipping_carrier || 'غير محدد'}</TableCell>
-                              <TableCell sx={{ fontFamily: 'monospace' }}>{s.tracking_number || '-'}</TableCell>
-                              <TableCell>
-                                {getShippingStatusChip(s.status)}
-                              </TableCell>
-                              <TableCell>{s.user_full_name || 'غير معروف'}</TableCell>
-                              <TableCell>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                  {s.items?.map((item) => (
-                                    <Typography key={item.id} variant="caption" display="block">
-                                      - {item.product_title}: <strong>{item.quantity}</strong>
-                                    </Typography>
-                                  ))}
-                                </Box>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: 'text.secondary', p: 2, textAlign: 'center' }}>
-                      لا يوجد شحنات مسجلة لهذه الفاتورة حتى الآن.
-                    </Typography>
-                  )}
-                </Box>
-              )}
-
-              {/* TAB 2: Returns */}
-              {detailsTabValue === 2 && (
-                <Box>
-                  {detailsInvoice.returns && detailsInvoice.returns.length > 0 ? (
-                    <TableContainer className="scrollable-table-container" component={Paper}>
-                      <Table size="small">
-                        <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                          <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold' }}>رقم المرتجع</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>تاريخ المرتجع</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>قيمة المرتجع</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>السبب / الملاحظة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>الأصناف المرتجعة</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {detailsInvoice.returns.map((r) => (
-                            <TableRow key={r.id}>
-                              <TableCell sx={{ fontFamily: 'monospace' }}>{r.return_number}</TableCell>
-                              <TableCell>{formatEgyptDateTime(r.created_at)}</TableCell>
-                              <TableCell sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                                {formatCurrencyEGP(r.return_value || 0)}
-                              </TableCell>
-                              <TableCell>{r.reason || '-'}</TableCell>
-                              <TableCell>
-                                <Chip
-                                  label={r.status === 'completed' ? 'مكتمل' : r.status === 'cancelled' ? 'ملغي' : r.status}
-                                  color={r.status === 'completed' ? 'success' : r.status === 'cancelled' ? 'error' : 'default'}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              </TableCell>
-                              <TableCell>{r.user_full_name || 'غير معروف'}</TableCell>
-                              <TableCell>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                  {r.items?.map((item) => (
-                                    <Typography key={item.id} variant="caption" display="block">
-                                      - {item.product_title}: <strong>{item.quantity}</strong>
-                                    </Typography>
-                                  ))}
-                                </Box>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: 'text.secondary', p: 2, textAlign: 'center' }}>
-                      لا يوجد مرتجعات مسجلة لهذه الفاتورة حتى الآن.
-                    </Typography>
-                  )}
-                </Box>
-              )}
-
-              {/* TAB 3: Status History */}
-              {detailsTabValue === 3 && (
-                <Box>
-                  <TableContainer className="scrollable-table-container" component={Paper}>
-                    <Table size="small">
-                      <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                        <TableRow>
-                          <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الحركة</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>النوع</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>الحالة السابقة</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>الحالة الجديدة</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
-                          <TableCell sx={{ fontWeight: 'bold' }}>السبب / الملاحظة</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {detailsInvoice.history.map((h) => (
-                          <TableRow key={h.id}>
-                            <TableCell>{formatEgyptDateTime(h.created_at)}</TableCell>
-                            <TableCell>
-                              {h.status_type === 'payment' ? 'دفع مالية' : 'توصيل شحن'}
-                            </TableCell>
-                            <TableCell>{h.status_type === 'payment' ? getPaymentStatusChip(h.old_status) : getShippingStatusChip(h.old_status)}</TableCell>
-                            <TableCell>{h.status_type === 'payment' ? getPaymentStatusChip(h.new_status) : getShippingStatusChip(h.new_status)}</TableCell>
-                            <TableCell>{h.user_full_name || 'غير معروف'}</TableCell>
-                            <TableCell>{h.notes}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-              )}
-          </Box>
-        )}
-      </EntityDrawer>
+        detailsInvoice={detailsInvoice}
+        invoices={invoices}
+        handleNavigateInvoice={handleNavigateInvoice}
+        hasPermission={hasPermission}
+        handlePayHandoff={handlePayHandoff}
+        handleMarkPaidHandoff={handleMarkPaidHandoff}
+        handleShipHandoff={handleShipHandoff}
+        handleReturnClick={handleReturnClick}
+        handleSinglePdfExport={handleSinglePdfExport}
+        handleSinglePdfPrint={handleSinglePdfPrint}
+        handlePrintInvoice={handlePrintInvoice}
+        detailsTabValue={detailsTabValue}
+        setDetailsTabValue={setDetailsTabValue}
+        handleMarkPaymentSupplied={handleMarkPaymentSupplied}
+      />
 
       {/* --- wizard creation / edit invoice modal --- */}
       {/* --- wizard creation / edit invoice Drawer --- */}
-      <EntityDrawer
+      <InvoiceWizardDrawer
         open={openFormModal}
-        onClose={() => !formSubmitting && setOpenFormModal(false)}
-        title={formMode === 'create' ? 'إنشاء فاتورة مبيعات جديدة' : 'تعديل فاتورة مبيعات'}
-        size="large"
-        loading={formSubmitting}
-        actions={
-          <>
-            <Button onClick={() => setOpenFormModal(false)} variant="outlined" color="inherit" disabled={formSubmitting}>
-              إلغاء
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              type="submit"
-              form="invoice-editor-form"
-              disabled={formSubmitting}
-            >
-              {formSubmitting ? 'جاري الحفظ والتحقق من الكميات...' : 'حفظ وتأكيد الفاتورة'}
-            </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleFormSubmit} id="invoice-editor-form">
-          <FormSection title="بيانات العميل والفاتورة">
-            <FieldGrid columns={2}>
-              <TextField
-                required
-                fullWidth
-                size="small"
-                label={t('system.invoiceNumber')}
-                value={formInvoiceNumber}
-                inputProps={{ className: 'ltr-value', readOnly: true }}
-                disabled={true}
-              />
-
-              {/* Outlet select */}
-              <FormControl fullWidth size="small" required>
-                <InputLabel id="form-outlet-select-label">المنفذ / العميل</InputLabel>
-                <Select
-                  labelId="form-outlet-select-label"
-                  value={formOutletId}
-                  onChange={(e) => handleFormOutletChange(e.target.value)}
-                  label="المنفذ / العميل"
-                  disabled={formMode === 'edit'} // Lock outlet on edit
-                >
-                  {outlets.map((o) => (
-                    <MenuItem key={o.id} value={o.id}>
-                      {o.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {/* Payment Status (Only on creation) */}
-              {formMode === 'create' ? (
-                <FormControl fullWidth size="small" required>
-                  <InputLabel id="form-collection-select-label">حالة الدفع عند الإنشاء</InputLabel>
-                  <Select
-                    labelId="form-collection-select-label"
-                    value={formCollectionType}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFormCollectionType(val);
-                      if (val === 'none') {
-                        setFormCollectedAmount(0);
-                      } else if (val === 'full') {
-                        setFormCollectedAmount(parseFloat(formTotals.total) || 0);
-                      }
-                    }}
-                    label="حالة الدفع عند الإنشاء"
-                  >
-                    <MenuItem value="none">مؤجل كلياً (Fully Deferred)</MenuItem>
-                    <MenuItem value="partial">مدفوع جزئياً (Partially Paid)</MenuItem>
-                    <MenuItem value="full">مدفوع كلياً (Fully Paid)</MenuItem>
-                  </Select>
-                </FormControl>
-              ) : (
-                <TextField
-                  fullWidth
-                  label="نوع الدفع"
-                  size="small"
-                  disabled
-                  value={translatePaymentType(formPaymentType)}
-                />
-              )}
-
-              {/* Discount */}
-              <TextField
-                fullWidth
-                label="الخصم المباشر الممنوح"
-                size="small"
-                type="number"
-                inputProps={{ step: '0.01', min: '0' }}
-                value={formDiscount}
-                onChange={(e) => setFormDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                InputProps={{
-                  endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
-                }}
-              />
-
-              {/* Shipping Cost */}
-              <TextField
-                fullWidth
-                label="تكلفة وأجور الشحن والتوصيل"
-                size="small"
-                type="number"
-                inputProps={{ step: '0.01', min: '0' }}
-                value={formShippingCost}
-                onChange={(e) => setFormShippingCost(Math.max(0, parseFloat(e.target.value) || 0))}
-                InputProps={{
-                  endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
-                }}
-              />
-            </FieldGrid>
-
-            {/* Notes */}
-            <Box sx={{ mt: 2 }}>
-              <TextField
-                fullWidth
-                label="ملاحظات وتفاصيل الفاتورة"
-                size="small"
-                multiline
-                rows={2}
-                value={formNotes}
-                onChange={(e) => setFormNotes(e.target.value)}
-              />
-            </Box>
-
-            {selectedOutlet && (
-              <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc', borderColor: (theme) => theme.palette.mode === 'dark' ? 'primary.dark' : 'primary.light' }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={6} sm={3}>
-                    <Typography variant="caption" color="textSecondary" display="block">فئة المنفذ</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formOutletTypeLabel || 'غير محددة'}</Typography>
-                  </Grid>
-                  <Grid item xs={6} sm={3}>
-                    <Typography variant="caption" color="textSecondary" display="block">المحافظة</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.governorate || '-'}</Typography>
-                  </Grid>
-                  <Grid item xs={6} sm={3}>
-                    <Typography variant="caption" color="textSecondary" display="block">الهاتف</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.phone || '-'}</Typography>
-                  </Grid>
-                  <Grid item xs={6} sm={3}>
-                    <Typography variant="caption" color="textSecondary" display="block">الحد الائتماني</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(selectedOutlet.credit_limit || 0)}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="caption" color="textSecondary" display="block">تفاصيل العنوان</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.address_details || '-'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="caption" color="textSecondary" display="block">المديونية (الرصيد المعلق الحالي)</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: (selectedOutletBalance?.pending_balance || 0) > 0 ? 'warning.main' : 'success.main' }}>
-                      {formatCurrencyEGP(selectedOutletBalance?.pending_balance || 0)}
-                    </Typography>
-                  </Grid>
-                  {selectedOutlet.credit_limit > 0 && (selectedOutletBalance?.pending_balance || 0) > selectedOutlet.credit_limit && (
-                    <Grid item xs={12}>
-                      <Alert severity="warning" sx={{ mt: 1 }}>
-                        تنبيه: مديونية هذا العميل تتجاوز الحد الائتماني المسموح به!
-                      </Alert>
-                    </Grid>
-                  )}
-                </Grid>
-              </Paper>
-            )}
-
-            {formMode === 'create' && formCollectionType !== 'none' && (
-              <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc', borderColor: (theme) => theme.palette.mode === 'dark' ? 'secondary.dark' : 'secondary.light' }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: (theme) => theme.palette.mode === 'dark' ? 'secondary.light' : 'secondary.dark' }}>
-                  تفاصيل تحصيل النقدية عند الإنشاء
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      required
-                      label="المبلغ المحصل"
-                      size="small"
-                      type="number"
-                      disabled={formCollectionType === 'full'}
-                      inputProps={{ step: '0.01', min: '0.01' }}
-                      value={formCollectionType === 'full' ? formTotals.total : formCollectedAmount}
-                      onChange={(e) => setFormCollectedAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                      InputProps={{
-                        endAdornment: <InputAdornment position="end">ج.م</InputAdornment>
-                      }}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth size="small" required>
-                      <InputLabel id="form-supply-status-select-label">حالة توريد النقدية</InputLabel>
-                      <Select
-                        labelId="form-supply-status-select-label"
-                        value={formSupplyStatus}
-                        onChange={(e) => setFormSupplyStatus(e.target.value)}
-                        label="حالة توريد النقدية"
-                      >
-                        <MenuItem value="not_supplied">مدفوع فقط (في الخزينة الفرعية)</MenuItem>
-                        <MenuItem value="supplied">مدفوع وتم توريده (إلى خزينة الشركة)</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="ملاحظات عملية التحصيل"
-                      size="small"
-                      value={formCollectionNotes}
-                      onChange={(e) => setFormCollectionNotes(e.target.value)}
-                    />
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <Box className="receipt-upload-container">
-                      <input
-                        hidden
-                        accept="image/*,application/pdf"
-                        id="invoice-payment-receipt-upload"
-                        type="file"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            try {
-                              const result = await compressImageAndConvertToBase64(file);
-                              setFormReceiptName(result.name);
-                              setFormReceiptData(result.data);
-                            } catch (err) {
-                              console.error('Error processing file:', err);
-                              setToastMsg('حدث خطأ أثناء معالجة الملف المرفوع.');
-                              setToastSeverity('error');
-                            }
-                          }
-                        }}
-                      />
-                      <label htmlFor="invoice-payment-receipt-upload">
-                        <Button
-                          variant="outlined"
-                          component="span"
-                          color="secondary"
-                          startIcon={<ReceiptIcon />}
-                          sx={{ fontWeight: 'bold' }}
-                        >
-                          {formReceiptName ? `تغيير مستند الإيصال: ${formReceiptName}` : 'رفع إيصال / مستند الدفع'}
-                        </Button>
-                      </label>
-                      {formReceiptName && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'bold' }}>
-                            الملف المحدد: {formReceiptName}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => {
-                              setFormReceiptName('');
-                              setFormReceiptData('');
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      )}
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Paper>
-            )}
-          </FormSection>
-
-          <FormSection title="المواد والكتب المباعة">
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Button
-                variant="outlined"
-                color="secondary"
-                size="small"
-                startIcon={<AddIcon />}
-                onClick={handleAddFormItem}
-              >
-                إضافة مادة للفاتورة
-              </Button>
-            </Box>
-
-            {formItems.length === 0 ? (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                لم يتم إضافة أي كتاب في الفاتورة حتى الآن. انقر على "إضافة مادة للفاتورة" للبدء.
-              </Alert>
-            ) : (
-              formItems.map((item, index) => {
-                const prod = productsList.find((p) => p.id === item.productId);
-                return (
-                  <Paper
-                    key={index}
-                    variant="outlined"
-                    className="invoice-item-card"
-                  >
-                    {/* Row 1: Book selection (40%), spacer (5%), & Unit Price (40%) */}
-                    <Box className="invoice-item-row">
-                      <Box className="invoice-item-field">
-                        <Autocomplete
-                          options={productsList}
-                          getOptionLabel={(option) => `(${option.code}) ${option.title}`}
-                          size="small"
-                          disabled={!formOutletId}
-                          value={prod || null}
-                          onChange={(e, val) => handleFormItemProductChange(index, val)}
-                          renderInput={(params) => <TextField {...params} required label="الكتاب" />}
-                        />
-                      </Box>
-                      <Box className="invoice-item-spacer" />
-                      <Box className="invoice-item-field">
-                        <TextField
-                          fullWidth
-                          label="السعر للوحدة"
-                          size="small"
-                          disabled
-                          value={item.price ? formatCurrencyEGP(item.price) : '0.00 ج.م'}
-                        />
-                      </Box>
-                    </Box>
-
-                    {/* Row 2: Quantity (40%), spacer (5%), & Free Quantity (40%) */}
-                    <Box className="invoice-item-row">
-                      <Box className="invoice-item-field">
-                        <TextField
-                          fullWidth
-                          label="الكمية الإجمالية"
-                          size="small"
-                          type="number"
-                          required
-                          inputProps={{ min: '1' }}
-                          value={item.quantity}
-                          onChange={(e) => handleFormItemQtyChange(index, e.target.value)}
-                        />
-                      </Box>
-                      <Box className="invoice-item-spacer" />
-                      <Box className="invoice-item-field">
-                        <TextField
-                          fullWidth
-                          label="الكمية المجانية"
-                          size="small"
-                          type="number"
-                          inputProps={{ min: '0', max: item.quantity }}
-                          value={item.freeQuantity || 0}
-                          onChange={(e) => handleFormItemFreeQtyChange(index, e.target.value)}
-                        />
-                      </Box>
-                    </Box>
-
-                    {/* Footer: Line Total and Remove Button */}
-                    <Box className="invoice-item-footer">
-                      <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.secondary' }}>
-                        إجمالي السطر: <Typography component="span" sx={{ color: 'text.primary', fontWeight: 'bold' }}>{formatCurrencyEGP((item.quantity - (item.freeQuantity || 0)) * item.price)}</Typography>
-                      </Typography>
-                      <IconButton color="error" size="small" onClick={() => handleRemoveFormItem(index)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-
-                    {/* Stock info & Price/Stock Error indicator */}
-                    {(item.productId || item.error) && (
-                      <Box className="invoice-item-stock-error">
-                        {item.productId && (
-                          <Typography variant="caption" sx={{ color: item.stockPolicy === 'track' && item.stock <= 0 ? 'error.main' : 'text.secondary', fontWeight: 500 }}>
-                            المتوفر في المخزن: {item.stock} {item.stockPolicy === 'ignore' && '(مخزون لا حصر له)'}
-                          </Typography>
-                        )}
-                        {item.error && (
-                          <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'bold' }}>
-                            {item.error}
-                          </Typography>
-                        )}
-                      </Box>
-                    )}
-                  </Paper>
-                );
-              })
-            )}
-
-            {/* Subtotal / Final total calculation board (Full Width layout - Minimal UI class-bound) */}
-            {formItems.length > 0 && (
-              <Box sx={{ mt: 3 }}>
-                <Paper
-                  variant="outlined"
-                  className="invoice-summary-card"
-                >
-                  <Box className="invoice-summary-card-content">
-                    {/* Breakdown section */}
-                    <Box className="invoice-summary-breakdown">
-                      <Box className="invoice-summary-row">
-                        <Typography variant="body2" color="textSecondary">
-                          المجموع الفرعي (قبل الخصم والشحن):
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                          {formTotals.subtotal} ج.م
-                        </Typography>
-                      </Box>
-                      <Divider sx={{ borderStyle: 'dashed' }} />
-                      <Box className="invoice-summary-row">
-                        <Typography variant="body2" color="textSecondary">
-                          الشحن والتوصيل:
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                          +{formatCurrencyEGP(formShippingCost || 0)}
-                        </Typography>
-                      </Box>
-                      <Divider sx={{ borderStyle: 'dashed' }} />
-                      <Box className="invoice-summary-row">
-                        <Typography variant="body2" color="textSecondary">
-                          الخصم المطبق:
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-                          -{formatCurrencyEGP(formDiscount || 0)}
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {/* Grand Total Callout section */}
-                    <Box className="invoice-summary-callout">
-                      <Typography variant="caption" className="invoice-summary-callout-label">
-                        المجموع الإجمالي النهائي
-                      </Typography>
-                      <Typography variant="h5" className="invoice-summary-callout-value">
-                        {formTotals.total} ج.م
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-              </Box>
-            )}
-          </FormSection>
-        </form>
-      </EntityDrawer>
+        onClose={() => setOpenFormModal(false)}
+        formSubmitting={formSubmitting}
+        formMode={formMode}
+        formInvoiceNumber={formInvoiceNumber}
+        formOutletId={formOutletId}
+        handleFormOutletChange={handleFormOutletChange}
+        outlets={outlets}
+        formCollectionType={formCollectionType}
+        setFormCollectionType={setFormCollectionType}
+        formCollectedAmount={formCollectedAmount}
+        setFormCollectedAmount={setFormCollectedAmount}
+        formTotals={formTotals}
+        formPaymentType={formPaymentType}
+        formDiscount={formDiscount}
+        setFormDiscount={setFormDiscount}
+        formShippingCost={formShippingCost}
+        setFormShippingCost={setFormShippingCost}
+        formNotes={formNotes}
+        setFormNotes={setFormNotes}
+        selectedOutlet={selectedOutlet}
+        formOutletTypeLabel={formOutletTypeLabel}
+        selectedOutletBalance={selectedOutletBalance}
+        formSupplyStatus={formSupplyStatus}
+        setFormSupplyStatus={setFormSupplyStatus}
+        formCollectionNotes={formCollectionNotes}
+        setFormCollectionNotes={setFormCollectionNotes}
+        formReceiptName={formReceiptName}
+        setFormReceiptName={setFormReceiptName}
+        formReceiptData={formReceiptData}
+        setFormReceiptData={setFormReceiptData}
+        formItems={formItems}
+        handleAddFormItem={handleAddFormItem}
+        productsList={productsList}
+        handleFormItemProductChange={handleFormItemProductChange}
+        handleFormItemQtyChange={handleFormItemQtyChange}
+        handleFormItemFreeQtyChange={handleFormItemFreeQtyChange}
+        handleRemoveFormItem={handleRemoveFormItem}
+        handleFormSubmit={handleFormSubmit}
+        setToastMsg={setToastMsg}
+        setToastSeverity={setToastSeverity}
+      />
 
 
 
       {/* --- إنشاء مرتجع Drawer --- */}
-      <EntityDrawer
+      <InvoiceReturnDrawer
         open={openReturnDrawer}
-        onClose={() => !returnSubmitting && setOpenReturnDrawer(false)}
-        title="إنشاء مرتجع مبيعات جديد"
-        subtitle={returnInvoice ? `للفاتورة رقم: ${returnInvoice.invoice_number}` : ''}
-        size="medium"
-        loading={returnSubmitting}
-        actions={
-          <>
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={() => setOpenReturnDrawer(false)}
-              disabled={returnSubmitting}
-            >
-              إلغاء
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              type="submit"
-              form="create-return-form"
-              disabled={returnSubmitting}
-            >
-              {returnSubmitting ? 'جاري الحفظ...' : 'تأكيد وإرجاع للمخزن'}
-            </Button>
-          </>
-        }
-      >
-        {returnInvoice && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmitReturn();
-            }}
-            id="create-return-form"
-          >
-            <FormSection title="أصناف وكميات الفاتورة القابلة للإرجاع">
-              <Alert severity="warning" sx={{ mb: 2, fontWeight: 'bold' }}>
-                تنبيه: عند إتمام المرتجع، سيتم إرجاع الكتب إلى المخزن تلقائياً. 
-                لا يمكن إعادة شحن هذه الكميات المرتجعة على نفس هذه الفاتورة مرة أخرى. 
-                لإعادة شحنها للعميل، يجب إنشاء فاتورة جديدة ومستقلة.
-              </Alert>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="secondary"
-                  onClick={() => {
-                    const allQtys = {};
-                    returnInvoice.items?.forEach(item => {
-                      allQtys[item.id] = item.remaining_returnable_quantity;
-                    });
-                    setReturnQuantities(allQtys);
-                  }}
-                >
-                  إرجاع كافة الكميات المتبقية (مرتجع كامل)
-                </Button>
-              </Box>
-              <TableContainer className="scrollable-table-container" component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead sx={{ backgroundColor: '#f8fafc' }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold' }}>اسم الكتاب</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>المباع</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>المسترجع سابقاً</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المتاحة للاسترجاع</TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 100 }}>كمية المرتجع الحالية</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {returnInvoice.items?.map((item) => {
-                      const maxQty = item.remaining_returnable_quantity;
-                      const currentVal = returnQuantities[item.id] || 0;
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.product_title}</TableCell>
-                          <TableCell align="center">{item.quantity}</TableCell>
-                          <TableCell align="center">{item.quantity - maxQty}</TableCell>
-                          <TableCell align="center" sx={{ fontWeight: 'bold', color: maxQty > 0 ? 'warning.main' : 'success.main' }}>{maxQty}</TableCell>
-                          <TableCell align="center">
-                            <TextField
-                              size="small"
-                              type="number"
-                              value={currentVal}
-                              onChange={(e) => handleReturnQtyChange(item.id, e.target.value)}
-                              inputProps={{ min: 0, max: maxQty }}
-                              disabled={maxQty <= 0 || returnSubmitting}
-                              sx={{ width: 80 }}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <TextField
-                fullWidth
-                label="سبب المرتجع / ملاحظات"
-                value={returnReason}
-                onChange={(e) => setReturnReason(e.target.value)}
-                placeholder="يرجى كتابة سبب المرتجع هنا..."
-                multiline
-                rows={3}
-                disabled={returnSubmitting}
-                sx={{ mt: 2 }}
-                InputLabelProps={{ shrink: true }}
-              />
-            </FormSection>
-          </form>
-        )}
-      </EntityDrawer>
+        onClose={() => setOpenReturnDrawer(false)}
+        returnSubmitting={returnSubmitting}
+        returnInvoice={returnInvoice}
+        returnQuantities={returnQuantities}
+        handleReturnQtyChange={handleReturnQtyChange}
+        returnReason={returnReason}
+        setReturnReason={setReturnReason}
+        setReturnQuantities={setReturnQuantities}
+        handleSubmitReturn={handleSubmitReturn}
+      />
 
       {/* Supply Payment Confirmation Dialog */}
       <ConfirmDialog

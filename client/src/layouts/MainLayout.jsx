@@ -73,6 +73,16 @@ export const MainLayout = () => {
   const { mode, toggleColorMode } = useColorMode();
   const muiTheme = useTheme();
 
+  const userRoles = Array.isArray(user?.roles) ? user.roles : [];
+  const hasRestrictedInvoiceRole = userRoles.some((role) =>
+    ['inventory_manager', 'shipping_user'].includes(role)
+  );
+  const hasInvoiceVisibilityBypassRole = userRoles.some((role) =>
+    ['super_admin', 'admin', 'accountant', 'sales_staff'].includes(role)
+  );
+  const isInvoiceVisibilityRestricted =
+    hasRestrictedInvoiceRole && !hasInvoiceVisibilityBypassRole;
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -206,7 +216,7 @@ export const MainLayout = () => {
       title: 'الفواتير والمبيعات',
       items: [
         { textKey: 'nav.invoices', text: 'الفواتير', icon: <ReceiptIcon />, path: '/invoices', permission: 'invoices.view' },
-        { textKey: 'nav.returns', text: 'المرتجعات', icon: <HistoryIcon />, path: '/returns', permission: 'invoices.view' }
+        { textKey: 'nav.returns', text: 'المرتجعات', icon: <HistoryIcon />, path: '/returns', permission: 'invoices.view', hideForRestrictedInvoiceRole: true }
       ]
     },
     {
@@ -256,7 +266,9 @@ export const MainLayout = () => {
 
     return menuSections.map((section) => {
       const visibleItems = section.items.filter(
-        item => !item.permission || hasPermission(item.permission)
+        item =>
+          (!item.permission || hasPermission(item.permission)) &&
+          !(item.hideForRestrictedInvoiceRole && isInvoiceVisibilityRestricted)
       );
       if (visibleItems.length === 0) return null;
 
