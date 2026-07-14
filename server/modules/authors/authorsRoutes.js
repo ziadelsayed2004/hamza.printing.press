@@ -2,8 +2,38 @@ const express = require('express');
 const router = express.Router();
 const authorsService = require('./authorsService');
 const usersService = require('../users/usersService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+function hasAccountReadPermission(req) {
+  return Array.isArray(req.userPermissions) && req.userPermissions.includes('users.view');
+}
+
+function withoutAccountLink(author) {
+  if (!author) return author;
+  const sanitized = { ...author };
+  delete sanitized.userId;
+  return sanitized;
+}
+
+async function requireAccountLinkPermission(req, res, next) {
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'userId')) return next();
+
+  try {
+    const permissions = req.userPermissions || await usersService.getUserPermissions(req.session.user.id);
+    if (!permissions.includes('users.update')) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: "Access denied. Linking an author to an account requires 'users.update'.",
+        requiredPermission: 'users.update'
+      });
+    }
+    return next();
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+}
 
 // 1. GET /api/authors - Fetch authors (supports pagination, search, status, book filter, and scoped user checking)
 router.get('/', requireAuth, checkPermission('authors.view'), async (req, res) => {
@@ -16,19 +46,19 @@ router.get('/', requireAuth, checkPermission('authors.view'), async (req, res) =
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const roleNames = userRoles.map(role => role.name);
+    const isElevated = hasGlobalBusinessScope(roleNames);
 
     let filterUserId = null;
     if (!isElevated) {
-      // Check if user is linked to an author
       const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
-      if (linkedAuthors.length > 0) {
+      if (roleNames.includes('author') || linkedAuthors.length > 0) {
         filterUserId = userId;
       }
     }
 
     const list = await authorsService.getAll({ limit, offset, search, status, userId: filterUserId, productId });
-    res.status(200).json(list);
+    res.status(200).json(hasAccountReadPermission(req) ? list : list.map(withoutAccountLink));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
@@ -41,11 +71,12 @@ router.get('/:id', requireAuth, checkPermission('authors.view'), async (req, res
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const roleNames = userRoles.map(role => role.name);
+    const isElevated = hasGlobalBusinessScope(roleNames);
 
     if (!isElevated) {
       const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
-      if (linkedAuthors.length > 0 && !linkedAuthors.includes(authorId)) {
+      if ((roleNames.includes('author') || linkedAuthors.length > 0) && !linkedAuthors.includes(authorId)) {
         return res.status(403).json({
           error: 'Forbidden',
           message: 'Access denied. You do not have permission to view other author profiles.'
@@ -57,15 +88,16 @@ router.get('/:id', requireAuth, checkPermission('authors.view'), async (req, res
     if (!author) {
       return res.status(404).json({ error: 'Not Found', message: 'Author not found.' });
     }
-    res.status(200).json(author);
+    res.status(200).json(hasAccountReadPermission(req) ? author : withoutAccountLink(author));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
 
 // 3. POST /api/authors - Create a new author
-router.post('/', requireAuth, checkPermission('authors.create'), auditLog('create_author', 'authors'), async (req, res) => {
-  const { name, phone = '', status = 'active', userId = null } = req.body;
+router.post('/', requireAuth, checkPermission('authors.create'), requireAccountLinkPermission, auditLog('create_author', 'authors'), async (req, res) => {
+  const { name, phone = '', status = 'active' } = req.body;
+  const userId = Object.prototype.hasOwnProperty.call(req.body, 'userId') ? req.body.userId : undefined;
 
   if (!name) {
     return res.status(400).json({ error: 'Bad Request', message: 'Author name is required.' });
@@ -92,9 +124,10 @@ router.post('/', requireAuth, checkPermission('authors.create'), auditLog('creat
 });
 
 // 4. PUT /api/authors/:id - Update an existing author
-router.put('/:id', requireAuth, checkPermission('authors.update'), auditLog('update_author', 'authors'), async (req, res) => {
+router.put('/:id', requireAuth, checkPermission('authors.update'), requireAccountLinkPermission, auditLog('update_author', 'authors'), async (req, res) => {
   const authorId = parseInt(req.params.id, 10);
-  const { name, phone = '', status = 'active', userId = null } = req.body;
+  const { name, phone = '', status = 'active' } = req.body;
+  const userId = Object.prototype.hasOwnProperty.call(req.body, 'userId') ? req.body.userId : undefined;
 
   if (!name) {
     return res.status(400).json({ error: 'Bad Request', message: 'Author name is required.' });
@@ -120,7 +153,7 @@ router.put('/:id', requireAuth, checkPermission('authors.update'), auditLog('upd
     res.status(200).json({
       success: true,
       message: 'Author updated successfully.',
-      author: updatedAuthor
+      author: hasAccountReadPermission(req) ? updatedAuthor : withoutAccountLink(updatedAuthor)
     });
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -134,11 +167,12 @@ router.get('/:id/books', requireAuth, checkPermission('authors.view'), async (re
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const roleNames = userRoles.map(role => role.name);
+    const isElevated = hasGlobalBusinessScope(roleNames);
 
     if (!isElevated) {
       const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
-      if (linkedAuthors.length > 0 && !linkedAuthors.includes(authorId)) {
+      if ((roleNames.includes('author') || linkedAuthors.length > 0) && !linkedAuthors.includes(authorId)) {
         return res.status(403).json({
           error: 'Forbidden',
           message: 'Access denied. You do not have permission to view other authors books.'

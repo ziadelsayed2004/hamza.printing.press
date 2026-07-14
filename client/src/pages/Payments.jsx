@@ -221,6 +221,7 @@ export const Payments = () => {
 
   useEffect(() => {
     const fetchOutlets = async () => {
+      if (!hasPermission('outlets.view')) return;
       try {
         const data = await apiClient.get('/outlets');
         setOutlets(data);
@@ -237,7 +238,7 @@ export const Payments = () => {
     const invId = params.get('invoiceId');
     const act = params.get('action');
     const amountHint = params.get('amount');
-    if (invId && act === 'create') {
+    if (invId && act === 'create' && hasPermission('payments.create')) {
       handleOpenAddPayment(invId, amountHint || '');
     }
   }, [location.search]);
@@ -380,6 +381,10 @@ export const Payments = () => {
   };
 
   const handleOpenAddPayment = async (prefilledInvoiceId = '', amountHint = '') => {
+    if (!hasPermission('payments.create')) {
+      showToast('ليس لديك صلاحية لتسجيل المدفوعات.', 'error');
+      return;
+    }
     setPayFormOutletId('');
     setPayFormInvoiceId(prefilledInvoiceId ? String(prefilledInvoiceId) : '');
     setPayFormAmount(amountHint || '');
@@ -443,6 +448,10 @@ export const Payments = () => {
 
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
+    if (!hasPermission('payments.create')) {
+      showToast('ليس لديك صلاحية لتسجيل المدفوعات.', 'error');
+      return;
+    }
     if (!payFormInvoiceId || !payFormAmount || !payFormMethod) {
       showToast('رقم الفاتورة والمبلغ وطريقة الدفع مطلوبة.', 'error');
       return;
@@ -597,9 +606,9 @@ export const Payments = () => {
         textColor="primary"
         indicatorColor="primary"
       >
-        <Tab label="سجل المقبوضات والتحصيل" />
-        <Tab label="المرتجعات المالية" />
-        {hasPermission('payments.create') && <Tab label="مراجعة إيصالات الدفع المعلقة" />}
+        <Tab value={0} label="سجل المقبوضات والتحصيل" />
+        {hasPermission('returns.view') && <Tab value={1} label="المرتجعات المالية" />}
+        {hasPermission('payments.create') && <Tab value={2} label="مراجعة إيصالات الدفع المعلقة" />}
       </Tabs>
 
       {activeTab === 0 && (
@@ -795,14 +804,16 @@ export const Payments = () => {
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      color="primary"
-                      indeterminate={selectedPaymentIds.length > 0 && selectedPaymentIds.length < payments.length}
-                      checked={payments.length > 0 && selectedPaymentIds.length === payments.length}
-                      onChange={handleSelectAll}
-                    />
-                  </TableCell>
+                  {hasPermission('payments.supply_batch') && (
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        color="primary"
+                        indeterminate={selectedPaymentIds.length > 0 && selectedPaymentIds.length < payments.length}
+                        checked={payments.length > 0 && selectedPaymentIds.length === payments.length}
+                        onChange={handleSelectAll}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell sx={{ fontWeight: 'bold' }}>#</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>رقم الفاتورة</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الدفع</TableCell>
@@ -819,13 +830,15 @@ export const Payments = () => {
               <TableBody>
                 {payments.map((row) => (
                   <TableRow key={row.id} hover>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        color="primary"
-                        checked={selectedPaymentIds.includes(row.id)}
-                        onChange={() => handleSelectRow(row.id)}
-                      />
-                    </TableCell>
+                    {hasPermission('payments.supply_batch') && (
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          color="primary"
+                          checked={selectedPaymentIds.includes(row.id)}
+                          onChange={() => handleSelectRow(row.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell sx={{ fontFamily: 'monospace' }}>{row.id}</TableCell>
                     <TableCell>
                       <Chip
@@ -861,7 +874,7 @@ export const Payments = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      {row.receipt_stored_path ? (
+                      {hasPermission('payments.receipt.view') && row.receipt_stored_path ? (
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
                           <Chip label="تم رفع الإيصال" color="info" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
                           <Button 
@@ -944,7 +957,7 @@ export const Payments = () => {
     </>
       )}
 
-      {activeTab === 1 && <Returns standalone={false} />}
+      {activeTab === 1 && hasPermission('returns.view') && <Returns standalone={false} />}
 
       {activeTab === 2 && hasPermission('payments.create') && (
         <Paper className="main-table-paper">

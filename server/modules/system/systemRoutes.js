@@ -1,10 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../db');
-const { requireAuth } = require('../../middleware/rbac');
+const { requireAuth, checkPermission } = require('../../middleware/rbac');
+
+function checkNextCodePermission(req, res, next) {
+  const requiredPermission = {
+    product: 'products.create',
+    book: 'products.create',
+    outlet: 'outlets.create',
+    invoice: 'invoices.create'
+  }[req.query.type];
+
+  if (!requiredPermission) return next();
+  return checkPermission(requiredPermission)(req, res, next);
+}
 
 // GET /api/system/next-code?type=product|outlet|invoice
-router.get('/next-code', requireAuth, async (req, res) => {
+router.get('/next-code', requireAuth, checkNextCodePermission, async (req, res) => {
   const { type } = req.query;
 
   let prefix = '';

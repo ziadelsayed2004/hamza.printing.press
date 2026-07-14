@@ -93,13 +93,18 @@ export const Dashboard = () => {
       setLoading(true);
       const promises = [];
 
-      if (hasPermission('invoices.view')) {
+      if (hasPermission('finance.view')) {
         promises.push(
           apiClient.get('/finance/summary')
             .then(data => setFinanceSummary(data))
             .catch(err => console.error('Finance summary fetch error:', err))
         );
-      } else if (hasPermission('reports.view')) {
+      } else {
+        setFinanceSummary(null);
+        setFinancials(null);
+      }
+
+      if (hasPermission('finance.view') && hasPermission('reports.view')) {
         promises.push(
           apiClient.get('/reports/financials/summary')
             .then(data => setFinancials(data))
@@ -110,8 +115,22 @@ export const Dashboard = () => {
       if (hasPermission('reports.view')) {
         promises.push(
           apiClient.get('/reports/stock')
-            .then(data => setStock(data || []))
+            .then(data => setStock((data || []).map((item) => ({
+              ...item,
+              currentStock: item.currentStock ?? item.stock ?? 0,
+              stockPolicy: item.stockPolicy ?? item.stock_policy
+            }))))
             .catch(err => console.error('Stock report fetch error:', err))
+        );
+      } else if (hasPermission('inventory.view')) {
+        promises.push(
+          apiClient.get('/inventory/stock-summary?limit=500')
+            .then(data => setStock((data || []).map((item) => ({
+              ...item,
+              currentStock: item.currentStock ?? item.stock ?? 0,
+              stockPolicy: item.stockPolicy ?? item.stock_policy
+            }))))
+            .catch(err => console.error('Stock summary fetch error:', err))
         );
       }
 
@@ -140,6 +159,9 @@ export const Dashboard = () => {
             .then(data => setRecentInvoices(data || []))
             .catch(err => console.error('Recent invoices fetch error:', err))
         );
+      }
+
+      if (hasPermission('returns.view')) {
         promises.push(
           apiClient.get('/returns?limit=5')
             .then(data => setRecentReturns(data || []))
@@ -176,9 +198,10 @@ export const Dashboard = () => {
     };
 
     loadDashboardData();
-  }, [hasPermission]);
+  }, [user?.id]);
 
   const handleResolveAlert = async (id) => {
+    if (!hasPermission('notifications.manage')) return;
     try {
       await apiClient.patch(`/notifications/${id}/resolve`);
       const data = await apiClient.get('/notifications?status=unread');
@@ -267,6 +290,10 @@ export const Dashboard = () => {
 
       {/* 2. Onboarding Wizard for Fresh Database Reset */}
       {isDatabaseFresh && (
+        hasPermission('outlet_types.manage') ||
+        hasPermission('products.create') ||
+        hasPermission('inventory.receipts.create')
+      ) && (
         <Paper className="onboarding-wizard">
           <Typography variant="h6" className="onboarding-wizard__title">
             <CheckCircleIcon color="success" /> {t('dashboard.systemInitReady')}
@@ -275,30 +302,30 @@ export const Dashboard = () => {
             {t('dashboard.systemInitDesc')}
           </Typography>
           <Box className="onboarding-wizard__steps-grid">
-            <Box className="onboarding-card" onClick={() => navigate('/outlet-types')}>
+            {hasPermission('outlet_types.manage') && <Box className="onboarding-card" onClick={() => navigate('/outlet-types')}>
               <Typography variant="subtitle2" className="onboarding-card__step-title">
                 {t('dashboard.initStep1Title')}
               </Typography>
               <Typography variant="caption" className="onboarding-card__step-description">
                 {t('dashboard.initStep1Desc')}
               </Typography>
-            </Box>
-            <Box className="onboarding-card" onClick={() => navigate('/products')}>
+            </Box>}
+            {hasPermission('products.create') && <Box className="onboarding-card" onClick={() => navigate('/products')}>
               <Typography variant="subtitle2" className="onboarding-card__step-title">
                 {t('dashboard.initStep2Title')}
               </Typography>
               <Typography variant="caption" className="onboarding-card__step-description">
                 {t('dashboard.initStep2Desc')}
               </Typography>
-            </Box>
-            <Box className="onboarding-card" onClick={() => navigate('/inventory')}>
+            </Box>}
+            {hasPermission('inventory.receipts.create') && <Box className="onboarding-card" onClick={() => navigate('/inventory')}>
               <Typography variant="subtitle2" className="onboarding-card__step-title">
                 {t('dashboard.initStep3Title')}
               </Typography>
               <Typography variant="caption" className="onboarding-card__step-description">
                 {t('dashboard.initStep3Desc')}
               </Typography>
-            </Box>
+            </Box>}
           </Box>
         </Paper>
       )}
@@ -336,11 +363,13 @@ export const Dashboard = () => {
                       </IconButton>
                     </Tooltip>
                   )}
-                  <Tooltip title={t('dashboard.dismiss')}>
-                    <IconButton color="inherit" size="small" onClick={() => handleResolveAlert(alert.id)}>
-                      <ResolveIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  {hasPermission('notifications.manage') && (
+                    <Tooltip title={t('dashboard.dismiss')}>
+                      <IconButton color="inherit" size="small" onClick={() => handleResolveAlert(alert.id)}>
+                        <ResolveIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </Stack>
               }
             >
@@ -354,15 +383,15 @@ export const Dashboard = () => {
       {/* 4. KPI Cards Strip (8-Card Grid) */}
       <Box className="kpi-grid">
         {[
-          { title: t('dashboard.kpiPending'), value: formatCurrencyEGP(pendingMetric), sub: t('dashboard.kpiPendingSub'), icon: <WalletIcon />, theme: 'warning' },
-          { title: t('dashboard.kpiCollected'), value: formatCurrencyEGP(collectedMetric), sub: t('dashboard.kpiCollectedSub'), icon: <PaymentIcon />, theme: 'success' },
-          { title: t('dashboard.kpiSupplied'), value: formatCurrencyEGP(suppliedMetric), sub: t('dashboard.kpiSuppliedSub'), icon: <CheckCircleIcon />, theme: 'primary' },
-          { title: t('dashboard.kpiUnsupplied'), value: formatCurrencyEGP(unsuppliedMetric), sub: t('dashboard.kpiUnsuppliedSub'), icon: <AccessTimeIcon />, theme: 'info' },
-          { title: t('dashboard.kpiReturns'), value: formatCurrencyEGP(returnsMetric), sub: t('dashboard.kpiReturnsSub'), icon: <HistoryIcon />, theme: 'danger' },
-          { title: t('dashboard.kpiSales'), value: formatCurrencyEGP(invoicesAmountVal), sub: t('dashboard.kpiSalesSub', { count: invoicesCountVal }), icon: <ReceiptIcon />, theme: 'primary' },
-          { title: t('dashboard.kpiShipments'), value: t('dashboard.kpiShipmentsValue', { count: partialShipmentsVal }), sub: t('dashboard.kpiShipmentsSub'), icon: <ShippingIcon />, theme: 'warning' },
-          { title: t('dashboard.kpiStockAlerts'), value: t('dashboard.kpiStockAlertsValue', { count: stockAlertsVal }), sub: t('dashboard.kpiStockAlertsSub'), icon: <AlertIcon />, theme: 'danger' }
-        ].map((card, i) => (
+          { title: t('dashboard.kpiPending'), value: formatCurrencyEGP(pendingMetric), sub: t('dashboard.kpiPendingSub'), icon: <WalletIcon />, theme: 'warning', permission: 'finance.view' },
+          { title: t('dashboard.kpiCollected'), value: formatCurrencyEGP(collectedMetric), sub: t('dashboard.kpiCollectedSub'), icon: <PaymentIcon />, theme: 'success', permission: 'finance.view' },
+          { title: t('dashboard.kpiSupplied'), value: formatCurrencyEGP(suppliedMetric), sub: t('dashboard.kpiSuppliedSub'), icon: <CheckCircleIcon />, theme: 'primary', permission: 'finance.view' },
+          { title: t('dashboard.kpiUnsupplied'), value: formatCurrencyEGP(unsuppliedMetric), sub: t('dashboard.kpiUnsuppliedSub'), icon: <AccessTimeIcon />, theme: 'info', permission: 'finance.view' },
+          { title: t('dashboard.kpiReturns'), value: formatCurrencyEGP(returnsMetric), sub: t('dashboard.kpiReturnsSub'), icon: <HistoryIcon />, theme: 'danger', permission: 'finance.view' },
+          { title: t('dashboard.kpiSales'), value: formatCurrencyEGP(invoicesAmountVal), sub: t('dashboard.kpiSalesSub', { count: invoicesCountVal }), icon: <ReceiptIcon />, theme: 'primary', permission: 'finance.view' },
+          { title: t('dashboard.kpiShipments'), value: t('dashboard.kpiShipmentsValue', { count: partialShipmentsVal }), sub: t('dashboard.kpiShipmentsSub'), icon: <ShippingIcon />, theme: 'warning', permission: 'shipments.view' },
+          { title: t('dashboard.kpiStockAlerts'), value: t('dashboard.kpiStockAlertsValue', { count: stockAlertsVal }), sub: t('dashboard.kpiStockAlertsSub'), icon: <AlertIcon />, theme: 'danger', permission: 'inventory.view' }
+        ].filter((card) => hasPermission(card.permission)).map((card, i) => (
           <Card className={`kpi-card kpi-card--${card.theme}`} key={i}>
             <CardContent className="kpi-card__body">
               <Box className={`kpi-card__icon-wrapper kpi-card__icon-wrapper--${card.theme}`}>
@@ -387,7 +416,7 @@ export const Dashboard = () => {
       {/* 5. Finance and Operations Status Overview */}
       <Box className="snapshots-grid">
         {/* Finance Overview Panel */}
-        <Paper className="snapshot-panel">
+        {hasPermission('finance.view') && <Paper className="snapshot-panel">
           <Typography variant="subtitle1" className="snapshot-panel__header">
             <TrendingUpIcon color="primary" /> {t('dashboard.financeSnapshotTitle')}
           </Typography>
@@ -429,42 +458,42 @@ export const Dashboard = () => {
               </Typography>
             </Box>
           </Box>
-        </Paper>
+        </Paper>}
 
         {/* Inventory Operations Panel */}
-        <Paper className="snapshot-panel">
+        {(hasPermission('inventory.view') || hasPermission('shipments.view')) && <Paper className="snapshot-panel">
           <Typography variant="subtitle1" className="snapshot-panel__header">
             <StoreIcon color="primary" /> {t('dashboard.inventorySnapshotTitle')}
           </Typography>
           <Divider sx={{ mb: 3 }} />
 
           <Box className="snapshot-panel__grid" sx={{ height: '100%', alignContent: 'center' }}>
-            <Box className="snapshot-panel__stat-box">
+            {hasPermission('inventory.view') && <Box className="snapshot-panel__stat-box">
               <Typography className="snapshot-panel__stat-title">{t('dashboard.lowStock')}</Typography>
               <Typography className={`snapshot-panel__stat-value ${lowStockItemsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
                 {t('dashboard.lowStockCount', { count: lowStockItemsCount })}
               </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
+            </Box>}
+            {hasPermission('inventory.view') && <Box className="snapshot-panel__stat-box">
               <Typography className="snapshot-panel__stat-title">{t('dashboard.negativeStock')}</Typography>
               <Typography className={`snapshot-panel__stat-value ${negativeStockItemsCount > 0 ? 'snapshot-panel__stat-value--danger' : 'snapshot-panel__stat-value--success'}`}>
                 {t('dashboard.negativeStockCount', { count: negativeStockItemsCount })}
               </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
+            </Box>}
+            {hasPermission('inventory.view') && <Box className="snapshot-panel__stat-box">
               <Typography className="snapshot-panel__stat-title">{t('dashboard.todayReceipts')}</Typography>
               <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--success">
                 {t('dashboard.todayReceiptsCount', { count: receiptsTodayCount })}
               </Typography>
-            </Box>
-            <Box className="snapshot-panel__stat-box">
+            </Box>}
+            {hasPermission('shipments.view') && <Box className="snapshot-panel__stat-box">
               <Typography className="snapshot-panel__stat-title">{t('dashboard.pendingShipments')}</Typography>
               <Typography className="snapshot-panel__stat-value snapshot-panel__stat-value--warning">
                 {t('dashboard.pendingShipmentsCount', { count: shipments.filter(s => s.status === 'pending').length })}
               </Typography>
-            </Box>
+            </Box>}
           </Box>
-        </Paper>
+        </Paper>}
       </Box>
 
       {/* 6. Quick Operations Grid */}
@@ -474,11 +503,11 @@ export const Dashboard = () => {
       <Box className="quick-actions-grid">
         {[
           { label: t('dashboard.newInvoice'), icon: <AddInvoiceIcon className="quick-action-btn__icon" />, path: '/invoices', perm: 'invoices.create' },
-          { label: t('dashboard.addStock'), icon: <AddStockIcon className="quick-action-btn__icon" />, path: '/inventory', perm: 'inventory.create' },
+          { label: t('dashboard.addStock'), icon: <AddStockIcon className="quick-action-btn__icon" />, path: '/inventory', perm: 'inventory.receipts.create' },
           { label: t('dashboard.addOutlet'), icon: <StoreIcon className="quick-action-btn__icon" />, path: '/outlets', perm: 'outlets.create' },
           { label: t('dashboard.addProduct'), icon: <AddProductIcon className="quick-action-btn__icon" />, path: '/products', perm: 'products.create' },
           { label: t('dashboard.bookCategories'), icon: <CategoryIcon className="quick-action-btn__icon" />, path: '/categories', perm: 'products.view' },
-          { label: t('dashboard.outletTypes'), icon: <AddCircleIcon className="quick-action-btn__icon" />, path: '/outlet-types', perm: 'outlet-types.create' },
+          { label: t('dashboard.outletTypes'), icon: <AddCircleIcon className="quick-action-btn__icon" />, path: '/outlet-types', perm: 'outlet_types.manage' },
         ].map(act => {
           if (act.perm && !hasPermission(act.perm)) return null;
           return (
@@ -500,6 +529,7 @@ export const Dashboard = () => {
       {/* 7. Live Activity Lists */}
       <Box className="activity-grid">
         {/* Latest Invoices */}
+        {hasPermission('invoices.view') && (
         <Paper className="activity-panel">
           <Typography variant="subtitle2" className="activity-panel__header">
             <ReceiptIcon color="primary" /> {t('dashboard.recentInvoices')}
@@ -541,8 +571,10 @@ export const Dashboard = () => {
             </Typography>
           )}
         </Paper>
+        )}
 
         {/* Latest Payments */}
+        {hasPermission('payments.view') && (
         <Paper className="activity-panel">
           <Typography variant="subtitle2" className="activity-panel__header">
             <PaymentIcon color="primary" /> {t('dashboard.recentPayments')}
@@ -581,8 +613,10 @@ export const Dashboard = () => {
             </Typography>
           )}
         </Paper>
+        )}
 
         {/* Recent Stock Transactions */}
+        {hasPermission('inventory.view') && (
         <Paper className="activity-panel">
           <Typography variant="subtitle2" className="activity-panel__header">
             <HistoryIcon color="primary" /> {t('dashboard.recentInventory')}
@@ -625,8 +659,10 @@ export const Dashboard = () => {
             </Typography>
           )}
         </Paper>
+        )}
 
         {/* Latest Returns */}
+        {hasPermission('returns.view') && (
         <Paper className="activity-panel">
           <Typography variant="subtitle2" className="activity-panel__header">
             <HistoryIcon color="primary" /> {t('dashboard.recentReturns')}
@@ -664,6 +700,7 @@ export const Dashboard = () => {
             </Typography>
           )}
         </Paper>
+        )}
       </Box>
     </Box>
   );

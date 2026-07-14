@@ -4,6 +4,7 @@ const productPricesService = require('./productPricesService');
 const productsService = require('./productsService');
 const authorsService = require('../authors/authorsService');
 const usersService = require('../users/usersService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
@@ -20,7 +21,7 @@ router.get('/product/:productId', requireAuth, checkPermission('product_prices.v
     // Check ownership for author-scoped users
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     if (!isElevated) {
       const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);

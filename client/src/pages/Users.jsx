@@ -77,6 +77,7 @@ const permissionTranslations = {
   'users.update': { name: 'تعديل مستخدمين', desc: 'تعديل بيانات المستخدمين وصلاحياتهم.' },
   'users.disable': { name: 'تعطيل حسابات', desc: 'إيقاف حسابات المستخدمين مؤقتاً ومنع دخولهم.' },
   'users.archive': { name: 'أرشفة وحذف', desc: 'أرشفة حسابات المستخدمين وحذفها نهائياً.' },
+  'roles.view': { name: 'عرض الأدوار والصلاحيات', desc: 'استعراض أدوار النظام ومصفوفة صلاحياتها دون تعديل.' },
   'roles.manage': { name: 'إدارة الأدوار والصلاحيات (RBAC)', desc: 'إدارة مصفوفة توزيع صلاحيات الأدوار الوظيفية.' },
   'permissions.manage': { name: 'إدارة الصلاحيات التفصيلية', desc: 'إدارة الصلاحيات الفردية المسجلة بالخلفية.' },
   'authors.view': { name: 'عرض المؤلفين', desc: 'استعراض دليل وبيانات المؤلفين المسجلين.' },
@@ -136,6 +137,45 @@ const permissionTranslations = {
 const translateRoleName = (name) => roleTranslations[name] || name;
 const translatePermission = (name) => permissionTranslations[name] || { name, desc: '' };
 
+const ASSIGNABLE_SYSTEM_ROLES = [
+  'author',
+  'outlet',
+  'readonly_viewer',
+  'shipping_user',
+  'inventory_manager',
+  'assistant'
+];
+const INTERNAL_OR_DEPRECATED_ROLES = [
+  'super_admin',
+  'admin',
+  'accountant',
+  'sales_staff',
+  'visitor'
+];
+const SYSTEM_ROLES = [...ASSIGNABLE_SYSTEM_ROLES, ...INTERNAL_OR_DEPRECATED_ROLES];
+
+const roleFlag = (role, camelCaseName, snakeCaseName, fallback) => {
+  if (typeof role?.[camelCaseName] === 'boolean') return role[camelCaseName];
+  if (typeof role?.[snakeCaseName] === 'boolean') return role[snakeCaseName];
+  if (role?.[camelCaseName] === 0 || role?.[snakeCaseName] === 0) return false;
+  if (role?.[camelCaseName] === 1 || role?.[snakeCaseName] === 1) return true;
+  return fallback;
+};
+
+const isSystemRole = (role) => roleFlag(role, 'isSystem', 'is_system', SYSTEM_ROLES.includes(role.name));
+const isActiveRole = (role) => roleFlag(
+  role,
+  'isActive',
+  'is_active',
+  !INTERNAL_OR_DEPRECATED_ROLES.includes(role.name)
+);
+const isAssignableRole = (role) => roleFlag(
+  role,
+  'isAssignable',
+  'is_assignable',
+  ASSIGNABLE_SYSTEM_ROLES.includes(role.name)
+);
+
 const permissionGroupHeaderStyles = {
   fontWeight: 'bold',
   mb: 1,
@@ -148,12 +188,10 @@ export const Users = () => {
   const { user: currentUser, hasPermission } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   
-  const SYSTEM_ROLES = ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user', 'author', 'outlet', 'visitor', 'assistant'];
-
   const permissionGroups = [
     {
       title: 'إدارة المستخدمين والأدوار',
-      perms: ['users.view', 'users.create', 'users.update', 'users.disable', 'users.archive', 'roles.manage', 'permissions.manage']
+      perms: ['users.view', 'users.create', 'users.update', 'users.disable', 'users.archive', 'roles.view', 'roles.manage', 'permissions.manage']
     },
     {
       title: 'الفواتير والمبيعات',
@@ -242,10 +280,19 @@ export const Users = () => {
         setUsers(usersData);
       }
       
-      if (hasPermission('roles.manage')) {
+      if (
+        hasPermission('roles.view') ||
+        hasPermission('roles.manage') ||
+        hasPermission('users.create') ||
+        hasPermission('users.update')
+      ) {
         const rolesData = await apiClient.get('/users/roles');
-        setRolesList(rolesData);
-        
+        setRolesList((rolesData || []).filter((role) =>
+          isActiveRole(role) && !INTERNAL_OR_DEPRECATED_ROLES.includes(role.name)
+        ));
+      }
+
+      if (hasPermission('roles.view') || hasPermission('roles.manage')) {
         const permsData = await apiClient.get('/users/permissions');
         setPermissionsList(permsData);
       }
@@ -293,10 +340,11 @@ export const Users = () => {
         });
         showToast('تم إنشاء الحساب بنجاح.');
       } else {
-        await apiClient.put(`/users/${selectedUser.id}`, {
-          fullName: formFullName,
-          roles: formRoles
-        });
+        const updatePayload = { fullName: formFullName };
+        if (!selectedUser?.roles?.includes('super_admin')) {
+          updatePayload.roles = formRoles;
+        }
+        await apiClient.put(`/users/${selectedUser.id}`, updatePayload);
         showToast('تم تعديل بيانات الحساب بنجاح.');
       }
       setOpenUserModal(false);
@@ -371,6 +419,7 @@ export const Users = () => {
 
   // Role designer edit opener
   const handleOpenEditRole = (role) => {
+    if (isSystemRole(role) || !hasPermission('roles.manage')) return;
     setRoleModalMode('edit');
     setRoleFormId(role.id);
     setRoleFormName(role.name);
@@ -392,6 +441,10 @@ export const Users = () => {
       showToast('اسم الدور الوظيفي مطلوب.', 'error');
       return;
     }
+    if (roleModalMode === 'edit' && SYSTEM_ROLES.includes(roleFormName)) {
+      showToast('أدوار النظام ثابتة ولا يمكن تعديل مصفوفة صلاحياتها.', 'error');
+      return;
+    }
 
     try {
       if (roleModalMode === 'create') {
@@ -402,18 +455,11 @@ export const Users = () => {
         });
         showToast('تم إنشاء الدور الوظيفي بنجاح.');
       } else {
-        if (SYSTEM_ROLES.includes(roleFormName)) {
-          // If system role, only permissions are modifiable
-          await apiClient.post(`/users/roles/${roleFormId}/permissions`, {
-            permissionIds: roleFormPermissions
-          });
-        } else {
-          await apiClient.put(`/users/roles/${roleFormId}`, {
-            name: roleFormName.trim(),
-            description: roleFormDescription,
-            permissionIds: roleFormPermissions
-          });
-        }
+        await apiClient.put(`/users/roles/${roleFormId}`, {
+          name: roleFormName.trim(),
+          description: roleFormDescription,
+          permissionIds: roleFormPermissions
+        });
         showToast('تم تحديث الدور الوظيفي بنجاح.');
       }
       setOpenRoleDrawer(false);
@@ -426,6 +472,8 @@ export const Users = () => {
 
   // Safe delete role handler
   const handleDeleteRole = (roleId) => {
+    const role = rolesList.find((candidate) => candidate.id === roleId);
+    if (!role || isSystemRole(role) || !hasPermission('roles.manage')) return;
     setRoleIdToDelete(roleId);
     setRoleDeleteConfirmOpen(true);
   };
@@ -504,7 +552,9 @@ export const Users = () => {
         sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
       >
         <Tab label="حسابات المستخدمين" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
-        {hasPermission('roles.manage') && <Tab label="جدول صلاحيات الأدوار (RBAC)" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />}
+        {(hasPermission('roles.view') || hasPermission('roles.manage')) && (
+          <Tab label="جدول صلاحيات الأدوار (RBAC)" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+        )}
       </Tabs>
 
       {/* Tab 0: Users Management */}
@@ -601,21 +651,23 @@ export const Users = () => {
       )}
 
       {/* Tab 1: Permissions Matrix (Role Designer) */}
-      {tabValue === 1 && hasPermission('roles.manage') && (
+      {tabValue === 1 && (hasPermission('roles.view') || hasPermission('roles.manage')) && (
         <Paper sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
               الأدوار الوظيفية المسجلة وصلاحياتها بالخلفية
             </Typography>
-            <Button
-              variant="contained"
-              color="secondary"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateRole}
-              sx={{ fontWeight: 'bold' }}
-            >
-              إنشاء دور وظيفي جديد
-            </Button>
+            {hasPermission('roles.manage') && (
+              <Button
+                variant="contained"
+                color="secondary"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreateRole}
+                sx={{ fontWeight: 'bold' }}
+              >
+                إنشاء دور وظيفي جديد
+              </Button>
+            )}
           </Box>
 
           <TableContainer className="scrollable-table-container" component={Paper} variant="outlined" sx={{ mb: 3 }}>
@@ -631,7 +683,7 @@ export const Users = () => {
               </TableHead>
               <TableBody>
                 {rolesList.map((r) => {
-                  const isSystem = SYSTEM_ROLES.includes(r.name);
+                  const isSystem = isSystemRole(r);
                   return (
                     <TableRow key={r.id}>
                       <TableCell align="right" sx={{ fontWeight: 'bold' }}>{translateRoleName(r.name)}</TableCell>
@@ -649,10 +701,12 @@ export const Users = () => {
                       </TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                          <IconButton color="primary" onClick={() => handleOpenEditRole(r)} title="تعديل وصلاحيات">
-                            <EditIcon />
-                          </IconButton>
-                          {!isSystem && (
+                          {!isSystem && hasPermission('roles.manage') && (
+                            <IconButton color="primary" onClick={() => handleOpenEditRole(r)} title="تعديل وصلاحيات">
+                              <EditIcon />
+                            </IconButton>
+                          )}
+                          {!isSystem && hasPermission('roles.manage') && (
                             <IconButton color="error" onClick={() => handleDeleteRole(r.id)} title="حذف">
                               <DeleteIcon />
                             </IconButton>
@@ -722,6 +776,7 @@ export const Users = () => {
                   value={formRoles}
                   label="الأدوار الممنوحة"
                   onChange={(e) => setFormRoles(e.target.value)}
+                  disabled={modalMode === 'edit' && selectedUser?.roles?.includes('super_admin')}
                   renderValue={(selected) => (
                     <Box className="roles-chip-container">
                       {selected.map((value) => (
@@ -730,7 +785,9 @@ export const Users = () => {
                     </Box>
                   )}
                 >
-                  {rolesList.map((r) => (
+                  {rolesList.filter((role) =>
+                    ASSIGNABLE_SYSTEM_ROLES.includes(role.name) && isAssignableRole(role)
+                  ).map((r) => (
                     <MenuItem key={r.id} value={r.name}>
                       {translateRoleName(r.name)}
                     </MenuItem>

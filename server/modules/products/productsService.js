@@ -222,6 +222,8 @@ async function getAll({ limit = 50, offset = 0, search = '', category = '', stat
     const placeholders = authorIds.map(() => '?').join(',');
     sql += ` AND pa.author_id IN (${placeholders})`;
     params.push(...authorIds);
+  } else if (authorIds) {
+    sql += ` AND 0=1`;
   }
 
   sql += ` ORDER BY p.title ASC LIMIT ? OFFSET ?`;

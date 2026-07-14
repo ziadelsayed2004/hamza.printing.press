@@ -3,9 +3,10 @@ const db = require('../../db');
 const reportsService = require('../reports/reportsService');
 const ExcelJS = require('exceljs');
 const { formatEgyptDateTime, formatEgyptDate } = require('../../utils/formatters');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 
-function applyInvoiceVisibilityFilters(sql, params, options = {}, invoiceAlias = 'i') {
-  const { allowedShippingStatuses, excludeCancelled } = options;
+function applyInvoiceVisibilityFilters(sql, params, options = {}, invoiceAlias = 'i', invoiceItemAlias = null) {
+  const { allowedShippingStatuses, excludeCancelled, authorIds, outletIds } = options;
 
   if (Array.isArray(allowedShippingStatuses)) {
     if (allowedShippingStatuses.length === 0) {
@@ -20,6 +21,37 @@ function applyInvoiceVisibilityFilters(sql, params, options = {}, invoiceAlias =
   if (excludeCancelled) {
     sql += ` AND ${invoiceAlias}.payment_status != ?`;
     params.push('cancelled');
+  }
+
+  if (Array.isArray(outletIds)) {
+    if (outletIds.length === 0) {
+      sql += ' AND 1=0';
+    } else {
+      sql += ` AND ${invoiceAlias}.outlet_id IN (${outletIds.map(() => '?').join(', ')})`;
+      params.push(...outletIds);
+    }
+  }
+
+  if (Array.isArray(authorIds)) {
+    if (authorIds.length === 0) {
+      sql += ' AND 1=0';
+    } else if (invoiceItemAlias) {
+      sql += ` AND EXISTS (
+        SELECT 1 FROM product_authors scope_pa
+        WHERE scope_pa.product_id = ${invoiceItemAlias}.product_id
+          AND scope_pa.author_id IN (${authorIds.map(() => '?').join(', ')})
+      )`;
+      params.push(...authorIds);
+    } else {
+      sql += ` AND EXISTS (
+        SELECT 1
+        FROM invoice_items scope_ii
+        JOIN product_authors scope_pa ON scope_pa.product_id = scope_ii.product_id
+        WHERE scope_ii.invoice_id = ${invoiceAlias}.id
+          AND scope_pa.author_id IN (${authorIds.map(() => '?').join(', ')})
+      )`;
+      params.push(...authorIds);
+    }
   }
 
   return sql;
@@ -792,7 +824,7 @@ async function exportReport(reportType, query = {}, sessionUser = null, format =
   if (sessionUser) {
     const userId = sessionUser.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'readonly_viewer'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     if (!isElevated) {
       filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
@@ -994,7 +1026,7 @@ async function exportInvoiceItems(query = {}, format = 'xlsx', accessOptions = {
     JOIN products p ON p.id = ii.product_id
     WHERE 1=1
   `;
-  sql = applyInvoiceVisibilityFilters(sql, params, accessOptions);
+  sql = applyInvoiceVisibilityFilters(sql, params, accessOptions, 'i', 'ii');
   if (query.outletId) {
     sql += ` AND i.outlet_id = ?`;
     params.push(query.outletId);

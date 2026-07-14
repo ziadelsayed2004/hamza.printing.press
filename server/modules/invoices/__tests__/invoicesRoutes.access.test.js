@@ -12,7 +12,10 @@ jest.mock('../invoicesService', () => ({
 }));
 jest.mock('../../payments/paymentsService', () => ({ getPayments: jest.fn() }));
 jest.mock('../pdfService', () => ({ generateInvoicesPdf: jest.fn() }));
-jest.mock('../../users/usersService', () => ({ getUserRoles: jest.fn() }));
+jest.mock('../../users/usersService', () => ({
+  getUserRoles: jest.fn(),
+  getUserPermissions: jest.fn()
+}));
 jest.mock('../../authors/authorsService', () => ({ getLinkedAuthorsForUser: jest.fn() }));
 jest.mock('../../outlets/outletsService', () => ({ getLinkedOutletsForUser: jest.fn() }));
 jest.mock('../../../middleware/rbac', () => ({
@@ -27,6 +30,8 @@ const invoicesService = require('../invoicesService');
 const paymentsService = require('../../payments/paymentsService');
 const pdfService = require('../pdfService');
 const usersService = require('../../users/usersService');
+const authorsService = require('../../authors/authorsService');
+const outletsService = require('../../outlets/outletsService');
 const invoicesRouter = require('../invoicesRoutes');
 
 function createApp() {
@@ -50,8 +55,13 @@ describe('invoice routes access scope', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     invoicesService.getInvoices.mockResolvedValue([]);
+    invoicesService.createInvoice.mockResolvedValue({ id: 99, history: [], payments: [] });
+    invoicesService.updateInvoice.mockResolvedValue({ id: 42, history: [], payments: [] });
     paymentsService.getPayments.mockResolvedValue([]);
     pdfService.generateInvoicesPdf.mockResolvedValue(Buffer.from('pdf'));
+    usersService.getUserPermissions.mockResolvedValue(['invoices.pay', 'payments.view']);
+    authorsService.getLinkedAuthorsForUser.mockResolvedValue([]);
+    outletsService.getLinkedOutletsForUser.mockResolvedValue([]);
   });
 
   test.each(['inventory_manager', 'shipping_user'])(
@@ -75,7 +85,7 @@ describe('invoice routes access scope', () => {
   );
 
   test('removes the restriction when an elevated role is combined with a restricted role', async () => {
-    useRoles('shipping_user', 'accountant');
+    useRoles('shipping_user', 'assistant');
 
     const response = await request(app).get('/api/invoices');
 
@@ -141,8 +151,8 @@ describe('invoice routes access scope', () => {
     expect(paymentsService.getPayments).not.toHaveBeenCalled();
   });
 
-  test('allows payments for an incomplete, non-cancelled invoice', async () => {
-    useRoles('shipping_user');
+  test('allows payments after the payments.view middleware for a visible invoice', async () => {
+    useRoles('readonly_viewer');
     invoicesService.getInvoiceVisibilityRecords.mockResolvedValue([{
       id: 42,
       shipping_status: 'partially_shipped',
@@ -153,6 +163,96 @@ describe('invoice routes access scope', () => {
 
     expect(response.status).toBe(200);
     expect(paymentsService.getPayments).toHaveBeenCalledWith({ invoiceId: 42 });
+  });
+
+  test('omits payment rows and payment history from invoice details without payments.view', async () => {
+    useRoles('assistant');
+    usersService.getUserPermissions.mockResolvedValue([]);
+    invoicesService.getInvoiceById.mockResolvedValue({
+      id: 42,
+      outlet_id: 3,
+      shipping_status: 'pending',
+      payment_status: 'unpaid',
+      paid_amount: 0,
+      remaining_amount: 150,
+      payments: [{ id: 8, amount: 50 }],
+      history: [
+        { status_type: 'payment', new_status: 'partially_paid' },
+        { status_type: 'shipping', new_status: 'pending' }
+      ],
+      items: []
+    });
+
+    const response = await request(app).get('/api/invoices/42');
+
+    expect(response.status).toBe(200);
+    expect(invoicesService.getInvoiceById).toHaveBeenCalledWith(42, { includePayments: false });
+    expect(response.body.payments).toBeUndefined();
+    expect(response.body.history).toEqual([{ status_type: 'shipping', new_status: 'pending' }]);
+    expect(response.body.remaining_amount).toBe(150);
+  });
+
+  test('rejects initial payment fields on invoice creation without invoices.pay', async () => {
+    usersService.getUserPermissions.mockResolvedValue([]);
+
+    const response = await request(app)
+      .post('/api/invoices')
+      .send({
+        outletId: 3,
+        items: [{ productId: 4, quantity: 1 }],
+        paymentAmount: 0
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.requiredPermission).toBe('invoices.pay');
+    expect(invoicesService.createInvoice).not.toHaveBeenCalled();
+  });
+
+  test('allows an operational invoice create payload with no payment fields', async () => {
+    usersService.getUserPermissions.mockResolvedValue([]);
+
+    const response = await request(app)
+      .post('/api/invoices')
+      .send({ outletId: 3, items: [{ productId: 4, quantity: 1 }] });
+
+    expect(response.status).toBe(201);
+    expect(invoicesService.createInvoice).toHaveBeenCalledWith(expect.objectContaining({
+      outletId: 3,
+      paymentAmount: 0,
+      paymentSupplyStatus: 'not_supplied'
+    }));
+    expect(response.body.invoice.payments).toBeUndefined();
+  });
+
+  test('rejects changing paymentType on update without invoices.pay', async () => {
+    usersService.getUserPermissions.mockResolvedValue([]);
+    invoicesService.getInvoiceById.mockResolvedValue({ id: 42, payment_type: 'deferred' });
+
+    const response = await request(app)
+      .put('/api/invoices/42')
+      .send({
+        outletId: 3,
+        items: [{ productId: 4, quantity: 1 }],
+        paymentType: 'cash'
+      });
+
+    expect(response.status).toBe(403);
+    expect(response.body.requiredPermission).toBe('invoices.pay');
+    expect(invoicesService.updateInvoice).not.toHaveBeenCalled();
+  });
+
+  test('preserves paymentType when an operational update omits it', async () => {
+    usersService.getUserPermissions.mockResolvedValue([]);
+    invoicesService.getInvoiceById.mockResolvedValue({ id: 42, payment_type: 'deferred' });
+
+    const response = await request(app)
+      .put('/api/invoices/42')
+      .send({ outletId: 3, items: [{ productId: 4, quantity: 1 }] });
+
+    expect(response.status).toBe(200);
+    expect(invoicesService.updateInvoice).toHaveBeenCalledWith(42, expect.objectContaining({
+      paymentType: 'deferred'
+    }));
   });
 
   test('rejects the entire PDF request if any selected invoice is hidden', async () => {
@@ -209,5 +309,41 @@ describe('invoice routes access scope', () => {
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toMatch(/^application\/pdf/);
     expect(pdfService.generateInvoicesPdf).toHaveBeenCalledWith([1, 2]);
+  });
+
+  test('rejects PDF export when a linked author selects another author invoice', async () => {
+    useRoles('author');
+    authorsService.getLinkedAuthorsForUser.mockResolvedValue([12]);
+    invoicesService.getInvoiceVisibilityRecords.mockResolvedValue([{
+      id: 1,
+      outlet_id: 3,
+      author_ids: [99],
+      shipping_status: 'pending',
+      payment_status: 'unpaid'
+    }]);
+
+    const response = await request(app)
+      .post('/api/invoices/export/pdf')
+      .send({ invoiceIds: [1] });
+
+    expect(response.status).toBe(403);
+    expect(pdfService.generateInvoicesPdf).not.toHaveBeenCalled();
+  });
+
+  test('rejects payment rows when a linked outlet requests another outlet invoice', async () => {
+    useRoles('outlet');
+    outletsService.getLinkedOutletsForUser.mockResolvedValue([7]);
+    invoicesService.getInvoiceVisibilityRecords.mockResolvedValue([{
+      id: 42,
+      outlet_id: 8,
+      author_ids: [],
+      shipping_status: 'pending',
+      payment_status: 'unpaid'
+    }]);
+
+    const response = await request(app).get('/api/invoices/42/payments');
+
+    expect(response.status).toBe(403);
+    expect(paymentsService.getPayments).not.toHaveBeenCalled();
   });
 });

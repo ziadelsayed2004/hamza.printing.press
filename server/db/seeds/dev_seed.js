@@ -1,174 +1,129 @@
 const bcrypt = require('bcrypt');
 const dbHelper = require('../index');
+const {
+  PERMISSIONS,
+  ROLE_DEFINITIONS,
+  SYSTEM_ROLE_NAMES,
+  PROTECTED_PERMISSION_NAMES,
+  getRolePermissions
+} = require('../../modules/roles/roleCatalog');
+
+async function synchronizeRoleCatalog() {
+  for (const permission of PERMISSIONS) {
+    await dbHelper.run(
+      'INSERT OR IGNORE INTO permissions (name, description) VALUES (?, ?)',
+      [permission, `Permission to access ${permission}`]
+    );
+  }
+
+  for (const [name, definition] of Object.entries(ROLE_DEFINITIONS)) {
+    await dbHelper.run(
+      'INSERT OR IGNORE INTO roles (name, description, is_system, is_assignable, is_active) VALUES (?, ?, ?, ?, ?)',
+      [
+        name,
+        definition.description,
+        definition.isSystem ? 1 : 0,
+        definition.isAssignable ? 1 : 0,
+        definition.isActive ? 1 : 0
+      ]
+    );
+    await dbHelper.run(
+      `UPDATE roles
+       SET description = ?, is_system = ?, is_assignable = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE name = ?`,
+      [
+        definition.description,
+        definition.isSystem ? 1 : 0,
+        definition.isAssignable ? 1 : 0,
+        definition.isActive ? 1 : 0,
+        name
+      ]
+    );
+  }
+
+  const permissions = await dbHelper.all('SELECT id, name FROM permissions');
+  const roles = await dbHelper.all('SELECT id, name FROM roles');
+  const permissionMap = new Map(permissions.map(permission => [permission.name, permission.id]));
+  const roleMap = new Map(roles.map(role => [role.name, role.id]));
+
+  for (const permissionName of PROTECTED_PERMISSION_NAMES) {
+    const permissionId = permissionMap.get(permissionName);
+    if (!permissionId) continue;
+    await dbHelper.run(
+      `DELETE FROM role_permissions
+       WHERE permission_id = ?
+         AND role_id IN (SELECT id FROM roles WHERE is_system = 0)`,
+      [permissionId]
+    );
+  }
+
+  for (const roleName of SYSTEM_ROLE_NAMES) {
+    const roleId = roleMap.get(roleName);
+    if (!roleId) continue;
+
+    await dbHelper.run('DELETE FROM role_permissions WHERE role_id = ?', [roleId]);
+    const configuredPermissions = getRolePermissions(roleName);
+    const permissionNames = configuredPermissions === '*'
+      ? permissions.map(permission => permission.name)
+      : configuredPermissions;
+
+    for (const permissionName of permissionNames) {
+      const permissionId = permissionMap.get(permissionName);
+      if (!permissionId) {
+        throw new Error(`Unknown permission '${permissionName}' configured for role '${roleName}'.`);
+      }
+      await dbHelper.run(
+        'INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)',
+        [roleId, permissionId]
+      );
+    }
+  }
+
+  return { roleMap };
+}
 
 async function seed() {
   const isTest = process.env.NODE_ENV === 'test';
   console.log(`--- Seeding Database (Mode: ${isTest ? 'TEST' : 'PRODUCTION FRESH'}) ---`);
 
-  // 1. Seed Permissions
-  const permissionsList = [
-    'users.view', 'users.create', 'users.update', 'users.disable', 'users.archive',
-    'roles.manage', 'permissions.manage',
-    'authors.view', 'authors.create', 'authors.update',
-    'products.view', 'products.create', 'products.update', 'products.delete',
-    'product_prices.view', 'product_prices.update',
-    'outlet_types.view', 'outlet_types.manage',
-    'outlets.view', 'outlets.create', 'outlets.update', 'outlets.disable',
-    'invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export',
-    'invoices.pay', 'invoices.ship', 'invoices.return',
-    'payments.view', 'payments.create', 'payments.reverse', 'payments.receipt.view', 'payments.receipt.upload',
-    'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
-    'shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver',
-    'returns.view', 'returns.create',
-    'reports.view', 'reports.export',
-    'exports.run',
-    'audit.view', 'settings.update',
-    'backup.create', 'backup.restore',
-    'finance.view', 'finance.adjust', 'finance.export', 'finance.statement.view',
-    'payments.mark_supplied', 'payments.supply_batch',
-    'notifications.view', 'notifications.manage'
-  ];
+  await dbHelper.exec('BEGIN IMMEDIATE TRANSACTION;');
+  try {
+    console.log('Synchronizing permissions and fixed system roles...');
+    const { roleMap } = await synchronizeRoleCatalog();
 
-  console.log('Seeding permissions...');
-  for (const perm of permissionsList) {
-    await dbHelper.run(
-      'INSERT OR IGNORE INTO permissions (name, description) VALUES (?, ?)',
-      [perm, `Permission to access ${perm}`]
+    console.log('Seeding super admin user...');
+    const adminUsername = (process.env.SUPER_ADMIN_USERNAME || 'admin').trim().toLowerCase();
+    const adminPassword = process.env.SUPER_ADMIN_PASSWORD || '912Isk912';
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+    const userResult = await dbHelper.run(
+      'INSERT OR IGNORE INTO users (username, password_hash, full_name, status) VALUES (?, ?, ?, ?)',
+      [adminUsername, hashedPassword, 'System Administrator', 'active']
     );
-  }
 
-  // 2. Seed Roles
-  // Always seed all 9 legacy and core roles expected by the system.
-  const rolesList = [
-    { name: 'super_admin', desc: 'System Super Administrator' },
-    { name: 'admin', desc: 'Administrator' },
-    { name: 'accountant', desc: 'Financial Accountant' },
-    { name: 'inventory_manager', desc: 'Inventory Manager' },
-    { name: 'sales_staff', desc: 'Sales Representative' },
-    { name: 'shipping_user', desc: 'Shipping and Logistics User' },
-    { name: 'readonly_viewer', desc: 'Read Only Auditor' },
-    { name: 'author', desc: 'Book Author View' },
-    { name: 'outlet', desc: 'Outlet Partner Account' }
-  ];
+    let userId = userResult.changes > 0 ? userResult.lastID : null;
+    if (!userId) {
+      const userRow = await dbHelper.get(
+        'SELECT id FROM users WHERE username = ?',
+        [adminUsername]
+      );
+      userId = userRow && userRow.id;
+    }
 
-  console.log('Seeding roles...');
-  for (const r of rolesList) {
-    await dbHelper.run(
-      'INSERT OR IGNORE INTO roles (name, description) VALUES (?, ?)',
-      [r.name, r.desc]
-    );
-  }
-
-  // 3. Link super_admin role with all permissions
-  console.log('Linking super_admin with all permissions...');
-  const permissions = await dbHelper.all('SELECT id, name FROM permissions');
-  const superAdminRole = await dbHelper.get('SELECT id FROM roles WHERE name = ?', ['super_admin']);
-  
-  if (superAdminRole) {
-    for (const perm of permissions) {
+    const superAdminRoleId = roleMap.get('super_admin');
+    if (userId && superAdminRoleId) {
       await dbHelper.run(
-        'INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)',
-        [superAdminRole.id, perm.id]
+        'INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)',
+        [userId, superAdminRoleId]
       );
     }
+
+    await dbHelper.exec('COMMIT;');
+    console.log('Seeding completed successfully. Environment setup verified.');
+  } catch (error) {
+    await dbHelper.exec('ROLLBACK;');
+    throw error;
   }
-
-  // Seed and link permissions for all roles
-  if (true) {
-    const roles = await dbHelper.all('SELECT id, name FROM roles');
-    const permMap = new Map(permissions.map(p => [p.name, p.id]));
-    const roleMap = new Map(roles.map(r => [r.name, r.id]));
-
-    const linkPerm = async (roleName, permName) => {
-      const roleId = roleMap.get(roleName);
-      const permId = permMap.get(permName);
-      if (roleId && permId) {
-        await dbHelper.run(
-          'INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)',
-          [roleId, permId]
-        );
-      }
-    };
-
-    // Admin gets all permissions too
-    for (const perm of permissionsList) {
-      await linkPerm('admin', perm);
-    }
-
-    // Accountant permissions
-    const accountantPerms = [
-      'invoices.view', 'payments.view', 'payments.create', 'payments.reverse', 'reports.view', 'reports.export',
-      'finance.view', 'finance.export', 'finance.statement.view', 'payments.mark_supplied', 'payments.supply_batch'
-    ];
-    for (const p of accountantPerms) {
-      await linkPerm('accountant', p);
-    }
-
-    // Sales Staff permissions
-    const salesPerms = [
-      'products.view', 'outlets.view', 'invoices.view', 'invoices.create', 'invoices.update', 'payments.view', 'payments.create', 'payments.mark_supplied'
-    ];
-    for (const p of salesPerms) {
-      await linkPerm('sales_staff', p);
-    }
-
-    // Inventory Manager permissions
-    const inventoryPerms = [
-      'products.view', 'products.create', 'products.update', 'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
-      'invoices.view'
-    ];
-    for (const p of inventoryPerms) {
-      await linkPerm('inventory_manager', p);
-    }
-
-    // Shipping User permissions
-    await linkPerm('shipping_user', 'invoices.view');
-
-    // Author permissions
-    const authorPerms = [
-      'products.view', 'invoices.view', 'finance.view'
-    ];
-    for (const p of authorPerms) {
-      await linkPerm('author', p);
-    }
-
-    // Outlet permissions
-    const outletPerms = [
-      'invoices.view', 'finance.view', 'finance.statement.view', 'shipments.view'
-    ];
-    for (const p of outletPerms) {
-      await linkPerm('outlet', p);
-    }
-  }
-
-  // 4. Seed a single active super admin user
-  console.log('Seeding super admin user...');
-  const adminUsername = process.env.SUPER_ADMIN_USERNAME || 'admin';
-  const adminPassword = process.env.SUPER_ADMIN_PASSWORD || '912Isk912';
-
-  const hashedPassword = await bcrypt.hash(adminPassword, 10);
-  const userResult = await dbHelper.run(
-    'INSERT OR IGNORE INTO users (username, password_hash, full_name, status) VALUES (?, ?, ?, ?)',
-    [adminUsername, hashedPassword, 'System Administrator', 'active']
-  );
-  
-  let userId;
-  if (userResult.lastID) {
-    userId = userResult.lastID;
-  } else {
-    const userRow = await dbHelper.get('SELECT id FROM users WHERE username = ?', [adminUsername]);
-    if (userRow) userId = userRow.id;
-  }
-  
-  if (userId && superAdminRole) {
-    await dbHelper.run(
-      'INSERT OR IGNORE INTO user_roles (user_id, role_id) VALUES (?, ?)',
-      [userId, superAdminRole.id]
-    );
-  }
-
-
-  console.log(`✓ Seeding completed successfully. Environment setup verified.`);
 }
 
 module.exports = seed;

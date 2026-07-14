@@ -1,0 +1,144 @@
+jest.mock('../../../db', () => ({
+  all: jest.fn(),
+  get: jest.fn(),
+  run: jest.fn(),
+  exec: jest.fn()
+}));
+jest.mock('../../notifications/notificationsService', () => ({
+  createOrUpdateNotification: jest.fn(),
+  resolveNotificationByDedupeKey: jest.fn()
+}));
+
+const db = require('../../../db');
+const shipmentsService = require('../shipmentsService');
+
+describe('shipmentsService status lifecycle', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    db.exec.mockResolvedValue();
+    db.run.mockResolvedValue({ lastID: 7, changes: 1 });
+    db.all.mockResolvedValue([]);
+  });
+
+  test.each([
+    [{ shipped_qty: 0, delivered_qty: 0 }, 'pending'],
+    [{ shipped_qty: 1, delivered_qty: 0 }, 'partially_shipped'],
+    [{ shipped_qty: 2, delivered_qty: 0 }, 'shipped'],
+    [{ shipped_qty: 2, delivered_qty: 2 }, 'delivered']
+  ])('recalculates the invoice from shipment item state as %s', async (quantities, expectedStatus) => {
+    db.get.mockImplementation(sql => {
+      if (sql.includes('SELECT shipping_status')) {
+        return Promise.resolve({ shipping_status: 'stale', invoice_number: 'INV-1' });
+      }
+      if (sql.includes('CASE WHEN s.status')) return Promise.resolve(quantities);
+      return Promise.resolve(null);
+    });
+    db.all.mockResolvedValue([{ id: 4, quantity: 2, product_title: 'Book' }]);
+
+    await shipmentsService.recalculateInvoiceShippingStatus(10, 17);
+
+    expect(db.run).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE invoices SET shipping_status'),
+      [expectedStatus, 10]
+    );
+  });
+
+  test.each([
+    ['pending', 'delivered'],
+    ['delivered', 'cancelled'],
+    ['cancelled', 'shipped']
+  ])('rejects invalid transition %s -> %s', async (from, to) => {
+    db.get.mockResolvedValue({ id: 7, invoice_id: 10, status: from });
+
+    await expect(shipmentsService.updateShipmentStatus(7, { status: to, userId: 17 }))
+      .rejects.toThrow(`Invalid shipment status transition from ${from} to ${to}`);
+
+    expect(db.exec).not.toHaveBeenCalled();
+  });
+
+  test('records shipped_at on pending -> shipped and recalculates the invoice', async () => {
+    db.get.mockImplementation(sql => {
+      if (sql.includes('SELECT * FROM shipments')) {
+        return Promise.resolve({
+          id: 7,
+          invoice_id: 10,
+          status: 'pending',
+          shipped_at: null,
+          delivered_at: null
+        });
+      }
+      if (sql.includes('SELECT shipping_status')) {
+        return Promise.resolve({ shipping_status: 'pending', invoice_number: 'INV-1' });
+      }
+      if (sql.includes('CASE WHEN s.status')) {
+        return Promise.resolve({ shipped_qty: 2, delivered_qty: 0 });
+      }
+      if (sql.includes('SELECT s.*')) {
+        return Promise.resolve({ id: 7, invoice_id: 10, status: 'shipped' });
+      }
+      return Promise.resolve(null);
+    });
+    db.all.mockImplementation(sql => {
+      if (sql.includes('FROM invoice_items ii') && sql.includes('WHERE ii.invoice_id')) {
+        return Promise.resolve([{ id: 4, quantity: 2, product_title: 'Book' }]);
+      }
+      return Promise.resolve([]);
+    });
+
+    await shipmentsService.updateShipmentStatus(7, { status: 'shipped', userId: 17 });
+
+    const shipmentUpdate = db.run.mock.calls.find(([sql]) => sql.includes('UPDATE shipments'));
+    expect(shipmentUpdate[1][0]).toBe('shipped');
+    expect(shipmentUpdate[1][1]).toEqual(expect.any(String));
+    expect(shipmentUpdate[1][2]).toBeNull();
+    expect(db.exec).toHaveBeenNthCalledWith(1, 'BEGIN TRANSACTION;');
+    expect(db.exec).toHaveBeenLastCalledWith('COMMIT;');
+  });
+
+  test('creates shipment and initial history in pending state', async () => {
+    db.get.mockImplementation(sql => {
+      if (sql.includes('SELECT * FROM invoices')) {
+        return Promise.resolve({ id: 10, payment_status: 'unpaid', shipping_status: 'pending' });
+      }
+      if (sql.includes('SELECT ii.*')) {
+        return Promise.resolve({ id: 4, invoice_id: 10, product_id: 6, quantity: 2, product_title: 'Book' });
+      }
+      if (sql.includes('COALESCE(SUM(si.quantity)')) return Promise.resolve({ qty: 0 });
+      if (sql.includes('SELECT stock_policy')) return Promise.resolve({ stock_policy: 'none' });
+      if (sql.includes('SELECT shipping_status')) {
+        return Promise.resolve({ shipping_status: 'pending', invoice_number: 'INV-1' });
+      }
+      if (sql.includes('SELECT s.*')) {
+        return Promise.resolve({ id: 7, invoice_id: 10, status: 'pending' });
+      }
+      return Promise.resolve(null);
+    });
+    db.all.mockResolvedValue([]);
+
+    const shipment = await shipmentsService.createShipment({
+      invoiceId: 10,
+      items: [{ invoiceItemId: 4, quantity: 1 }],
+      userId: 17
+    });
+
+    const shipmentInsert = db.run.mock.calls.find(([sql]) => sql.includes('INSERT INTO shipments'));
+    const historyInsert = db.run.mock.calls.find(([sql]) => sql.includes('INSERT INTO shipment_status_history'));
+    expect(shipmentInsert[0]).toContain("'pending'");
+    expect(historyInsert[0]).toContain("'pending', 'pending'");
+    expect(shipment.status).toBe('pending');
+  });
+
+  test.each([
+    [{ payment_status: 'cancelled', shipping_status: 'pending' }, 'cancelled invoice'],
+    [{ payment_status: 'paid', shipping_status: 'delivered' }, 'shipping is already complete']
+  ])('refuses shipment creation when invoice is not shippable: %s', async (invoice, message) => {
+    db.get.mockResolvedValue({ id: 10, ...invoice });
+
+    await expect(shipmentsService.createShipment({
+      invoiceId: 10,
+      items: [{ invoiceItemId: 4, quantity: 1 }]
+    })).rejects.toThrow(message);
+
+    expect(db.exec).not.toHaveBeenCalled();
+  });
+});

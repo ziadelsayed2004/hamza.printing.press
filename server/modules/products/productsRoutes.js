@@ -3,6 +3,7 @@ const router = express.Router();
 const productsService = require('./productsService');
 const authorsService = require('../authors/authorsService');
 const usersService = require('../users/usersService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
@@ -35,7 +36,7 @@ router.get('/', requireAuth, checkPermission('products.view'), async (req, res) 
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
     const isAuthor = userRoles.some(r => r.name === 'author');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     let filterAuthorIds = null;
     if (isAuthor && !isElevated) {
@@ -100,7 +101,7 @@ router.get('/:id', requireAuth, checkPermission('products.view'), async (req, re
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
     const isAuthor = userRoles.some(r => r.name === 'author');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     if (!isElevated) {
       if (isAuthor) {

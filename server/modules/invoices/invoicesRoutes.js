@@ -6,9 +6,80 @@ const pdfService = require('./pdfService');
 const usersService = require('../users/usersService');
 const authorsService = require('../authors/authorsService');
 const outletsService = require('../outlets/outletsService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { getInvoiceVisibilityScope, isInvoiceVisible } = require('./invoiceAccessPolicy');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+const CREATE_PAYMENT_FIELDS = Object.freeze([
+  'paymentType',
+  'paymentAmount',
+  'paymentSupplyStatus',
+  'paymentNotes',
+  'paymentReceiptName',
+  'paymentReceiptData'
+]);
+
+function requestContainsPaymentFields(body) {
+  return CREATE_PAYMENT_FIELDS.some(field => Object.prototype.hasOwnProperty.call(body, field));
+}
+
+function sendPaymentPermissionForbidden(res) {
+  return res.status(403).json({
+    error: 'Forbidden',
+    message: "Access denied. You do not have the required permission: 'invoices.pay'.",
+    requiredPermission: 'invoices.pay'
+  });
+}
+
+function redactInvoicePaymentDetails(invoice) {
+  if (!invoice) return invoice;
+  delete invoice.payments;
+  if (Array.isArray(invoice.history)) {
+    invoice.history = invoice.history.filter(entry => entry.status_type !== 'payment');
+  }
+  return invoice;
+}
+
+async function getLinkedInvoiceScope(userId, userRoles) {
+  const roleNames = userRoles.map(role => role.name);
+  if (hasGlobalBusinessScope(roleNames)) return { global: true };
+
+  const [linkedAuthorIds, linkedOutletIds] = await Promise.all([
+    authorsService.getLinkedAuthorsForUser(userId),
+    outletsService.getLinkedOutletsForUser(userId)
+  ]);
+  return {
+    global: false,
+    isAuthor: roleNames.includes('author'),
+    isOutlet: roleNames.includes('outlet'),
+    linkedAuthorIds,
+    linkedOutletIds
+  };
+}
+
+function isInvoiceWithinLinkedScope(invoice, scope) {
+  if (!scope || scope.global) return true;
+
+  if (scope.isOutlet) {
+    if (!scope.linkedOutletIds.includes(invoice.outlet_id)) return false;
+  } else if (scope.linkedOutletIds.length > 0 && !scope.linkedOutletIds.includes(invoice.outlet_id)) {
+    return false;
+  }
+
+  const invoiceAuthorIds = Array.isArray(invoice.author_ids) ? invoice.author_ids : [];
+  if (scope.isAuthor) {
+    if (scope.linkedAuthorIds.length === 0) return false;
+    if (!invoiceAuthorIds.some(authorId => scope.linkedAuthorIds.includes(authorId))) return false;
+  } else if (
+    scope.linkedAuthorIds.length > 0 &&
+    !invoiceAuthorIds.some(authorId => scope.linkedAuthorIds.includes(authorId))
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 function sendInvoiceVisibilityForbidden(res) {
   return res.status(403).json({
@@ -41,7 +112,7 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
     const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
     const isAuthor = userRoles.some(r => r.name === 'author');
     const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     let filterAuthorIds = null;
     let filterOutletIds = null;
@@ -98,12 +169,18 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
   const invoiceId = parseInt(req.params.id, 10);
 
   try {
-    const invoice = await invoicesService.getInvoiceById(invoiceId);
+    if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
+      return res.status(400).json({ error: 'Bad Request', message: 'Valid Invoice ID is required.' });
+    }
+
+    const userId = req.session.user.id;
+    const permissions = await usersService.getUserPermissions(userId);
+    const canViewPayments = permissions.includes('payments.view');
+    const invoice = await invoicesService.getInvoiceById(invoiceId, { includePayments: canViewPayments });
     if (!invoice) {
       return res.status(404).json({ error: 'Not Found', message: 'Invoice not found.' });
     }
 
-    const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
     const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
     if (!isInvoiceVisible(invoice, visibilityScope)) {
@@ -112,7 +189,7 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
 
     const isAuthor = userRoles.some(r => r.name === 'author');
     const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     if (!isElevated) {
       if (isOutlet) {
@@ -178,6 +255,7 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
       }
     }
 
+    if (!canViewPayments) redactInvoicePaymentDetails(invoice);
     res.status(200).json(invoice);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -207,6 +285,13 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
 
   try {
     const userId = req.session.user.id;
+    const permissions = await usersService.getUserPermissions(userId);
+    const canPayInvoices = permissions.includes('invoices.pay');
+    const canViewPayments = permissions.includes('payments.view');
+    if (requestContainsPaymentFields(req.body) && !canPayInvoices) {
+      return sendPaymentPermissionForbidden(res);
+    }
+
     const invoice = await invoicesService.createInvoice({
       invoiceNumber,
       outletId,
@@ -223,6 +308,8 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
       paymentReceiptData
     });
 
+    if (!canViewPayments) redactInvoicePaymentDetails(invoice);
+
     res.status(201).json({
       success: true,
       message: 'Invoice created successfully.',
@@ -238,7 +325,7 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
 });
 
 // 9. PUT /api/invoices/bulk/shipping-status - Bulk update shipping status
-router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.update'), auditLog('bulk_update_shipping_status', 'invoices'), async (req, res) => {
+router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.ship'), auditLog('bulk_update_shipping_status', 'invoices'), async (req, res) => {
   const { invoiceIds, shippingStatus } = req.body;
   if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
     return res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must be a non-empty array.' });
@@ -260,7 +347,15 @@ router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.updat
     });
   } catch (err) {
     const msg = (err.message || '').toLowerCase();
-    if (msg.includes('المخزون') || msg.includes('كاف') || msg.includes('exceeds') || msg.includes('insufficient')) {
+    if (
+      msg.includes('invalid shipping status') ||
+      msg.includes('cannot update shipping') ||
+      msg.includes('unable to derive shipping status') ||
+      msg.includes('المخزون') ||
+      msg.includes('كاف') ||
+      msg.includes('exceeds') ||
+      msg.includes('insufficient')
+    ) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -270,14 +365,31 @@ router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.updat
 // 4. PUT /api/invoices/:id - Update an existing invoice
 router.put('/:id', requireAuth, checkPermission('invoices.update'), auditLog('update_invoice', 'invoices'), async (req, res) => {
   const invoiceId = parseInt(req.params.id, 10);
-  const { outletId, discount = 0, shippingCost = 0, paymentType = 'cash', notes = '', items = [] } = req.body;
+  const { outletId, discount = 0, shippingCost = 0, notes = '', items = [] } = req.body;
 
+  if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Valid Invoice ID is required.' });
+  }
   if (!outletId || !items || items.length === 0) {
     return res.status(400).json({ error: 'Bad Request', message: 'Outlet ID and items are required.' });
   }
 
   try {
     const userId = req.session.user.id;
+    const permissions = await usersService.getUserPermissions(userId);
+    const canPayInvoices = permissions.includes('invoices.pay');
+    const canViewPayments = permissions.includes('payments.view');
+    const existingInvoice = await invoicesService.getInvoiceById(invoiceId, { includePayments: false });
+    if (!existingInvoice) {
+      return res.status(404).json({ error: 'Not Found', message: `Invoice with ID ${invoiceId} does not exist` });
+    }
+
+    const paymentTypeWasProvided = Object.prototype.hasOwnProperty.call(req.body, 'paymentType');
+    const paymentType = paymentTypeWasProvided ? req.body.paymentType : existingInvoice.payment_type;
+    if (paymentTypeWasProvided && paymentType !== existingInvoice.payment_type && !canPayInvoices) {
+      return sendPaymentPermissionForbidden(res);
+    }
+
     const invoice = await invoicesService.updateInvoice(invoiceId, {
       outletId,
       discount,
@@ -287,6 +399,8 @@ router.put('/:id', requireAuth, checkPermission('invoices.update'), auditLog('up
       items,
       userId
     });
+
+    if (!canViewPayments) redactInvoicePaymentDetails(invoice);
 
     res.status(200).json({
       success: true,
@@ -306,7 +420,7 @@ router.put('/:id', requireAuth, checkPermission('invoices.update'), auditLog('up
 });
 
 // 5. GET /api/invoices/:id/payments - Get payments list for a specific invoice
-router.get('/:id/payments', requireAuth, checkPermission('invoices.view'), async (req, res) => {
+router.get('/:id/payments', requireAuth, checkPermission('payments.view'), async (req, res) => {
   const invoiceId = Number(req.params.id);
 
   if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
@@ -324,6 +438,10 @@ router.get('/:id/payments', requireAuth, checkPermission('invoices.view'), async
       return res.status(404).json({ error: 'Not Found', message: 'Invoice not found.' });
     }
     if (!isInvoiceVisible(invoice, visibilityScope)) {
+      return sendInvoiceVisibilityForbidden(res);
+    }
+    const linkedScope = await getLinkedInvoiceScope(req.session.user.id, userRoles);
+    if (!isInvoiceWithinLinkedScope(invoice, linkedScope)) {
       return sendInvoiceVisibilityForbidden(res);
     }
 
@@ -360,6 +478,18 @@ router.post('/export/pdf', requireAuth, checkPermission('invoices.export'), asyn
       visibilityScope.restricted &&
       (invoices.length !== uniqueInvoiceIds.length ||
         invoices.some(invoice => !isInvoiceVisible(invoice, visibilityScope)))
+    ) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied. One or more selected invoices cannot be exported.'
+      });
+    }
+
+    const linkedScope = await getLinkedInvoiceScope(req.session.user.id, userRoles);
+    if (
+      !linkedScope.global &&
+      (invoices.length !== uniqueInvoiceIds.length ||
+        invoices.some(invoice => !isInvoiceWithinLinkedScope(invoice, linkedScope)))
     ) {
       return res.status(403).json({
         error: 'Forbidden',

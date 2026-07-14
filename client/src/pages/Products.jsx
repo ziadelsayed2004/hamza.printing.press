@@ -89,18 +89,28 @@ export const Products = () => {
   const [productIdToDelete, setProductIdToDelete] = useState(null);
 
   const fetchInitialData = async () => {
-    try {
-      const cats = await apiClient.get('/categories');
-      setCategories(cats);
+    const requests = [
+      apiClient.get('/categories')
+        .then(setCategories)
+        .catch((err) => console.error('Failed to load categories:', err))
+    ];
 
-      const authorsData = await apiClient.get('/authors?limit=500&status=active');
-      setAuthorsList(authorsData);
-
-      const outletsData = await apiClient.get('/outlet-types?limit=100&includeDisabled=false');
-      setOutletTypes(outletsData);
-    } catch (err) {
-      console.error('Failed to load filters metadata:', err);
+    if (hasPermission('authors.view')) {
+      requests.push(
+        apiClient.get('/authors?limit=500&status=active')
+          .then(setAuthorsList)
+          .catch((err) => console.error('Failed to load authors:', err))
+      );
     }
+    if (hasPermission('outlet_types.view') && hasPermission('product_prices.view')) {
+      requests.push(
+        apiClient.get('/outlet-types?limit=100&includeDisabled=false')
+          .then(setOutletTypes)
+          .catch((err) => console.error('Failed to load outlet types:', err))
+      );
+    }
+
+    await Promise.all(requests);
   };
 
   const fetchProducts = async () => {
@@ -147,6 +157,7 @@ export const Products = () => {
     setDetailsProduct(product);
     setDetailsPrices([]);
     setOpenDetailsModal(true);
+    if (!hasPermission('product_prices.view')) return;
     try {
       const prices = await apiClient.get(`/product-prices/product/${product.id}`);
       setDetailsPrices(prices);
@@ -203,6 +214,7 @@ export const Products = () => {
     setFormPrices(initialPrices);
     
     setOpenModal(true);
+    if (!hasPermission('product_prices.view')) return;
     try {
       const prices = await apiClient.get(`/product-prices/product/${product.id}`);
       const priceMap = {};
@@ -266,7 +278,7 @@ export const Products = () => {
       });
 
       // Send bulk prices update
-      if (pricesPayload.length > 0) {
+      if (hasPermission('product_prices.update') && pricesPayload.length > 0) {
         await apiClient.put(`/product-prices/product/${productId}`, { prices: pricesPayload });
       }
 
@@ -432,7 +444,11 @@ export const Products = () => {
                   </TableCell>
                   <TableCell align="right">
                     <Box sx={{ display: 'flex', justifyContent: 'flex-start', gap: 1 }}>
-                      <IconButton color="secondary" onClick={() => handleOpenDetails(p)} title="عرض التفاصيل والأسعار">
+                      <IconButton
+                        color="secondary"
+                        onClick={() => handleOpenDetails(p)}
+                        title={hasPermission('product_prices.view') ? 'عرض التفاصيل والأسعار' : 'عرض التفاصيل'}
+                      >
                         <VisibilityIcon />
                       </IconButton>
                       {hasPermission('products.update') && (
@@ -458,7 +474,7 @@ export const Products = () => {
       <EntityDrawer
         open={openDetailsModal}
         onClose={() => setOpenDetailsModal(false)}
-        title="تفاصيل الكتاب والأسعار"
+        title={hasPermission('product_prices.view') ? 'تفاصيل الكتاب والأسعار' : 'تفاصيل الكتاب'}
         actions={<Button onClick={() => setOpenDetailsModal(false)} variant="outlined">إغلاق</Button>}
       >
         {detailsProduct && (
@@ -485,34 +501,37 @@ export const Products = () => {
               <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>{t('system.scanToViewProduct')}</Typography>
             </Box>
             
-            <Divider sx={{ my: 3 }} />
-            
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1.5 }}>
-              أسعار البيع المعتمدة بحسب فئات المنافذ:
-            </Typography>
-            {detailsPrices.length === 0 ? (
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>لا توجد أسعار مدخلة بعد لهذا المنتج.</Typography>
-            ) : (
-              <TableContainer className="scrollable-table-container">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell align="right">فئة المنفذ</TableCell>
-                      <TableCell align="right">السعر المعتمد</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {detailsPrices.map((pr) => (
-                      <TableRow key={pr.outletTypeId}>
-                        <TableCell align="right">{pr.outletTypeName}</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
-                          {formatCurrencyEGP(pr.price)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+            {hasPermission('product_prices.view') && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1.5 }}>
+                  أسعار البيع المعتمدة بحسب فئات المنافذ:
+                </Typography>
+                {detailsPrices.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>لا توجد أسعار مدخلة بعد لهذا المنتج.</Typography>
+                ) : (
+                  <TableContainer className="scrollable-table-container">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell align="right">فئة المنفذ</TableCell>
+                          <TableCell align="right">السعر المعتمد</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {detailsPrices.map((pr) => (
+                          <TableRow key={pr.outletTypeId}>
+                            <TableCell align="right">{pr.outletTypeName}</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                              {formatCurrencyEGP(pr.price)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </>
             )}
           </FormSection>
         )}
@@ -617,25 +636,27 @@ export const Products = () => {
             </FieldGrid>
           </FormSection>
 
-          <FormSection title="قائمة أسعار البيع المعتمدة بحسب فئات المنافذ">
-            <FieldGrid columns={2}>
-              {outletTypes.map((ot) => (
-                <TextField
-                  key={ot.id}
-                  type="number"
-                  size="small"
-                  label={`السعر لـ (${ot.name})`}
-                  value={formPrices[ot.id] || ''}
-                  onChange={(e) => handlePriceChange(ot.id, e.target.value)}
-                  placeholder="0.00"
-                  fullWidth
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
-                  }}
-                />
-              ))}
-            </FieldGrid>
-          </FormSection>
+          {hasPermission('product_prices.update') && (
+            <FormSection title="قائمة أسعار البيع المعتمدة بحسب فئات المنافذ">
+              <FieldGrid columns={2}>
+                {outletTypes.map((ot) => (
+                  <TextField
+                    key={ot.id}
+                    type="number"
+                    size="small"
+                    label={`السعر لـ (${ot.name})`}
+                    value={formPrices[ot.id] || ''}
+                    onChange={(e) => handlePriceChange(ot.id, e.target.value)}
+                    placeholder="0.00"
+                    fullWidth
+                    InputProps={{
+                      endAdornment: <InputAdornment position="end">ج.م</InputAdornment>,
+                    }}
+                  />
+                ))}
+              </FieldGrid>
+            </FormSection>
+          )}
         </form>
       </EntityDrawer>
 

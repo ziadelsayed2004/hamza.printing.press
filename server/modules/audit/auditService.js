@@ -18,7 +18,12 @@ async function log({ userId, action, targetType = null, targetId = null, details
  */
 async function getLogs({ limit = 50, offset = 0, userId = null, action = null, targetType = null } = {}) {
   let sql = `
-    SELECT al.*, u.username, u.full_name
+    SELECT al.*,
+           CASE
+             WHEN u.status = 'archived' THEN COALESCE(u.archived_username, u.username)
+             ELSE u.username
+           END AS username,
+           u.full_name
     FROM audit_logs al
     LEFT JOIN users u ON u.id = al.user_id
     WHERE 1=1
@@ -45,7 +50,7 @@ async function getLogs({ limit = 50, offset = 0, userId = null, action = null, t
   return logs.map(log => {
     try {
       log.details = log.details ? JSON.parse(log.details) : null;
-    } catch (e) {
+    } catch {
       // Keep it as string if JSON parsing fails
     }
     return log;

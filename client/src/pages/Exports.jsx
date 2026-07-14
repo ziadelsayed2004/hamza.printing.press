@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../app/AuthContext';
+import { apiClient } from '../services/apiClient';
 import {
   Box,
   Typography,
@@ -59,8 +60,29 @@ import {
 
 import '../styles/Exports.css';
 
+const EXPORT_MODULE_PERMISSIONS = {
+  invoices: ['invoices.export'],
+  'invoice-items': ['invoices.export'],
+  payments: ['payments.view'],
+  'outlet-statement': ['finance.statement.view'],
+  inventory: ['inventory.view'],
+  shipments: ['shipments.view'],
+  'courier-sheet': ['shipments.view'],
+  returns: ['returns.view'],
+  products: ['products.view'],
+  prices: ['product_prices.view'],
+  outlets: ['outlets.view'],
+  authors: ['authors.view'],
+  'report-balances': ['reports.view', 'finance.view'],
+  'report-stock': ['reports.view', 'inventory.view'],
+  'report-authors': ['reports.view', 'authors.view'],
+  'report-receipts': ['reports.view', 'inventory.view']
+};
+
 export const Exports = () => {
   const { hasPermission } = useAuth();
+  const canAccessModule = (module) =>
+    (EXPORT_MODULE_PERMISSIONS[module.id] || []).every(hasPermission);
   
   const getButtonStyle = (color) => ({
     py: 0.5, 
@@ -117,17 +139,17 @@ export const Exports = () => {
   };
 
   useEffect(() => {
-    // Fetch outlets
-    fetch('/api/outlets')
-      .then(res => res.json())
+    if (hasPermission('outlets.view')) {
+      apiClient.get('/outlets')
       .then(data => setOutlets(Array.isArray(data) ? data : []))
       .catch(err => console.error('Error fetching outlets:', err));
+    }
 
-    // Fetch products
-    fetch('/api/products')
-      .then(res => res.json())
+    if (hasPermission('products.view')) {
+      apiClient.get('/products')
       .then(data => setProducts(Array.isArray(data) ? data : []))
       .catch(err => console.error('Error fetching products:', err));
+    }
   }, []);
 
 
@@ -136,13 +158,19 @@ export const Exports = () => {
     const allModules = exportSectors[2].modules;
     
     // Group 1: Catalog & Pricing
-    const catalogModules = allModules.filter(m => ['products', 'prices', 'authors'].includes(m.id));
+    const catalogModules = allModules.filter(m =>
+      ['products', 'prices', 'authors'].includes(m.id) && canAccessModule(m)
+    );
     
     // Group 2: Inventory Ledger & Operations
-    const inventoryModules = allModules.filter(m => ['report-stock', 'report-receipts'].includes(m.id));
+    const inventoryModules = allModules.filter(m =>
+      ['report-stock', 'report-receipts'].includes(m.id) && canAccessModule(m)
+    );
     
     // Group 3: Sales & Balances Reports
-    const salesModules = allModules.filter(m => ['report-balances', 'report-authors', 'outlets'].includes(m.id));
+    const salesModules = allModules.filter(m =>
+      ['report-balances', 'report-authors', 'outlets'].includes(m.id) && canAccessModule(m)
+    );
     
     return [
       { title: 'بيانات الكتالوج والأسعار', modules: catalogModules, icon: <BookIcon sx={{ color: '#f1c40f', fontSize: '1.25rem' }} /> },
@@ -320,6 +348,10 @@ export const Exports = () => {
   ];
 
   const handleOpenFilters = (mod) => {
+    if (!hasPermission('exports.run') || !canAccessModule(mod)) {
+      showToast('ليس لديك صلاحية لتصدير هذا النوع من البيانات.', 'error');
+      return;
+    }
     setSelectedMod(mod);
     setErrorMsg('');
     setFormFilters({
@@ -340,7 +372,7 @@ export const Exports = () => {
   };
 
   const handleExportSubmit = () => {
-    if (!hasPermission('exports.run')) {
+    if (!hasPermission('exports.run') || !selectedMod || !canAccessModule(selectedMod)) {
       showToast('ليس لديك صلاحية تصدير البيانات', 'error');
       return;
     }
@@ -485,7 +517,7 @@ export const Exports = () => {
               ) : (
                 // Flat grid view for tabs 0 and 1
                 <Grid container spacing={2}>
-                  {currentSector.modules.map((mod, mIdx) => (
+                  {currentSector.modules.filter(canAccessModule).map((mod, mIdx) => (
                     <Grid item xs={12} sm={6} md={3} key={mIdx}>
                       <Card className="exports-card" sx={{ 
                         height: '100%', 

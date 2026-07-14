@@ -78,7 +78,7 @@ export const MainLayout = () => {
     ['inventory_manager', 'shipping_user'].includes(role)
   );
   const hasInvoiceVisibilityBypassRole = userRoles.some((role) =>
-    ['super_admin', 'admin', 'accountant', 'sales_staff'].includes(role)
+    ['super_admin', 'assistant', 'readonly_viewer'].includes(role)
   );
   const isInvoiceVisibilityRestricted =
     hasRestrictedInvoiceRole && !hasInvoiceVisibilityBypassRole;
@@ -92,7 +92,7 @@ export const MainLayout = () => {
 
   // ── Notifications Fetching ──
   const fetchNotifications = async () => {
-    if (!user) return;
+    if (!user || !hasPermission('notifications.view')) return;
     try {
       const counts = await apiClient.get('/notifications/counts');
       setUnreadCount(counts.unread || 0);
@@ -104,6 +104,11 @@ export const MainLayout = () => {
   };
 
   useEffect(() => {
+    if (!hasPermission('notifications.view')) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return undefined;
+    }
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
@@ -111,6 +116,7 @@ export const MainLayout = () => {
 
   const handleMarkAsRead = async (id, event) => {
     if (event) event.stopPropagation();
+    if (!hasPermission('notifications.manage')) return;
     try {
       await apiClient.patch(`/notifications/${id}/read`);
       await fetchNotifications();
@@ -121,6 +127,7 @@ export const MainLayout = () => {
 
   const handleResolve = async (id, event) => {
     if (event) event.stopPropagation();
+    if (!hasPermission('notifications.manage')) return;
     try {
       await apiClient.patch(`/notifications/${id}/resolve`);
       await fetchNotifications();
@@ -216,7 +223,7 @@ export const MainLayout = () => {
       title: 'الفواتير والمبيعات',
       items: [
         { textKey: 'nav.invoices', text: 'الفواتير', icon: <ReceiptIcon />, path: '/invoices', permission: 'invoices.view' },
-        { textKey: 'nav.returns', text: 'المرتجعات', icon: <HistoryIcon />, path: '/returns', permission: 'invoices.view', hideForRestrictedInvoiceRole: true }
+        { textKey: 'nav.returns', text: 'المرتجعات', icon: <HistoryIcon />, path: '/returns', permission: 'returns.view', hideForRestrictedInvoiceRole: true }
       ]
     },
     {
@@ -486,22 +493,24 @@ export const MainLayout = () => {
           </Tooltip>
 
           {/* Notifications Bell */}
-          <Tooltip title={t('nav.notifications')}>
-            <IconButton
-              onClick={handleNotifyClick}
-              className="main-layout__icon-btn"
-              aria-controls={openNotify ? 'notifications-menu' : undefined}
-              aria-haspopup="true"
-            >
-              <Badge
-                badgeContent={unreadCount}
-                color="error"
-                className="main-layout__badge"
+          {hasPermission('notifications.view') && (
+            <Tooltip title={t('nav.notifications')}>
+              <IconButton
+                onClick={handleNotifyClick}
+                className="main-layout__icon-btn"
+                aria-controls={openNotify ? 'notifications-menu' : undefined}
+                aria-haspopup="true"
               >
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-          </Tooltip>
+                <Badge
+                  badgeContent={unreadCount}
+                  color="error"
+                  className="main-layout__badge"
+                >
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+          )}
 
           {/* Account Avatar */}
           <Tooltip title={t('auth.accountOptions')}>
@@ -546,13 +555,15 @@ export const MainLayout = () => {
               <PersonIcon fontSize="small" className="main-layout__icon-btn" />
               {t('nav.profile')}
             </MenuItem>
-            <MenuItem onClick={() => navigate('/notifications')} className="user-menu-item">
-              <NotificationsIcon fontSize="small" className="main-layout__icon-btn" />
-              {t('nav.notifications')}
-              {unreadCount > 0 && (
-                <Chip label={unreadCount} size="small" color="error" className="user-menu-chip" />
-              )}
-            </MenuItem>
+            {hasPermission('notifications.view') && (
+              <MenuItem onClick={() => navigate('/notifications')} className="user-menu-item">
+                <NotificationsIcon fontSize="small" className="main-layout__icon-btn" />
+                {t('nav.notifications')}
+                {unreadCount > 0 && (
+                  <Chip label={unreadCount} size="small" color="error" className="user-menu-chip" />
+                )}
+              </MenuItem>
+            )}
             <Divider />
             <MenuItem onClick={handleLogout} className="user-menu-item user-menu-item--logout">
               <ExitToAppIcon fontSize="small" />
@@ -561,7 +572,7 @@ export const MainLayout = () => {
           </Menu>
 
           {/* ── Notifications Dropdown ── */}
-          <Menu
+          {hasPermission('notifications.view') && <Menu
             anchorEl={notifyAnchorEl}
             id="notifications-menu"
             open={openNotify}
@@ -618,7 +629,7 @@ export const MainLayout = () => {
                       </Typography>
 
                       <Box className="notification-item__actions" onClick={(e) => e.stopPropagation()}>
-                        {n.status === 'unread' && (
+                        {hasPermission('notifications.manage') && n.status === 'unread' && (
                           <Button
                             size="small"
                             variant="text"
@@ -628,7 +639,7 @@ export const MainLayout = () => {
                             {t('notifications.markAsRead')}
                           </Button>
                         )}
-                        {n.status !== 'resolved' && (
+                        {hasPermission('notifications.manage') && n.status !== 'resolved' && (
                           <Button
                             size="small"
                             variant="text"
@@ -656,7 +667,7 @@ export const MainLayout = () => {
                 {t('notifications.viewAll')}
               </Button>
             </Box>
-          </Menu>
+          </Menu>}
         </Toolbar>
       </AppBar>
 

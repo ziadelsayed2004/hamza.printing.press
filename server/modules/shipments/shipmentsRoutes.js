@@ -4,8 +4,54 @@ const shipmentsService = require('./shipmentsService');
 const outletsService = require('../outlets/outletsService');
 const usersService = require('../users/usersService');
 const invoicesService = require('../invoices/invoicesService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
+const { getInvoiceVisibilityScope, isInvoiceVisible } = require('../invoices/invoiceAccessPolicy');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+function hasGlobalOperationalScope(userRoles) {
+  return hasGlobalBusinessScope(userRoles.map(role => role.name));
+}
+
+async function canAccessOutlet(userId, userRoles, outletId) {
+  if (hasGlobalOperationalScope(userRoles)) return true;
+
+  const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+  const isOutlet = userRoles.some(role => role.name === 'outlet');
+  if (isOutlet) return linkedOutlets.includes(outletId);
+  return linkedOutlets.length === 0 || linkedOutlets.includes(outletId);
+}
+
+async function getVisibleInvoiceForShipment(userId, invoiceId) {
+  const userRoles = await usersService.getUserRoles(userId);
+  const [invoice] = await invoicesService.getInvoiceVisibilityRecords([invoiceId]);
+  if (!invoice) return { status: 404, invoice: null };
+
+  const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+  if (!isInvoiceVisible(invoice, visibilityScope)) return { status: 403, invoice };
+  if (!(await canAccessOutlet(userId, userRoles, invoice.outlet_id))) {
+    return { status: 403, invoice };
+  }
+
+  return { status: 200, invoice };
+}
+
+function sendInvoiceAccessError(res, status) {
+  if (status === 404) {
+    return res.status(404).json({ error: 'Not Found', message: 'Invoice not found.' });
+  }
+  return res.status(403).json({
+    error: 'Forbidden',
+    message: 'Access denied. You do not have permission to ship this invoice.'
+  });
+}
+
+function checkShipmentStatusPermission(req, res, next) {
+  const requiredPermission = req.body && req.body.status === 'delivered'
+    ? 'shipments.deliver'
+    : 'shipments.update';
+  return checkPermission(requiredPermission)(req, res, next);
+}
 
 // 1. GET /api/shipments - List and filter shipments
 router.get('/', requireAuth, checkPermission('shipments.view'), async (req, res) => {
@@ -17,27 +63,53 @@ router.get('/', requireAuth, checkPermission('shipments.view'), async (req, res)
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const isOutlet = userRoles.some(role => role.name === 'outlet');
+    const isElevated = hasGlobalOperationalScope(userRoles);
 
     let filterOutletIds = null;
     if (isOutlet && !isElevated) {
       filterOutletIds = await outletsService.getLinkedOutletsForUser(userId);
     } else if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0) {
-        filterOutletIds = linkedOutlets;
-      }
+      if (linkedOutlets.length > 0) filterOutletIds = linkedOutlets;
     }
 
-    const list = await shipmentsService.getShipments({ limit, offset, invoiceId, status, outletIds: filterOutletIds });
-    res.status(200).json(list);
+    const list = await shipmentsService.getShipments({
+      limit,
+      offset,
+      invoiceId,
+      status,
+      outletIds: filterOutletIds
+    });
+    return res.status(200).json(list);
   } catch (err) {
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
 
-// 2. GET /api/shipments/:id - Fetch specific shipment by ID
+// 2. GET /api/shipments/invoice/:invoiceId/remaining
+// The static prefix must be registered before /:id.
+router.get('/invoice/:invoiceId/remaining', requireAuth, checkPermission('shipments.view'), async (req, res) => {
+  const invoiceId = Number(req.params.invoiceId);
+  if (!Number.isInteger(invoiceId) || invoiceId <= 0) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Valid Invoice ID is required.' });
+  }
+
+  try {
+    const access = await getVisibleInvoiceForShipment(req.session.user.id, invoiceId);
+    if (access.status !== 200) return sendInvoiceAccessError(res, access.status);
+
+    const items = await shipmentsService.getRemainingShippableItems(invoiceId);
+    return res.status(200).json(items);
+  } catch (err) {
+    if (err.message.includes('does not exist')) {
+      return res.status(404).json({ error: 'Not Found', message: err.message });
+    }
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+// 3. GET /api/shipments/:id - Fetch specific shipment by ID
 router.get('/:id', requireAuth, checkPermission('shipments.view'), async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
@@ -52,58 +124,45 @@ router.get('/:id', requireAuth, checkPermission('shipments.view'), async (req, r
 
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
-
-    if (!isElevated) {
-      if (isOutlet) {
-        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-        const invoice = await invoicesService.getInvoiceById(shipment.invoice_id);
-        if (!invoice || !linkedOutlets.includes(invoice.outlet_id)) {
-          return res.status(403).json({
-            error: 'Forbidden',
-            message: 'Access denied. You do not have permission to view this shipment.'
-          });
-        }
-      } else {
-        const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-        if (linkedOutlets.length > 0) {
-          const invoice = await invoicesService.getInvoiceById(shipment.invoice_id);
-          if (invoice && !linkedOutlets.includes(invoice.outlet_id)) {
-            return res.status(403).json({
-              error: 'Forbidden',
-              message: 'Access denied. You do not have permission to view this shipment.'
-            });
-          }
-        }
+    if (!hasGlobalOperationalScope(userRoles)) {
+      const invoice = await invoicesService.getInvoiceById(shipment.invoice_id, { includePayments: false });
+      if (!invoice || !(await canAccessOutlet(userId, userRoles, invoice.outlet_id))) {
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'Access denied. You do not have permission to view this shipment.'
+        });
       }
     }
 
-    res.status(200).json(shipment);
+    return res.status(200).json(shipment);
   } catch (err) {
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
 
-// 3. POST /api/shipments - Create a new shipment
+// 4. POST /api/shipments - Create a new shipment
 router.post('/', requireAuth, checkPermission('shipments.create'), auditLog('create_shipment', 'shipments'), async (req, res) => {
   const { invoiceId, shippingCarrier = '', trackingNumber = '', items = [] } = req.body;
+  const normalizedInvoiceId = Number(invoiceId);
 
-  if (!invoiceId || !items || items.length === 0) {
+  if (!Number.isInteger(normalizedInvoiceId) || normalizedInvoiceId <= 0 || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Bad Request', message: 'Invoice ID and at least one item are required.' });
   }
 
   try {
     const userId = req.session.user.id;
+    const access = await getVisibleInvoiceForShipment(userId, normalizedInvoiceId);
+    if (access.status !== 200) return sendInvoiceAccessError(res, access.status);
+
     const shipment = await shipmentsService.createShipment({
-      invoiceId,
+      invoiceId: normalizedInvoiceId,
       shippingCarrier,
       trackingNumber,
       items,
       userId
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Shipment created successfully.',
       shipment
@@ -113,15 +172,22 @@ router.post('/', requireAuth, checkPermission('shipments.create'), auditLog('cre
     if (msg.includes('does not exist')) {
       return res.status(404).json({ error: 'Not Found', message: err.message });
     }
-    if (msg.includes('required') || msg.includes('positive') || msg.includes('exceeds') || msg.includes('المخزون') || msg.includes('كاف')) {
+    if (
+      msg.includes('required') ||
+      msg.includes('positive') ||
+      msg.includes('exceeds') ||
+      msg.includes('cannot create') ||
+      msg.includes('insufficient') ||
+      err.code === 'INSUFFICIENT_STOCK'
+    ) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
 
-// 4. POST /api/shipments/:id/status - Update shipment status
-router.post('/:id/status', requireAuth, checkPermission('shipments.update'), auditLog('update_shipment_status', 'shipments'), async (req, res) => {
+// 5. POST /api/shipments/:id/status - Update shipment status
+router.post('/:id/status', requireAuth, checkShipmentStatusPermission, auditLog('update_shipment_status', 'shipments'), async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { status, notes = '' } = req.body;
 
@@ -136,7 +202,7 @@ router.post('/:id/status', requireAuth, checkPermission('shipments.update'), aud
     const userId = req.session.user.id;
     const shipment = await shipmentsService.updateShipmentStatus(id, { status, notes, userId });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Shipment status updated successfully.',
       shipment
@@ -146,43 +212,10 @@ router.post('/:id/status', requireAuth, checkPermission('shipments.update'), aud
     if (msg.includes('does not exist')) {
       return res.status(404).json({ error: 'Not Found', message: err.message });
     }
-    if (msg.includes('invalid status')) {
+    if (msg.includes('invalid status') || msg.includes('invalid shipment status transition')) {
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
-  }
-});
-
-// 5. GET /api/shipments/invoice/:invoiceId/remaining - Calculate remaining shippable quantities
-router.get('/invoice/:invoiceId/remaining', requireAuth, checkPermission('shipments.view'), async (req, res) => {
-  const invoiceId = parseInt(req.params.invoiceId, 10);
-  if (isNaN(invoiceId)) {
-    return res.status(400).json({ error: 'Bad Request', message: 'Valid Invoice ID is required.' });
-  }
-
-  try {
-    const userId = req.session.user.id;
-    const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user', 'readonly_viewer'].includes(r.name));
-
-    if (!isElevated) {
-      const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      const invoice = await invoicesService.getInvoiceById(invoiceId);
-      if (invoice && !linkedOutlets.includes(invoice.outlet_id)) {
-        return res.status(403).json({
-          error: 'Forbidden',
-          message: 'Access denied. You do not have permission to view remaining shippable items for this invoice.'
-        });
-      }
-    }
-
-    const items = await shipmentsService.getRemainingShippableItems(invoiceId);
-    res.status(200).json(items);
-  } catch (err) {
-    if (err.message.includes('does not exist')) {
-      return res.status(404).json({ error: 'Not Found', message: err.message });
-    }
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 });
 

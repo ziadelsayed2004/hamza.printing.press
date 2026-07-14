@@ -3,8 +3,27 @@ const router = express.Router();
 const paymentsService = require('./paymentsService');
 const outletsService = require('../outlets/outletsService');
 const usersService = require('../users/usersService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+async function requireReceiptUploadPermission(req, res, next) {
+  if (!req.body.receiptData && !req.body.receiptName) return next();
+
+  try {
+    const permissions = await usersService.getUserPermissions(req.session.user.id);
+    if (!permissions.includes('payments.receipt.upload')) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: "Access denied. You do not have the required permission: 'payments.receipt.upload'.",
+        requiredPermission: 'payments.receipt.upload'
+      });
+    }
+    return next();
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+}
 
 // 1. GET /api/payments - List and filter payments
 router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) => {
@@ -18,7 +37,7 @@ router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) 
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     let filterOutletIds = null;
     const queryOutletId = req.query.outletId ? parseInt(req.query.outletId, 10) : null;
@@ -41,7 +60,7 @@ router.get('/', requireAuth, checkPermission('payments.view'), async (req, res) 
 });
 
 // 2. POST /api/payments - Record a payment
-router.post('/', requireAuth, checkPermission('payments.create'), auditLog('create_payment', 'payments'), async (req, res) => {
+router.post('/', requireAuth, checkPermission('payments.create'), requireReceiptUploadPermission, auditLog('create_payment', 'payments'), async (req, res) => {
   const { invoiceId, amount, paymentMethod, paymentDate, referenceNumber = '', notes = '', supplyStatus = 'not_supplied', receiptName, receiptData } = req.body;
 
   if (!invoiceId || amount === undefined || !paymentMethod) {
@@ -213,7 +232,7 @@ router.get('/receipts/review-queue', requireAuth, checkPermission('payments.view
 });
 
 // 9. GET /api/payments/:id/receipt - Download receipt file
-router.get('/:id/receipt', requireAuth, checkPermission('payments.view'), async (req, res) => {
+router.get('/:id/receipt', requireAuth, checkPermission('payments.receipt.view'), async (req, res) => {
   const paymentId = parseInt(req.params.id, 10);
   try {
     const payment = await paymentsService.getPaymentById(paymentId);

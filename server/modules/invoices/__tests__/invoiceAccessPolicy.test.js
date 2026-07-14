@@ -16,7 +16,7 @@ describe('invoice access policy', () => {
     }
   );
 
-  test.each(['super_admin', 'admin', 'accountant', 'sales_staff'])(
+  test.each(['super_admin', 'assistant', 'readonly_viewer'])(
     'lets bypass role %s see the normal invoice scope',
     role => {
       expect(getInvoiceVisibilityScope([role])).toEqual({
@@ -31,7 +31,7 @@ describe('invoice access policy', () => {
     expect(getInvoiceVisibilityScope(['inventory_manager', 'shipping_user']).restricted).toBe(true);
   });
 
-  test.each(['super_admin', 'admin', 'accountant', 'sales_staff'])(
+  test.each(['super_admin', 'assistant', 'readonly_viewer'])(
     'gives bypass role %s precedence in a mixed-role user',
     bypassRole => {
       expect(getInvoiceVisibilityScope(['shipping_user', bypassRole]).restricted).toBe(false);
@@ -64,7 +64,7 @@ describe('invoice access policy', () => {
   );
 
   test('does not apply invoice-state filtering to an unrestricted scope', () => {
-    const scope = getInvoiceVisibilityScope(['sales_staff']);
+    const scope = getInvoiceVisibilityScope(['readonly_viewer']);
     const completedCancelledInvoice = {
       shipping_status: 'delivered',
       payment_status: 'cancelled'

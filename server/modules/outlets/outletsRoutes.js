@@ -3,8 +3,39 @@ const router = express.Router();
 const outletsService = require('./outletsService');
 const outletTypesService = require('../outlet-types/outletTypesService');
 const usersService = require('../users/usersService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
+
+function hasAccountReadPermission(req) {
+  return Array.isArray(req.userPermissions) && req.userPermissions.includes('users.view');
+}
+
+function withoutAccountLink(outlet) {
+  if (!outlet) return outlet;
+  const sanitized = { ...outlet };
+  delete sanitized.userId;
+  delete sanitized.linked_username;
+  return sanitized;
+}
+
+async function requireAccountLinkPermission(req, res, next) {
+  if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'userId')) return next();
+
+  try {
+    const permissions = req.userPermissions || await usersService.getUserPermissions(req.session.user.id);
+    if (!permissions.includes('users.update')) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: "Access denied. Linking an outlet to an account requires 'users.update'.",
+        requiredPermission: 'users.update'
+      });
+    }
+    return next();
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+}
 
 // 1. GET /api/outlets/governorates - Fetch unique governorates
 router.get('/governorates', requireAuth, checkPermission('outlets.view'), async (req, res) => {
@@ -35,18 +66,19 @@ router.get('/', requireAuth, checkPermission('outlets.view'), async (req, res) =
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const roleNames = userRoles.map(role => role.name);
+    const isElevated = hasGlobalBusinessScope(roleNames);
 
     let filterUserId = null;
     if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0) {
+      if (roleNames.includes('outlet') || linkedOutlets.length > 0) {
         filterUserId = userId;
       }
     }
 
     const outlets = await outletsService.getAll({ limit, offset, search, governorate, outletTypeId, status, userId: filterUserId });
-    res.status(200).json(outlets);
+    res.status(200).json(hasAccountReadPermission(req) ? outlets : outlets.map(withoutAccountLink));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
@@ -58,11 +90,12 @@ router.get('/:id', requireAuth, checkPermission('outlets.view'), async (req, res
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const roleNames = userRoles.map(role => role.name);
+    const isElevated = hasGlobalBusinessScope(roleNames);
 
     if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0 && !linkedOutlets.includes(parseInt(id, 10))) {
+      if ((roleNames.includes('outlet') || linkedOutlets.length > 0) && !linkedOutlets.includes(parseInt(id, 10))) {
         return res.status(403).json({
           error: 'Forbidden',
           message: 'Access denied. You do not have permission to view this outlet.'
@@ -74,7 +107,7 @@ router.get('/:id', requireAuth, checkPermission('outlets.view'), async (req, res
     if (!outlet) {
       return res.status(404).json({ error: 'Not Found', message: 'Outlet not found.' });
     }
-    res.status(200).json(outlet);
+    res.status(200).json(hasAccountReadPermission(req) ? outlet : withoutAccountLink(outlet));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
@@ -90,11 +123,12 @@ router.get('/:id/details', requireAuth, checkPermission('outlets.view'), async (
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff', 'shipping_user'].includes(r.name));
+    const roleNames = userRoles.map(role => role.name);
+    const isElevated = hasGlobalBusinessScope(roleNames);
 
     if (!isElevated) {
       const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
-      if (linkedOutlets.length > 0 && !linkedOutlets.includes(id)) {
+      if ((roleNames.includes('outlet') || linkedOutlets.length > 0) && !linkedOutlets.includes(id)) {
         return res.status(403).json({
           error: 'Forbidden',
           message: 'Access denied. You do not have permission to view this outlet.'
@@ -107,6 +141,9 @@ router.get('/:id/details', requireAuth, checkPermission('outlets.view'), async (
       return res.status(404).json({ error: 'Not Found', message: 'Outlet not found.' });
     }
 
+    if (!hasAccountReadPermission(req) && report.outlet) {
+      report.outlet = withoutAccountLink(report.outlet);
+    }
     res.status(200).json(report);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
@@ -114,8 +151,9 @@ router.get('/:id/details', requireAuth, checkPermission('outlets.view'), async (
 });
 
 // 3. POST /api/outlets - Create a new outlet
-router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('create_outlet', 'outlets'), async (req, res) => {
-  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null, code = '' } = req.body;
+router.post('/', requireAuth, checkPermission('outlets.create'), requireAccountLinkPermission, auditLog('create_outlet', 'outlets'), async (req, res) => {
+  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', code = '' } = req.body;
+  const userId = Object.prototype.hasOwnProperty.call(req.body, 'userId') ? req.body.userId : undefined;
 
   if (!name || !outletTypeId || !governorate) {
     return res.status(400).json({ error: 'Bad Request', message: 'Name, outlet type ID, and governorate are required.' });
@@ -162,9 +200,10 @@ router.post('/', requireAuth, checkPermission('outlets.create'), auditLog('creat
 });
 
 // 4. PUT /api/outlets/:id - Edit an outlet
-router.put('/:id', requireAuth, checkPermission('outlets.update'), auditLog('update_outlet', 'outlets'), async (req, res) => {
+router.put('/:id', requireAuth, checkPermission('outlets.update'), requireAccountLinkPermission, auditLog('update_outlet', 'outlets'), async (req, res) => {
   const { id } = req.params;
-  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', userId = null, code = '' } = req.body;
+  const { name, outletTypeId, governorate, addressDetails = '', phone = '', creditLimit = 0, status = 'active', notes = '', code = '' } = req.body;
+  const userId = Object.prototype.hasOwnProperty.call(req.body, 'userId') ? req.body.userId : undefined;
 
   if (!name || !outletTypeId || !governorate) {
     return res.status(400).json({ error: 'Bad Request', message: 'Name, outlet type ID, and governorate are required.' });
@@ -206,7 +245,7 @@ router.put('/:id', requireAuth, checkPermission('outlets.update'), auditLog('upd
     res.status(200).json({
       success: true,
       message: 'Outlet updated successfully.',
-      outlet: updated
+      outlet: hasAccountReadPermission(req) ? updated : withoutAccountLink(updated)
     });
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

@@ -39,37 +39,31 @@ async function recalculateInvoiceShippingStatus(invoiceId, userId = null) {
     WHERE ii.invoice_id = ?
   `, [invoiceId]);
 
-  let allDelivered = true;
-  let anyAllocated = false;
+  let allShipped = items.length > 0;
+  let allDelivered = items.length > 0;
+  let anyShipped = false;
 
   for (const item of items) {
-    // 1. Shipped quantity (status IN ('shipped', 'delivered'))
     const shippedRow = await db.get(`
-      SELECT COALESCE(SUM(si.quantity), 0) as qty
+      SELECT
+        COALESCE(SUM(CASE WHEN s.status IN ('shipped', 'delivered') THEN si.quantity ELSE 0 END), 0) as shipped_qty,
+        COALESCE(SUM(CASE WHEN s.status = 'delivered' THEN si.quantity ELSE 0 END), 0) as delivered_qty
       FROM shipment_items si
       JOIN shipments s ON s.id = si.shipment_id
-      WHERE si.invoice_item_id = ? AND s.status IN ('shipped', 'delivered')
+      WHERE si.invoice_item_id = ?
     `, [item.id]);
-    const shippedQty = shippedRow.qty;
+    const shippedQty = Number(shippedRow.shipped_qty) || 0;
+    const deliveredQty = Number(shippedRow.delivered_qty) || 0;
 
-    const targetQty = item.quantity;
-
-    if (shippedQty < targetQty) {
-      allDelivered = false;
-    }
-    if (shippedQty > 0) {
-      anyAllocated = true;
-    }
+    if (shippedQty < item.quantity) allShipped = false;
+    if (deliveredQty < item.quantity) allDelivered = false;
+    if (shippedQty > 0) anyShipped = true;
   }
 
   let newStatus = 'pending';
-  if (items.length > 0) {
-    if (allDelivered) {
-      newStatus = 'delivered';
-    } else if (anyAllocated) {
-      newStatus = 'partially_shipped';
-    }
-  }
+  if (allDelivered) newStatus = 'delivered';
+  else if (allShipped) newStatus = 'shipped';
+  else if (anyShipped) newStatus = 'partially_shipped';
 
   if (newStatus !== invoice.shipping_status) {
     await db.run('UPDATE invoices SET shipping_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newStatus, invoiceId]);
@@ -115,6 +109,12 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
   if (!invoice) {
     throw new Error(`Invoice with ID ${invoiceId} does not exist`);
   }
+  if (invoice.payment_status === 'cancelled') {
+    throw new Error('Cannot create a shipment for a cancelled invoice');
+  }
+  if (['shipped', 'delivered'].includes(invoice.shipping_status)) {
+    throw new Error('Cannot create a shipment for an invoice whose shipping is already complete');
+  }
 
   // Validate each item
   const validatedItems = [];
@@ -154,7 +154,9 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
     if (product && product.stock_policy === 'track') {
       const physicalStock = await getPhysicalStock(invoiceItem.product_id);
       if (physicalStock < qty) {
-        throw new Error(`المخزون الفعلي المتاح للكتاب "${invoiceItem.product_title}" في المستودع هو ${physicalStock}، وهو غير كافٍ لشحن الكمية المطلوبة (${qty}).`);
+        const error = new Error(`المخزون الفعلي المتاح للكتاب "${invoiceItem.product_title}" في المستودع هو ${physicalStock}، وهو غير كافٍ لشحن الكمية المطلوبة (${qty}).`);
+        error.code = 'INSUFFICIENT_STOCK';
+        throw error;
       }
     }
 
@@ -171,7 +173,7 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
   try {
     const shipmentSql = `
       INSERT INTO shipments (shipment_number, invoice_id, shipping_carrier, tracking_number, status, created_by)
-      VALUES (?, ?, ?, ?, 'delivered', ?)
+      VALUES (?, ?, ?, ?, 'pending', ?)
     `;
     const shipmentResult = await db.run(shipmentSql, [
       shipmentNumber,
@@ -194,7 +196,7 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
     // Insert status history
     const historySql = `
       INSERT INTO shipment_status_history (shipment_id, old_status, new_status, changed_by, notes)
-      VALUES (?, 'delivered', 'delivered', ?, 'Shipment created.')
+      VALUES (?, 'pending', 'pending', ?, 'Shipment created.')
     `;
     await db.run(historySql, [shipmentId, userId]);
 
@@ -214,14 +216,9 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
  * Update shipment status.
  */
 async function updateShipmentStatus(shipmentId, { status, notes = '', userId = null }) {
-  let targetStatus = status;
-  if (status === 'shipped') {
-    targetStatus = 'delivered';
-  }
-
-  const allowedStatuses = ['pending', 'delivered', 'cancelled'];
-  if (!targetStatus || !allowedStatuses.includes(targetStatus)) {
-    throw new Error(`Invalid status. Allowed: pending, delivered, cancelled`);
+  const allowedStatuses = ['pending', 'shipped', 'delivered', 'cancelled'];
+  if (!status || !allowedStatuses.includes(status)) {
+    throw new Error(`Invalid status. Allowed: pending, shipped, delivered, cancelled`);
   }
 
   const shipment = await db.get('SELECT * FROM shipments WHERE id = ?', [shipmentId]);
@@ -229,8 +226,18 @@ async function updateShipmentStatus(shipmentId, { status, notes = '', userId = n
     throw new Error(`Shipment with ID ${shipmentId} does not exist`);
   }
 
-  if (shipment.status === targetStatus) {
+  if (shipment.status === status) {
     return await getShipmentById(shipmentId);
+  }
+
+  const allowedTransitions = {
+    pending: ['shipped', 'cancelled'],
+    shipped: ['delivered', 'cancelled'],
+    delivered: [],
+    cancelled: []
+  };
+  if (!(allowedTransitions[shipment.status] || []).includes(status)) {
+    throw new Error(`Invalid shipment status transition from ${shipment.status} to ${status}`);
   }
 
   await db.exec('BEGIN TRANSACTION;');
@@ -240,7 +247,8 @@ async function updateShipmentStatus(shipmentId, { status, notes = '', userId = n
     let deliveredAt = shipment.delivered_at;
     const nowStr = new Date().toISOString();
 
-    if (targetStatus === 'delivered') {
+    if (status === 'shipped' && !shippedAt) shippedAt = nowStr;
+    if (status === 'delivered') {
       if (!shippedAt) shippedAt = nowStr;
       if (!deliveredAt) deliveredAt = nowStr;
     }
@@ -250,7 +258,7 @@ async function updateShipmentStatus(shipmentId, { status, notes = '', userId = n
       SET status = ?, shipped_at = ?, delivered_at = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
-    await db.run(updateSql, [targetStatus, shippedAt, deliveredAt, shipmentId]);
+    await db.run(updateSql, [status, shippedAt, deliveredAt, shipmentId]);
 
     // Log history
     const historySql = `
@@ -260,9 +268,9 @@ async function updateShipmentStatus(shipmentId, { status, notes = '', userId = n
     await db.run(historySql, [
       shipmentId,
       shipment.status,
-      targetStatus,
+      status,
       userId,
-      notes.trim() || `Status updated from ${shipment.status} to ${targetStatus}.`
+      notes.trim() || `Status updated from ${shipment.status} to ${status}.`
     ]);
 
     // Recalculate invoice shipping status
@@ -296,12 +304,8 @@ async function getShipments({ limit = 50, offset = 0, invoiceId = null, status =
   }
 
   if (status) {
-    if (status === 'delivered') {
-      sql += ` AND s.status IN ('shipped', 'delivered')`;
-    } else {
-      sql += ` AND s.status = ?`;
-      params.push(status);
-    }
+    sql += ` AND s.status = ?`;
+    params.push(status);
   }
 
   if (outletIds && outletIds.length > 0) {

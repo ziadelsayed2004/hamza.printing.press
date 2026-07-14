@@ -1,20 +1,21 @@
 const INCOMPLETE_SHIPPING_STATUSES = Object.freeze(['pending', 'partially_shipped']);
-const RESTRICTED_INVOICE_ROLES = Object.freeze(['inventory_manager', 'shipping_user']);
-const INVOICE_VISIBILITY_BYPASS_ROLES = Object.freeze([
-  'super_admin',
-  'admin',
-  'accountant',
-  'sales_staff'
-]);
+const {
+  RESTRICTED_INVOICE_ROLE_NAMES,
+  UNRESTRICTED_INVOICE_ROLE_NAMES,
+  RESTRICTED_INVOICE_ROLE_SET,
+  UNRESTRICTED_INVOICE_ROLE_SET,
+  hasAnyRole
+} = require('../roles/roleCatalog');
+const RESTRICTED_INVOICE_ROLES = RESTRICTED_INVOICE_ROLE_NAMES;
+const INVOICE_VISIBILITY_BYPASS_ROLES = UNRESTRICTED_INVOICE_ROLE_NAMES;
 
 /**
  * Build the invoice visibility scope for a user's role names.
  * Elevated roles take precedence when a user also has a restricted role.
  */
 function getInvoiceVisibilityScope(roleNames = []) {
-  const roles = new Set(Array.isArray(roleNames) ? roleNames : []);
-  const hasRestrictedRole = RESTRICTED_INVOICE_ROLES.some(role => roles.has(role));
-  const hasBypassRole = INVOICE_VISIBILITY_BYPASS_ROLES.some(role => roles.has(role));
+  const hasRestrictedRole = hasAnyRole(roleNames, RESTRICTED_INVOICE_ROLE_SET);
+  const hasBypassRole = hasAnyRole(roleNames, UNRESTRICTED_INVOICE_ROLE_SET);
   const restricted = hasRestrictedRole && !hasBypassRole;
 
   return {

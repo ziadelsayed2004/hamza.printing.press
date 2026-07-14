@@ -104,8 +104,8 @@ export const Authors = () => {
       const data = await apiClient.get(query);
       setAuthors(data);
       
-      // If we have permissions to create/update, prefetch users list for account link
-      if (hasPermission('authors.create') || hasPermission('authors.update')) {
+      // Linking a master record to a login account is an identity-management action.
+      if (hasPermission('users.update')) {
         const usersData = await apiClient.get('/users?limit=200');
         setUsersList(usersData.filter(u => u.status === 'active'));
       }
@@ -156,9 +156,11 @@ export const Authors = () => {
     const payload = {
       name: formName,
       phone: formPhone,
-      status: formStatus,
-      userId: formUserId ? parseInt(formUserId, 10) : null
+      status: formStatus
     };
+    if (hasPermission('users.update')) {
+      payload.userId = formUserId ? parseInt(formUserId, 10) : null;
+    }
 
     try {
       if (modalMode === 'create') {
@@ -284,7 +286,9 @@ export const Authors = () => {
               <TableRow>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>اسم المؤلف</TableCell>
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>رقم الهاتف</TableCell>
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحساب المرتبط</TableCell>
+                {hasPermission('users.view') && (
+                  <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحساب المرتبط</TableCell>
+                )}
                 <TableCell align="center" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 'bold' }}>العمليات</TableCell>
               </TableRow>
@@ -294,13 +298,15 @@ export const Authors = () => {
                 <TableRow key={author.id} hover>
                   <TableCell align="center" sx={{ fontWeight: 500 }}>{author.name}</TableCell>
                   <TableCell align="center">{author.phone || '-'}</TableCell>
-                  <TableCell align="center">
-                    {author.linked_username ? (
-                      <Chip label={author.linked_username} size="small" color="primary" variant="outlined" />
-                    ) : (
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير مرتبط</Typography>
-                    )}
-                  </TableCell>
+                  {hasPermission('users.view') && (
+                    <TableCell align="center">
+                      {author.linked_username ? (
+                        <Chip label={author.linked_username} size="small" color="primary" variant="outlined" />
+                      ) : (
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>غير مرتبط</Typography>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell align="center">
                     <Chip
                       label={author.status === 'active' ? 'نشط' : 'معطل'}
@@ -372,22 +378,24 @@ export const Authors = () => {
                 onChange={(e) => setFormPhone(e.target.value)}
                 inputProps={{ className: 'ltr-value' }}
               />
-              <FormControl fullWidth size="small">
-                <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
-                <Select
-                  labelId="link-user-label"
-                  value={formUserId}
-                  label="ربط الحساب البرمجي (اختياري)"
-                  onChange={(e) => setFormUserId(e.target.value)}
-                >
-                  <MenuItem value="">غير مرتبط</MenuItem>
-                  {usersList.map((u) => (
-                    <MenuItem key={u.id} value={u.id}>
-                      {u.full_name} ({u.username})
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {hasPermission('users.update') && (
+                <FormControl fullWidth size="small">
+                  <InputLabel id="link-user-label">ربط الحساب البرمجي (اختياري)</InputLabel>
+                  <Select
+                    labelId="link-user-label"
+                    value={formUserId}
+                    label="ربط الحساب البرمجي (اختياري)"
+                    onChange={(e) => setFormUserId(e.target.value)}
+                  >
+                    <MenuItem value="">غير مرتبط</MenuItem>
+                    {usersList.map((u) => (
+                      <MenuItem key={u.id} value={u.id}>
+                        {u.full_name} ({u.username})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
               <FormControl fullWidth size="small">
                 <InputLabel id="status-label">الحالة</InputLabel>
                 <Select

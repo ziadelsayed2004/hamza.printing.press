@@ -69,7 +69,9 @@ export default function InvoiceWizardDrawer({
   handleRemoveFormItem,
   handleFormSubmit,
   setToastMsg,
-  setToastSeverity
+  setToastSeverity,
+  canRecordPayments,
+  canViewFinance
 }) {
   const translatePaymentType = (type) => {
     switch (type) {
@@ -142,7 +144,7 @@ export default function InvoiceWizardDrawer({
             </FormControl>
 
             {/* Payment Status (Only on creation) */}
-            {formMode === 'create' ? (
+            {canRecordPayments && (formMode === 'create' ? (
               <FormControl fullWidth size="small" required>
                 <InputLabel id="form-collection-select-label">حالة الدفع عند الإنشاء</InputLabel>
                 <Select
@@ -172,7 +174,7 @@ export default function InvoiceWizardDrawer({
                 disabled
                 value={translatePaymentType(formPaymentType)}
               />
-            )}
+            ))}
 
             {/* Discount */}
             <TextField
@@ -231,21 +233,25 @@ export default function InvoiceWizardDrawer({
                   <Typography variant="caption" color="textSecondary" display="block">الهاتف</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.phone || '-'}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" color="textSecondary" display="block">الحد الائتماني</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(selectedOutlet.credit_limit || 0)}</Typography>
-                </Grid>
+                {canViewFinance && (
+                  <Grid item xs={6} sm={3}>
+                    <Typography variant="caption" color="textSecondary" display="block">الحد الائتماني</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(selectedOutlet.credit_limit || 0)}</Typography>
+                  </Grid>
+                )}
                 <Grid item xs={12} sm={6}>
                   <Typography variant="caption" color="textSecondary" display="block">تفاصيل العنوان</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedOutlet.address_details || '-'}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="caption" color="textSecondary" display="block">المديونية (الرصيد المعلق الحالي)</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: (selectedOutletBalance?.pending_balance || 0) > 0 ? 'warning.main' : 'success.main' }}>
-                    {formatCurrencyEGP(selectedOutletBalance?.pending_balance || 0)}
-                  </Typography>
-                </Grid>
-                {selectedOutlet.credit_limit > 0 && (selectedOutletBalance?.pending_balance || 0) > selectedOutlet.credit_limit && (
+                {canViewFinance && (
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="textSecondary" display="block">المديونية (الرصيد المعلق الحالي)</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: (selectedOutletBalance?.pending_balance || 0) > 0 ? 'warning.main' : 'success.main' }}>
+                      {formatCurrencyEGP(selectedOutletBalance?.pending_balance || 0)}
+                    </Typography>
+                  </Grid>
+                )}
+                {canViewFinance && selectedOutlet.credit_limit > 0 && (selectedOutletBalance?.pending_balance || 0) > selectedOutlet.credit_limit && (
                   <Grid item xs={12}>
                     <Alert severity="warning" sx={{ mt: 1 }}>
                       تنبيه: مديونية هذا العميل تتجاوز الحد الائتماني المسموح به!
@@ -256,7 +262,7 @@ export default function InvoiceWizardDrawer({
             </Paper>
           )}
 
-          {formMode === 'create' && formCollectionType !== 'none' && (
+          {canRecordPayments && formMode === 'create' && formCollectionType !== 'none' && (
             <Paper variant="outlined" sx={{ p: 2, mt: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc', borderColor: (theme) => theme.palette.mode === 'dark' ? 'secondary.dark' : 'secondary.light' }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 2, color: (theme) => theme.palette.mode === 'dark' ? 'secondary.light' : 'secondary.dark' }}>
                 تفاصيل تحصيل النقدية عند الإنشاء

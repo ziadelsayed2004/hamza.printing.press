@@ -159,6 +159,12 @@ router.post('/reset-password/:userId', requireAuth, checkPermission('users.updat
         message: 'User not found.'
       });
     }
+    if (targetUser.status === 'archived') {
+      return res.status(409).json({
+        error: 'Conflict',
+        message: 'Archived accounts cannot have their password reset.'
+      });
+    }
 
     await usersService.updatePassword(userId, newPassword);
     res.status(200).json({
@@ -166,6 +172,13 @@ router.post('/reset-password/:userId', requireAuth, checkPermission('users.updat
       message: `Password for user '${targetUser.username}' has been reset successfully.`
     });
   } catch (err) {
+    if (Number.isInteger(err.statusCode)) {
+      return res.status(err.statusCode).json({
+        error: err.statusCode === 409 ? 'Conflict' : 'Request Failed',
+        message: err.message,
+        code: err.code
+      });
+    }
     res.status(500).json({
       error: 'Internal Server Error',
       message: err.message

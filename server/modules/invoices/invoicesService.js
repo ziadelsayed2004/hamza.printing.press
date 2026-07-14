@@ -38,7 +38,6 @@ async function createInvoice({
   outletId,
   discount = 0,
   shippingCost = 0,
-  paymentType = 'cash',
   notes = '',
   items = [],
   userId,
@@ -166,22 +165,6 @@ async function createInvoice({
         throw new Error(`No price configured for product "${product.title}" and outlet type ID ${outlet.outlet_type_id}`);
       }
       const unitPrice = parseFloat(priceRow.price);
-
-      // Validate stock if policy is track
-      if (product.stock_policy === 'track') {
-        const currentStock = await inventoryService.getRealTimeStock(productId);
-        // Stock checks are disabled to allow negative inventory on sales
-        /*
-        if (currentStock < qty) {
-          const err = new Error(`المخزون غير كافٍ للكتاب "${product.title}". المتاح: ${currentStock}، المطلوب: ${qty}`);
-          err.productId = productId;
-          err.productTitle = product.title;
-          err.currentStock = currentStock;
-          err.qty = qty;
-          throw err;
-        }
-        */
-      }
 
       const billableQty = qty - freeQty;
       const itemTotalPrice = billableQty * unitPrice;
@@ -463,15 +446,6 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
       }
       const unitPrice = parseFloat(priceRow.price);
 
-      // Validate stock if policy is track (taking into account old quantity already reserved by this invoice)
-      if (product.stock_policy === 'track') {
-        const oldItem = oldItems.find(i => i.product_id === productId);
-        const oldQty = oldItem ? oldItem.quantity : 0;
-        const currentStock = await inventoryService.getRealTimeStock(productId);
-        const availableStock = currentStock + oldQty;
-        // Stock checks are disabled to allow negative inventory on sales
-      }
-
       const billableQty = qty - freeQty;
       const itemTotalPrice = billableQty * unitPrice;
       subtotal += itemTotalPrice;
@@ -647,7 +621,7 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
 /**
  * Retrieve invoice by ID.
  */
-async function getInvoiceById(id) {
+async function getInvoiceById(id, { includePayments = true } = {}) {
   const sql = `
     SELECT i.*, o.name as outlet_name, o.outlet_type_id, o.governorate, o.address_details, o.phone, u.full_name as user_full_name,
            COALESCE(p.paid_amount, 0) as paid_amount,
@@ -695,16 +669,20 @@ async function getInvoiceById(id) {
     FROM invoice_status_history ish
     LEFT JOIN users u ON u.id = ish.changed_by
     WHERE ish.invoice_id = ?
+      ${includePayments ? '' : "AND ish.status_type != 'payment'"}
     ORDER BY ish.created_at ASC
   `, [id]);
 
-  const payments = await db.all(`
-    SELECT ip.*, u.full_name as user_full_name
-    FROM invoice_payments ip
-    LEFT JOIN users u ON u.id = ip.recorded_by
-    WHERE ip.invoice_id = ?
-    ORDER BY ip.payment_date ASC
-  `, [id]);
+  let payments = null;
+  if (includePayments) {
+    payments = await db.all(`
+      SELECT ip.*, u.full_name as user_full_name
+      FROM invoice_payments ip
+      LEFT JOIN users u ON u.id = ip.recorded_by
+      WHERE ip.invoice_id = ?
+      ORDER BY ip.payment_date ASC
+    `, [id]);
+  }
 
   const shipments = await db.all(`
     SELECT s.*, u.full_name as user_full_name
@@ -744,7 +722,7 @@ async function getInvoiceById(id) {
 
   invoice.items = items;
   invoice.history = history;
-  invoice.payments = payments;
+  if (includePayments) invoice.payments = payments;
   invoice.shipments = shipments;
   invoice.returns = returns;
 
@@ -864,12 +842,8 @@ async function getInvoices({
   }
 
   if (shippingStatus) {
-    if (shippingStatus === 'delivered') {
-      sql += ` AND i.shipping_status IN ('shipped', 'delivered')`;
-    } else {
-      sql += ` AND i.shipping_status = ?`;
-      params.push(shippingStatus);
-    }
+    sql += ` AND i.shipping_status = ?`;
+    params.push(shippingStatus);
   }
 
   if (startDate) {
@@ -911,11 +885,26 @@ async function getInvoiceVisibilityRecords(invoiceIds) {
   if (!Array.isArray(invoiceIds) || invoiceIds.length === 0) return [];
 
   const placeholders = invoiceIds.map(() => '?').join(',');
-  return await db.all(`
-    SELECT id, payment_status, shipping_status
-    FROM invoices
-    WHERE id IN (${placeholders})
+  const rows = await db.all(`
+    SELECT
+      i.id,
+      i.outlet_id,
+      i.payment_status,
+      i.shipping_status,
+      GROUP_CONCAT(DISTINCT pa.author_id) as author_ids
+    FROM invoices i
+    LEFT JOIN invoice_items ii ON ii.invoice_id = i.id
+    LEFT JOIN product_authors pa ON pa.product_id = ii.product_id
+    WHERE i.id IN (${placeholders})
+    GROUP BY i.id
   `, invoiceIds);
+
+  return rows.map(row => ({
+    ...row,
+    author_ids: row.author_ids
+      ? String(row.author_ids).split(',').map(authorId => Number(authorId))
+      : []
+  }));
 }
 
 /**
@@ -996,11 +985,37 @@ async function cancelInvoice(invoiceId, userId) {
 /**
  * Bulk update shipping status for a list of invoices.
  */
+async function transitionShipmentForBulk(shipment, targetStatus, userId) {
+  const steps = [];
+  if (shipment.status === 'pending') steps.push('shipped');
+  if ((shipment.status === 'pending' || shipment.status === 'shipped') && targetStatus === 'delivered') {
+    steps.push('delivered');
+  }
+
+  for (const nextStatus of steps) {
+    const oldStatus = shipment.status;
+    const now = new Date().toISOString();
+    if (nextStatus === 'shipped' && !shipment.shipped_at) shipment.shipped_at = now;
+    if (nextStatus === 'delivered' && !shipment.delivered_at) shipment.delivered_at = now;
+
+    await db.run(`
+      UPDATE shipments
+      SET status = ?, shipped_at = ?, delivered_at = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [nextStatus, shipment.shipped_at || null, shipment.delivered_at || null, shipment.id]);
+    await db.run(`
+      INSERT INTO shipment_status_history (shipment_id, old_status, new_status, changed_by, notes)
+      VALUES (?, ?, ?, ?, 'Shipment status updated via authorized bulk invoice action.')
+    `, [shipment.id, oldStatus, nextStatus, userId]);
+    shipment.status = nextStatus;
+  }
+}
+
 async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) {
   if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
     throw new Error('Invoice IDs must be a non-empty array.');
   }
-  const allowedStatuses = ['pending', 'partially_shipped', 'shipped', 'delivered'];
+  const allowedStatuses = ['shipped', 'delivered'];
   if (!allowedStatuses.includes(shippingStatus)) {
     throw new Error(`Invalid shipping status: ${shippingStatus}`);
   }
@@ -1010,13 +1025,26 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) 
 
   try {
     for (const invoiceId of invoiceIds) {
-      const invoice = await db.get('SELECT shipping_status, invoice_number, outlet_id FROM invoices WHERE id = ?', [invoiceId]);
+      const invoice = await db.get('SELECT shipping_status, payment_status, invoice_number, outlet_id FROM invoices WHERE id = ?', [invoiceId]);
       if (!invoice) {
         throw new Error(`Invoice with ID ${invoiceId} does not exist`);
       }
+      if (invoice.payment_status === 'cancelled') {
+        throw new Error(`Cannot update shipping for cancelled invoice ${invoice.invoice_number}`);
+      }
       
       if (shippingStatus !== invoice.shipping_status) {
-        // If updating status to 'shipped' or 'delivered', validate physical stock and create shipments automatically
+        // Move existing shipments through the same state machine used by the shipment API.
+        const activeShipments = await db.all(`
+          SELECT id, status, shipped_at, delivered_at
+          FROM shipments
+          WHERE invoice_id = ? AND status != 'cancelled'
+        `, [invoiceId]);
+        for (const shipment of activeShipments) {
+          await transitionShipmentForBulk(shipment, shippingStatus, userId);
+        }
+
+        // Validate physical stock and create a shipment for any quantities not yet allocated.
         if (shippingStatus === 'shipped' || shippingStatus === 'delivered') {
           const invoiceItems = await db.all('SELECT * FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
           const shipmentItemsToCreate = [];
@@ -1067,7 +1095,7 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) 
             const shipmentNumber = `SHP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
             const shipmentSql = `
               INSERT INTO shipments (shipment_number, invoice_id, shipping_carrier, tracking_number, status, created_by)
-              VALUES (?, ?, 'Bulk Update', NULL, 'delivered', ?)
+              VALUES (?, ?, 'Bulk Update', NULL, 'pending', ?)
             `;
             const shipmentResult = await db.run(shipmentSql, [
               shipmentNumber,
@@ -1085,36 +1113,23 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) 
             
             await db.run(`
               INSERT INTO shipment_status_history (shipment_id, old_status, new_status, changed_by, notes)
-              VALUES (?, 'delivered', 'delivered', ?, 'Shipment created automatically via bulk shipping status update.')
+              VALUES (?, 'pending', 'pending', ?, 'Shipment created automatically via bulk shipping action.')
             `, [shipmentId, userId]);
+
+            await transitionShipmentForBulk({
+              id: shipmentId,
+              status: 'pending',
+              shipped_at: null,
+              delivered_at: null
+            }, shippingStatus, userId);
           }
         }
 
-        await db.run('UPDATE invoices SET shipping_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [shippingStatus, invoiceId]);
-        
-        await db.run(`
-          INSERT INTO invoice_status_history (invoice_id, status_type, old_status, new_status, changed_by, notes)
-          VALUES (?, 'shipping', ?, ?, ?, ?)
-        `, [invoiceId, invoice.shipping_status, shippingStatus, userId, 'Bulk shipping status update.']);
-
-        // Handle partial shipment notification
-        try {
-          if (shippingStatus === 'partially_shipped') {
-            await notificationsService.createOrUpdateNotification({
-              category: 'shipment_partial',
-              severity: 'warning',
-              title: 'شحنة جزئية للفاتورة',
-              message: `تم شحن الفاتورة رقم ${invoice.invoice_number} شحناً جزئياً.`,
-              source_type: 'invoice',
-              source_id: invoiceId,
-              dedupe_key: `shipment_partial:${invoiceId}`,
-              action_url: `/operations/shipments`
-            });
-          } else {
-            await notificationsService.resolveNotificationByDedupeKey(`shipment_partial:${invoiceId}`);
-          }
-        } catch (e) {
-          console.error('Error triggering partial shipment notification check inside bulk update:', e);
+        const shipmentsService = require('../shipments/shipmentsService');
+        await shipmentsService.recalculateInvoiceShippingStatus(invoiceId, userId);
+        const refreshedInvoice = await db.get('SELECT shipping_status FROM invoices WHERE id = ?', [invoiceId]);
+        if (!refreshedInvoice || refreshedInvoice.shipping_status !== shippingStatus) {
+          throw new Error(`Unable to derive shipping status ${shippingStatus} from shipment records for invoice ${invoice.invoice_number}`);
         }
       }
     }

@@ -85,7 +85,13 @@ const entryTypeTranslations = {
 };
 
 export const Finance = () => {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const roleNames = Array.isArray(user?.roles) ? user.roles : [];
+  const hasGlobalFinanceScope = roleNames.some((role) =>
+    ['super_admin', 'assistant', 'readonly_viewer', 'inventory_manager', 'shipping_user'].includes(role)
+  );
+  const isScopedAuthor = roleNames.includes('author') && !hasGlobalFinanceScope;
+  const isScopedOutlet = roleNames.includes('outlet') && !hasGlobalFinanceScope;
   
   // Page UI State
   const [tab, setTab] = useState(0);
@@ -152,8 +158,16 @@ export const Finance = () => {
 
   // Fetch Dropdown data
   useEffect(() => {
-    apiClient.get('/outlets')
-      .then(data => setOutlets(data))
+    if (!hasPermission('finance.view')) return;
+    const endpoint = hasPermission('outlets.view') ? '/outlets' : '/finance/outlets';
+    apiClient.get(endpoint)
+      .then(data => {
+        const availableOutlets = data || [];
+        setOutlets(availableOutlets);
+        if (isScopedOutlet && hasPermission('finance.statement.view') && availableOutlets.length === 1) {
+          setStatementOutletId(String(availableOutlets[0].id));
+        }
+      })
       .catch(err => console.error('Failed to load outlets for dropdowns', err));
   }, []);
 
@@ -272,17 +286,20 @@ export const Finance = () => {
   // Trigger loading based on Active Tab
   useEffect(() => {
     fetchSummary();
+    if (isScopedAuthor) {
+      return;
+    }
     if (tab === 0) {
       fetchLedger();
     } else if (tab === 1) {
       fetchOutletBalances();
-    } else if (tab === 2) {
+    } else if (tab === 2 && hasGlobalFinanceScope) {
       fetchGovernorateBalances();
-    } else if (tab === 3) {
+    } else if (tab === 3 && hasGlobalFinanceScope) {
       fetchOutletTypeBalances();
-    } else if (tab === 4) {
+    } else if (tab === 4 && hasPermission('payments.view')) {
       fetchPaymentsList();
-    } else if (tab === 5) {
+    } else if (tab === 5 && hasPermission('finance.statement.view')) {
       fetchStatementData();
     }
   }, [tab, fetchSummary, fetchLedger, fetchOutletBalances, fetchGovernorateBalances, fetchOutletTypeBalances, fetchPaymentsList, fetchStatementData]);
@@ -500,7 +517,7 @@ export const Finance = () => {
       </Grid>
 
       {/* Main Tabs */}
-      <Paper sx={{ width: '100%', borderRadius: 3, mb: 4 }}>
+      {!isScopedAuthor && <Paper sx={{ width: '100%', borderRadius: 3, mb: 4 }}>
         <Tabs
           value={tab}
           onChange={(e, newTab) => setTab(newTab)}
@@ -510,12 +527,20 @@ export const Finance = () => {
           scrollButtons="auto"
           sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label="سجل حركات الخزينة والحسابات" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
-          <Tab label="أرصدة منافذ التوزيع" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
-          <Tab label="المبيعات والأرصدة بالمحافظات" icon={<MapIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
-          <Tab label="أرصدة فئات منافذ البيع" icon={<CategoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
-          <Tab label="سجل المدفوعات والتوريد" icon={<PaymentIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
-          <Tab label="كشف حساب عميل" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          <Tab value={0} label="سجل حركات الخزينة والحسابات" icon={<HistoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          <Tab value={1} label="أرصدة منافذ التوزيع" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          {hasGlobalFinanceScope && (
+            <Tab value={2} label="المبيعات والأرصدة بالمحافظات" icon={<MapIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          )}
+          {hasGlobalFinanceScope && (
+            <Tab value={3} label="أرصدة فئات منافذ البيع" icon={<CategoryIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          )}
+          {hasPermission('payments.view') && (
+            <Tab value={4} label="سجل المدفوعات والتوريد" icon={<PaymentIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          )}
+          {hasPermission('finance.statement.view') && (
+            <Tab value={5} label="كشف حساب عميل" icon={<StoreIcon />} iconPosition="start" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap' }} />
+          )}
         </Tabs>
 
         {/* TAB 0: LEDGER HISTORY */}
@@ -1202,7 +1227,7 @@ export const Finance = () => {
             <Alert severity="info">يرجى اختيار منفذ بيع من القائمة المنسدلة أعلاه لعرض كشف حساب تفصيلي.</Alert>
           )}
         </TabPanel>
-      </Paper>
+      </Paper>}
 
       {/* MANUAL ADJUSTMENT DRAWER */}
       <EntityDrawer

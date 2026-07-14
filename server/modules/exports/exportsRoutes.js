@@ -2,18 +2,51 @@ const express = require('express');
 const router = express.Router();
 const exportsService = require('./exportsService');
 const usersService = require('../users/usersService');
+const authorsService = require('../authors/authorsService');
+const outletsService = require('../outlets/outletsService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { getInvoiceVisibilityScope } = require('../invoices/invoiceAccessPolicy');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
 async function getInvoiceExportOptions(userId) {
   const userRoles = await usersService.getUserRoles(userId);
-  const scope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+  const roleNames = userRoles.map(role => role.name);
+  const scope = getInvoiceVisibilityScope(roleNames);
+  const hasGlobalScope = hasGlobalBusinessScope(roleNames);
+
+  let authorIds = null;
+  let outletIds = null;
+  if (!hasGlobalScope) {
+    const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
+    const linkedOutlets = await outletsService.getLinkedOutletsForUser(userId);
+    if (roleNames.includes('author') || linkedAuthors.length > 0) authorIds = linkedAuthors;
+    if (roleNames.includes('outlet') || linkedOutlets.length > 0) outletIds = linkedOutlets;
+  }
 
   return {
     allowedShippingStatuses: scope.allowedShippingStatuses,
-    excludeCancelled: scope.excludeCancelled
+    excludeCancelled: scope.excludeCancelled,
+    authorIds,
+    outletIds
   };
+}
+
+async function requireFinancialReportExport(req, res, next) {
+  if (req.query.type !== 'balances') return next();
+
+  try {
+    const permissions = await usersService.getUserPermissions(req.session.user.id);
+    if (!permissions.includes('finance.view') || !permissions.includes('finance.export')) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied. Financial report export permission is required.'
+      });
+    }
+    return next();
+  } catch (err) {
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
 }
 
 // Helper to handle sending downloads based on format
@@ -35,7 +68,7 @@ function sendExportDownload(res, filenameBase, format, contentOrBuffer) {
 }
 
 // 1. GET /api/exports/products - Export products catalog
-router.get('/products', requireAuth, checkPermission('exports.run'), auditLog('export_products', 'exports'), async (req, res) => {
+router.get('/products', requireAuth, checkPermission('exports.run'), checkPermission('products.view'), checkPermission('product_prices.view'), auditLog('export_products', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportProducts(format);
@@ -46,7 +79,7 @@ router.get('/products', requireAuth, checkPermission('exports.run'), auditLog('e
 });
 
 // 2. GET /api/exports/prices - Export price sheets
-router.get('/prices', requireAuth, checkPermission('exports.run'), auditLog('export_prices', 'exports'), async (req, res) => {
+router.get('/prices', requireAuth, checkPermission('exports.run'), checkPermission('product_prices.view'), auditLog('export_prices', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportPrices(format);
@@ -57,7 +90,7 @@ router.get('/prices', requireAuth, checkPermission('exports.run'), auditLog('exp
 });
 
 // 3. GET /api/exports/authors - Export authors list
-router.get('/authors', requireAuth, checkPermission('exports.run'), auditLog('export_authors', 'exports'), async (req, res) => {
+router.get('/authors', requireAuth, checkPermission('exports.run'), checkPermission('authors.view'), auditLog('export_authors', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportAuthors(format);
@@ -68,7 +101,7 @@ router.get('/authors', requireAuth, checkPermission('exports.run'), auditLog('ex
 });
 
 // 4. GET /api/exports/outlets - Export outlets listing
-router.get('/outlets', requireAuth, checkPermission('exports.run'), auditLog('export_outlets', 'exports'), async (req, res) => {
+router.get('/outlets', requireAuth, checkPermission('exports.run'), checkPermission('outlets.view'), auditLog('export_outlets', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportOutlets(format);
@@ -79,7 +112,7 @@ router.get('/outlets', requireAuth, checkPermission('exports.run'), auditLog('ex
 });
 
 // 5. GET /api/exports/invoices - Export invoice records
-router.get('/invoices', requireAuth, checkPermission('exports.run'), auditLog('export_invoices', 'exports'), async (req, res) => {
+router.get('/invoices', requireAuth, checkPermission('invoices.export'), auditLog('export_invoices', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const accessOptions = await getInvoiceExportOptions(req.session.user.id);
@@ -91,7 +124,7 @@ router.get('/invoices', requireAuth, checkPermission('exports.run'), auditLog('e
 });
 
 // 5a. GET /api/exports/invoice-items - Export invoice items detailed catalog (NEW!)
-router.get('/invoice-items', requireAuth, checkPermission('exports.run'), auditLog('export_invoice_items', 'exports'), async (req, res) => {
+router.get('/invoice-items', requireAuth, checkPermission('invoices.export'), auditLog('export_invoice_items', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const accessOptions = await getInvoiceExportOptions(req.session.user.id);
@@ -103,7 +136,7 @@ router.get('/invoice-items', requireAuth, checkPermission('exports.run'), auditL
 });
 
 // 6. GET /api/exports/payments - Export recorded payments history
-router.get('/payments', requireAuth, checkPermission('exports.run'), auditLog('export_payments', 'exports'), async (req, res) => {
+router.get('/payments', requireAuth, checkPermission('exports.run'), checkPermission('payments.view'), checkPermission('finance.export'), auditLog('export_payments', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportPayments(req.query, format);
@@ -114,7 +147,7 @@ router.get('/payments', requireAuth, checkPermission('exports.run'), auditLog('e
 });
 
 // 7. GET /api/exports/inventory - Export transaction ledger
-router.get('/inventory', requireAuth, checkPermission('exports.run'), auditLog('export_inventory', 'exports'), async (req, res) => {
+router.get('/inventory', requireAuth, checkPermission('exports.run'), checkPermission('inventory.view'), checkPermission('reports.export'), auditLog('export_inventory', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportInventory(req.query, format);
@@ -125,7 +158,7 @@ router.get('/inventory', requireAuth, checkPermission('exports.run'), auditLog('
 });
 
 // 7a. GET /api/exports/returns - Export returns history
-router.get('/returns', requireAuth, checkPermission('exports.run'), auditLog('export_returns', 'exports'), async (req, res) => {
+router.get('/returns', requireAuth, checkPermission('exports.run'), checkPermission('returns.view'), checkPermission('reports.export'), auditLog('export_returns', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportReturns(req.query, format);
@@ -136,7 +169,7 @@ router.get('/returns', requireAuth, checkPermission('exports.run'), auditLog('ex
 });
 
 // 7b. GET /api/exports/shipments - Export shipments history
-router.get('/shipments', requireAuth, checkPermission('exports.run'), auditLog('export_shipments', 'exports'), async (req, res) => {
+router.get('/shipments', requireAuth, checkPermission('exports.run'), checkPermission('shipments.view'), checkPermission('reports.export'), auditLog('export_shipments', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportShipments(req.query, format);
@@ -147,7 +180,7 @@ router.get('/shipments', requireAuth, checkPermission('exports.run'), auditLog('
 });
 
 // 7c. GET /api/exports/courier-sheet - Export shipments courier delivery sheet (NEW!)
-router.get('/courier-sheet', requireAuth, checkPermission('exports.run'), auditLog('export_courier_sheet', 'exports'), async (req, res) => {
+router.get('/courier-sheet', requireAuth, checkPermission('exports.run'), checkPermission('shipments.view'), checkPermission('reports.export'), auditLog('export_courier_sheet', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportCourierSheet(req.query, format);
@@ -158,7 +191,7 @@ router.get('/courier-sheet', requireAuth, checkPermission('exports.run'), auditL
 });
 
 // 7d. GET /api/exports/outlet-statement - Export outlet financial statement ledger (NEW!)
-router.get('/outlet-statement', requireAuth, checkPermission('exports.run'), auditLog('export_outlet_statement', 'exports'), async (req, res) => {
+router.get('/outlet-statement', requireAuth, checkPermission('exports.run'), checkPermission('finance.statement.view'), checkPermission('finance.export'), auditLog('export_outlet_statement', 'exports'), async (req, res) => {
   try {
     const format = req.query.format || 'xlsx';
     const content = await exportsService.exportOutletStatement(req.query, format);
@@ -169,7 +202,7 @@ router.get('/outlet-statement', requireAuth, checkPermission('exports.run'), aud
 });
 
 // 8. GET /api/exports/reports - Export dynamic report sheets (balances, stock, authors, receipts)
-router.get('/reports', requireAuth, checkPermission('exports.run'), auditLog('export_reports', 'exports'), async (req, res) => {
+router.get('/reports', requireAuth, checkPermission('exports.run'), checkPermission('reports.export'), requireFinancialReportExport, auditLog('export_reports', 'exports'), async (req, res) => {
   const { type } = req.query;
   if (!type || !['balances', 'stock', 'authors', 'receipts'].includes(type)) {
     return res.status(400).json({ error: 'Bad Request', message: 'Valid report type is required (balances, stock, authors, receipts).' });

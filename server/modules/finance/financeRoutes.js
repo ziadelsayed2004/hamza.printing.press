@@ -3,6 +3,7 @@ const router = express.Router();
 const financeService = require('./financeService');
 const outletsService = require('../outlets/outletsService');
 const authorsService = require('../authors/authorsService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const usersService = require('../users/usersService');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
@@ -14,7 +15,7 @@ router.get('/summary', requireAuth, checkPermission('finance.view'), async (req,
     const userRoles = await usersService.getUserRoles(userId);
     const isOutlet = userRoles.some(r => r.name === 'outlet');
     const isAuthor = userRoles.some(r => r.name === 'author');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     let filterOutletIds = null;
     let filterAuthorIds = null;
@@ -54,7 +55,7 @@ router.get('/balances/history', requireAuth, checkPermission('finance.view'), as
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
     const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     let filterOutletIds = null;
     if (isOutlet && !isElevated) {
@@ -122,7 +123,7 @@ router.get('/outlets', requireAuth, checkPermission('finance.view'), async (req,
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
     const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     let filterOutletIds = null;
     if (isOutlet && !isElevated) {
@@ -148,7 +149,7 @@ router.get('/outlets/:id/statement', requireAuth, checkPermission('finance.state
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
     const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     if (!isElevated) {
       if (isOutlet) {

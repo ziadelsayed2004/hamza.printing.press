@@ -4,13 +4,14 @@ const reportsService = require('./reportsService');
 const usersService = require('../users/usersService');
 const authorsService = require('../authors/authorsService');
 const outletsService = require('../outlets/outletsService');
+const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 
 // Helper to get restricted author IDs if the user is a linked author
 async function getFilterAuthorIds(req) {
   const userId = req.session.user.id;
   const userRoles = await usersService.getUserRoles(userId);
-  const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'readonly_viewer'].includes(r.name));
+  const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
   if (!isElevated) {
     const linkedAuthors = await authorsService.getLinkedAuthorsForUser(userId);
@@ -22,7 +23,7 @@ async function getFilterAuthorIds(req) {
 }
 
 // 1. GET /api/reports/financials/summary - Overall financial summary metrics
-router.get('/financials/summary', requireAuth, checkPermission('reports.view'), async (req, res) => {
+router.get('/financials/summary', requireAuth, checkPermission('reports.view'), checkPermission('finance.view'), async (req, res) => {
   const { startDate = '', endDate = '', outletId = null, outletTypeId = null, governorate = '' } = req.query;
 
   try {
@@ -42,13 +43,13 @@ router.get('/financials/summary', requireAuth, checkPermission('reports.view'), 
 });
 
 // 2. GET /api/reports/financials/by-outlet - Sales/balances grouped by outlet
-router.get('/financials/by-outlet', requireAuth, checkPermission('reports.view'), async (req, res) => {
+router.get('/financials/by-outlet', requireAuth, checkPermission('reports.view'), checkPermission('finance.view'), async (req, res) => {
   const { startDate = '', endDate = '', governorate = '', outletTypeId = null } = req.query;
 
   try {
     const userId = req.session.user.id;
     const userRoles = await usersService.getUserRoles(userId);
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'readonly_viewer'].includes(r.name));
+    const isElevated = hasGlobalBusinessScope(userRoles.map(role => role.name));
 
     let filterOutletIds = null;
     if (!isElevated) {
@@ -69,7 +70,7 @@ router.get('/financials/by-outlet', requireAuth, checkPermission('reports.view')
 });
 
 // 3. GET /api/reports/financials/by-governorate - Sales/balances grouped by governorate
-router.get('/financials/by-governorate', requireAuth, checkPermission('reports.view'), async (req, res) => {
+router.get('/financials/by-governorate', requireAuth, checkPermission('reports.view'), checkPermission('finance.view'), async (req, res) => {
   const { startDate = '', endDate = '' } = req.query;
 
   try {
@@ -81,7 +82,7 @@ router.get('/financials/by-governorate', requireAuth, checkPermission('reports.v
 });
 
 // 4. GET /api/reports/financials/by-outlet-type - Sales/balances grouped by outlet type
-router.get('/financials/by-outlet-type', requireAuth, checkPermission('reports.view'), async (req, res) => {
+router.get('/financials/by-outlet-type', requireAuth, checkPermission('reports.view'), checkPermission('finance.view'), async (req, res) => {
   const { startDate = '', endDate = '' } = req.query;
 
   try {

@@ -70,7 +70,7 @@ describe('returns routes do not inherit restricted invoice visibility', () => {
   });
 
   test('keeps returns access unchanged when a bypass role is also present', async () => {
-    useRoles('inventory_manager', 'admin');
+    useRoles('inventory_manager', 'assistant');
 
     const response = await request(app).get('/api/returns');
 

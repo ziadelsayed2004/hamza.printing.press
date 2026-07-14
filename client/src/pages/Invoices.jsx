@@ -84,10 +84,18 @@ export const Invoices = () => {
     ['inventory_manager', 'shipping_user'].includes(role)
   );
   const hasUnrestrictedInvoiceRole = userRoles.some((role) =>
-    ['super_admin', 'admin', 'accountant', 'sales_staff'].includes(role)
+    ['super_admin', 'assistant', 'readonly_viewer'].includes(role)
   );
   const isInvoiceVisibilityRestricted =
     hasRestrictedInvoiceRole && !hasUnrestrictedInvoiceRole;
+  const canRecordInvoicePayments =
+    hasPermission('invoices.pay') && hasPermission('payments.create');
+  const getInitialDetailsTab = () => {
+    if (hasPermission('payments.view')) return 0;
+    if (hasPermission('shipments.view')) return 1;
+    if (hasPermission('returns.view')) return 2;
+    return 3;
+  };
 
   const kpiCardStyle = {
     p: 2,
@@ -195,42 +203,50 @@ export const Invoices = () => {
     setToastSeverity(severity);
   };
 
-  // Fetch initial configuration metadata (Run once)
+  // Fetch only metadata the current account is allowed to read. Keeping each
+  // request independent prevents a single 403 from breaking the invoice list.
   const fetchMetadata = async () => {
-    try {
-      const outletsData = await apiClient.get('/outlets?limit=500&status=active');
-      setOutlets(outletsData);
-
-      const typesData = await apiClient.get('/outlet-types?limit=100&includeDisabled=false');
-      setOutletTypes(typesData);
-
-      const authorsData = await apiClient.get('/authors?limit=500&status=active');
-      setAuthorsList(authorsData);
-
-      const catsData = await apiClient.get('/products/categories');
-      setCategoriesList(catsData);
-
-      // Prefetch products and stock levels to make lookup fast in invoice wizard
-      const productsData = await apiClient.get('/products?limit=500&status=active');
-      const stockData = await apiClient.get('/inventory/stock-summary?limit=500');
-      const combined = productsData.map((p) => {
-        const match = stockData.find((s) => s.id === p.id);
-        return {
-          ...p,
-          stock: match ? match.stock : 0
-        };
-      });
-      setProductsList(combined);
-
-      try {
-        const balancesData = await apiClient.get('/finance/outlets');
-        setOutletBalances(balancesData);
-      } catch (err) {
-        console.error('Error fetching outlet balances:', err);
+    const safeLoad = async (permission, endpoint, setter, fallback = []) => {
+      if (!hasPermission(permission)) {
+        setter(fallback);
+        return fallback;
       }
-    } catch (err) {
-      console.error('Error fetching metadata:', err);
-    }
+      try {
+        const data = await apiClient.get(endpoint);
+        setter(data || fallback);
+        return data || fallback;
+      } catch (err) {
+        console.error(`Error fetching ${endpoint}:`, err);
+        setter(fallback);
+        return fallback;
+      }
+    };
+
+    const tasks = [
+      safeLoad('outlets.view', '/outlets?limit=500&status=active', setOutlets),
+      safeLoad('outlet_types.view', '/outlet-types?limit=100&includeDisabled=false', setOutletTypes),
+      safeLoad('authors.view', '/authors?limit=500&status=active', setAuthorsList),
+      safeLoad('products.view', '/products/categories', setCategoriesList),
+      safeLoad('finance.view', '/finance/outlets', setOutletBalances)
+    ];
+
+    const productsTask = safeLoad(
+      'products.view',
+      '/products?limit=500&status=active',
+      () => {}
+    );
+    const stockTask = safeLoad(
+      'inventory.view',
+      '/inventory/stock-summary?limit=500',
+      () => {}
+    );
+    const [productsData, stockData] = await Promise.all([productsTask, stockTask]);
+    const stockByProductId = new Map(stockData.map((item) => [item.id, item.stock]));
+    setProductsList(productsData.map((product) => ({
+      ...product,
+      stock: stockByProductId.get(product.id) || 0
+    })));
+    await Promise.all(tasks);
   };
 
   // Main fetch invoices list function
@@ -341,6 +357,10 @@ export const Invoices = () => {
   // Bulk update shipping status for selected invoices
   const handleBulkShippingUpdate = async () => {
     if (selectedInvoiceIds.length === 0) return;
+    if (!hasPermission('invoices.ship')) {
+      showToast('ليس لديك صلاحية للتعديل المباشر على حالة شحن الفواتير.', 'error');
+      return;
+    }
     setBulkSubmitting(true);
     try {
       await apiClient.put('/invoices/bulk/shipping-status', {
@@ -688,7 +708,7 @@ export const Invoices = () => {
 
   // Open Details Modal and fetch full details
   const handleOpenDetails = async (invoice) => {
-    setDetailsTabValue(0);
+    setDetailsTabValue(getInitialDetailsTab());
     try {
       const data = await apiClient.get(`/invoices/${invoice.id}`);
       setDetailsInvoice(data);
@@ -713,7 +733,7 @@ export const Invoices = () => {
     }
 
     if (targetIndex >= 0 && targetIndex < invoices.length) {
-      setDetailsTabValue(0);
+      setDetailsTabValue(getInitialDetailsTab());
       try {
         const targetInvoice = invoices[targetIndex];
         const data = await apiClient.get(`/invoices/${targetInvoice.id}`);
@@ -759,7 +779,7 @@ export const Invoices = () => {
   };
 
   const handleShipHandoff = (invoice) => {
-    if (!hasPermission('invoices.update')) {
+    if (!hasPermission('shipments.create')) {
       showToast('ليس لديك صلاحية لتسجيل الشحنات.', 'error');
       return;
     }
@@ -771,7 +791,7 @@ export const Invoices = () => {
   };
 
   const handleReturnClick = async (invoice) => {
-    if (!hasPermission('invoices.update')) {
+    if (!hasPermission('returns.create')) {
       showToast('ليس لديك صلاحية لتسجيل المرتجعات.', 'error');
       return;
     }
@@ -1158,7 +1178,7 @@ export const Invoices = () => {
     }
 
     let collectedVal = 0;
-    if (formMode === 'create') {
+    if (formMode === 'create' && canRecordInvoicePayments) {
       if (formCollectionType === 'full') {
         collectedVal = finalTotal;
       } else if (formCollectionType === 'partial') {
@@ -1181,7 +1201,6 @@ export const Invoices = () => {
         outletId: parseInt(formOutletId, 10),
         discount: discountVal,
         shippingCost: parseFloat(formShippingCost) || 0,
-        paymentType: formMode === 'create' ? (formCollectionType === 'full' ? 'cash' : 'deferred') : formPaymentType,
         notes: formNotes,
         items: formItems.map((item) => ({
           productId: item.productId,
@@ -1190,15 +1209,25 @@ export const Invoices = () => {
         }))
       };
 
+      if (canRecordInvoicePayments) {
+        payload.paymentType = formMode === 'create'
+          ? (formCollectionType === 'full' ? 'cash' : 'deferred')
+          : formPaymentType;
+      }
+
       if (formMode === 'create') {
-        payload.paymentAmount = collectedVal;
-        payload.paymentSupplyStatus = formSupplyStatus;
-        payload.paymentNotes = formCollectionNotes || 'تحصيل تلقائي عند إنشاء الفاتورة.';
-        payload.paymentReceiptName = formReceiptName;
-        payload.paymentReceiptData = formReceiptData;
+        if (canRecordInvoicePayments) {
+          payload.paymentAmount = collectedVal;
+          payload.paymentSupplyStatus = formSupplyStatus;
+          payload.paymentNotes = formCollectionNotes || 'تحصيل تلقائي عند إنشاء الفاتورة.';
+          payload.paymentReceiptName = formReceiptName;
+          payload.paymentReceiptData = formReceiptData;
+        }
 
         await apiClient.post('/invoices', payload);
-        showToast('تم إنشاء الفاتورة وحسم الكميات وتسجيل التحصيل بنجاح.');
+        showToast(canRecordInvoicePayments
+          ? 'تم إنشاء الفاتورة وحسم الكميات وتسجيل التحصيل بنجاح.'
+          : 'تم إنشاء الفاتورة وحسم الكميات بنجاح دون تسجيل تحصيل.');
       } else {
         await apiClient.put(`/invoices/${selectedFormInvoice.id}`, payload);
         showToast('تم تحديث الفاتورة وتعديل حركة المخزون بنجاح.');
@@ -1208,6 +1237,7 @@ export const Invoices = () => {
       fetchInvoices();
       // Reload balances to ensure UI is perfectly synced
       try {
+        if (!hasPermission('finance.view')) return;
         const balancesData = await apiClient.get('/finance/outlets');
         setOutletBalances(balancesData);
       } catch (err) {
@@ -1291,7 +1321,7 @@ export const Invoices = () => {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1.5 }}>
-          {selectedInvoiceIds.length > 0 && hasPermission('invoices.update') && (
+          {selectedInvoiceIds.length > 0 && hasPermission('invoices.ship') && (
             <Button
               variant="outlined"
               color="warning"
@@ -1688,7 +1718,7 @@ export const Invoices = () => {
                           <VisibilityIcon size="small" />
                         </IconButton>
 
-                        {row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
+                        {hasPermission('payments.create') && row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
                           <IconButton
                             color="success"
                             title="تسجيل دفع (Pay)"
@@ -1698,7 +1728,7 @@ export const Invoices = () => {
                           </IconButton>
                         )}
 
-                        {row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
+                        {hasPermission('payments.create') && row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
                           <IconButton
                             color="success"
                             title="تعليم كمدفوعة كلياً"
@@ -1708,17 +1738,17 @@ export const Invoices = () => {
                           </IconButton>
                         )}
 
-                        {row.payment_status !== 'cancelled' && (
+                        {hasPermission('shipments.create') && row.payment_status !== 'cancelled' && (
                           <IconButton
                             color="warning"
-                            title="تحديث حالة الشحن"
+                            title="إنشاء شحنة للفاتورة"
                             onClick={() => handleShipHandoff(row)}
                           >
                             <LocalShippingIcon size="small" />
                           </IconButton>
                         )}
 
-                        {row.payment_status !== 'cancelled' && (
+                        {hasPermission('returns.create') && row.payment_status !== 'cancelled' && (
                           <IconButton
                             color="secondary"
                             title="إنشاء مرتجع (Return)"
@@ -1876,6 +1906,8 @@ export const Invoices = () => {
         handleFormSubmit={handleFormSubmit}
         setToastMsg={setToastMsg}
         setToastSeverity={setToastSeverity}
+        canRecordPayments={canRecordInvoicePayments}
+        canViewFinance={hasPermission('finance.view')}
       />
 
 
@@ -1925,8 +1957,8 @@ export const Invoices = () => {
               onChange={(e) => setBulkShippingStatus(e.target.value)}
               label="حالة الشحن الجديدة"
             >
-              <MenuItem value="pending">قيد الانتظار</MenuItem>
-              <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
+              <MenuItem value="shipped">تم الشحن</MenuItem>
+              <MenuItem value="delivered">تم التسليم</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>

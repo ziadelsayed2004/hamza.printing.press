@@ -38,7 +38,7 @@ async function createOutlet({ name, outletTypeId, governorate, addressDetails = 
 /**
  * Update an existing outlet.
  */
-async function updateOutlet(id, { name, outletTypeId, governorate, addressDetails, phone, creditLimit, status, notes, userId = null, code = '' }) {
+async function updateOutlet(id, { name, outletTypeId, governorate, addressDetails, phone, creditLimit, status, notes, userId, code = '' }) {
   if (!name || !outletTypeId || !governorate) {
     throw new Error('Name, outlet type ID, and governorate are required');
   }
@@ -72,9 +72,13 @@ async function updateOutlet(id, { name, outletTypeId, governorate, addressDetail
   `;
   const result = await db.run(sql, [name.trim(), outletTypeId, governorate.trim(), addressDetails, phone, creditLimit, status, notes, finalCode, id]);
   
-  await db.run('DELETE FROM outlet_users WHERE outlet_id = ?', [id]);
-  if (userId) {
-    await db.run('INSERT INTO outlet_users (outlet_id, user_id) VALUES (?, ?)', [id, userId]);
+  // Preserve the existing account association unless it was explicitly
+  // supplied by an account administrator.
+  if (userId !== undefined) {
+    await db.run('DELETE FROM outlet_users WHERE outlet_id = ?', [id]);
+    if (userId) {
+      await db.run('INSERT INTO outlet_users (outlet_id, user_id) VALUES (?, ?)', [id, userId]);
+    }
   }
 
   // Trigger notification check for the outlet credit limit after update

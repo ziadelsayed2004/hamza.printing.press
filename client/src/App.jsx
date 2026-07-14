@@ -24,7 +24,7 @@ import { Finance } from './pages/Finance';
 import { Returns } from './pages/Returns';
 import { Notifications } from './pages/Notifications';
 import { Backups } from './pages/Backups';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, Button } from '@mui/material';
 import { LoadingState } from './components/LoadingState';
 import './styles/App.css';
 
@@ -42,6 +42,33 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+const AccessDenied = () => (
+  <Paper sx={{ p: 5, mx: 'auto', mt: 6, maxWidth: 620, textAlign: 'center' }}>
+    <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'error.main', mb: 2 }}>
+      غير مسموح بالوصول
+    </Typography>
+    <Typography variant="body1" sx={{ color: 'text.secondary', mb: 3 }}>
+      لا يملك حسابك الصلاحية المطلوبة لعرض هذه الصفحة.
+    </Typography>
+    <Button component="a" href="/" variant="contained">
+      العودة إلى لوحة التحكم
+    </Button>
+  </Paper>
+);
+
+// Route-level permission checks complement the API authorization and protect
+// direct links/deep-links that are not rendered in the navigation menu.
+const PermissionRoute = ({ permission, anyOf, children }) => {
+  const { hasPermission } = useAuth();
+  const permissions = anyOf || (permission ? [permission] : []);
+
+  if (permissions.length > 0 && !permissions.some(hasPermission)) {
+    return <AccessDenied />;
   }
 
   return children;
@@ -106,23 +133,23 @@ export function App() {
               >
                 <Route index element={<Dashboard />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="users" element={<Users />} />
-                <Route path="outlet-types" element={<OutletTypes />} />
-                <Route path="outlets" element={<Outlets />} />
-                <Route path="authors" element={<Authors />} />
-                <Route path="products" element={<Products />} />
-                <Route path="categories" element={<Categories />} />
-                <Route path="inventory" element={<Inventory />} />
-                <Route path="invoices" element={<Invoices />} />
-                <Route path="returns" element={<Returns />} />
-                <Route path="payments" element={<Payments />} />
-                <Route path="finance" element={<Finance />} />
-                <Route path="shipments" element={<Shipments />} />
-                <Route path="reports" element={<Reports />} />
-                <Route path="exports" element={<Exports />} />
-                <Route path="backups" element={<Backups />} />
-                <Route path="audit" element={<AuditLogs />} />
-                <Route path="notifications" element={<Notifications />} />
+                <Route path="users" element={<PermissionRoute permission="users.view"><Users /></PermissionRoute>} />
+                <Route path="outlet-types" element={<PermissionRoute permission="outlet_types.view"><OutletTypes /></PermissionRoute>} />
+                <Route path="outlets" element={<PermissionRoute permission="outlets.view"><Outlets /></PermissionRoute>} />
+                <Route path="authors" element={<PermissionRoute permission="authors.view"><Authors /></PermissionRoute>} />
+                <Route path="products" element={<PermissionRoute permission="products.view"><Products /></PermissionRoute>} />
+                <Route path="categories" element={<PermissionRoute permission="products.view"><Categories /></PermissionRoute>} />
+                <Route path="inventory" element={<PermissionRoute permission="inventory.view"><Inventory /></PermissionRoute>} />
+                <Route path="invoices" element={<PermissionRoute permission="invoices.view"><Invoices /></PermissionRoute>} />
+                <Route path="returns" element={<PermissionRoute permission="returns.view"><Returns /></PermissionRoute>} />
+                <Route path="payments" element={<PermissionRoute permission="payments.view"><Payments /></PermissionRoute>} />
+                <Route path="finance" element={<PermissionRoute permission="finance.view"><Finance /></PermissionRoute>} />
+                <Route path="shipments" element={<PermissionRoute permission="shipments.view"><Shipments /></PermissionRoute>} />
+                <Route path="reports" element={<PermissionRoute permission="reports.view"><Reports /></PermissionRoute>} />
+                <Route path="exports" element={<PermissionRoute permission="exports.run"><Exports /></PermissionRoute>} />
+                <Route path="backups" element={<PermissionRoute permission="backup.create"><Backups /></PermissionRoute>} />
+                <Route path="audit" element={<PermissionRoute permission="audit.view"><AuditLogs /></PermissionRoute>} />
+                <Route path="notifications" element={<PermissionRoute permission="notifications.view"><Notifications /></PermissionRoute>} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>

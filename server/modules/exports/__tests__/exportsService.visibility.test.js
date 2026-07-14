@@ -37,4 +37,26 @@ describe('invoice export SQL visibility filters', () => {
       expect(params).toEqual(['pending', 'partially_shipped', 'cancelled', 'shipped']);
     }
   });
+
+  test('intersects invoice exports with linked author and outlet scope', async () => {
+    await exportsService.exportInvoices({}, 'csv', {
+      authorIds: [7, 8],
+      outletIds: [3]
+    });
+
+    const [sql, params] = db.all.mock.calls[0];
+    expect(sql).toContain('i.outlet_id IN (?)');
+    expect(sql).toContain('JOIN product_authors scope_pa');
+    expect(sql).toContain('scope_pa.author_id IN (?, ?)');
+    expect(params).toEqual([3, 7, 8]);
+  });
+
+  test('limits invoice-item exports to the linked author products', async () => {
+    await exportsService.exportInvoiceItems({}, 'csv', { authorIds: [5] });
+
+    const [sql, params] = db.all.mock.calls[0];
+    expect(sql).toContain('scope_pa.product_id = ii.product_id');
+    expect(sql).toContain('scope_pa.author_id IN (?)');
+    expect(params).toEqual([5]);
+  });
 });

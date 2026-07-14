@@ -53,7 +53,7 @@ function TabPanel({ children, value, index, ...props }) {
 
 export const Reports = () => {
   const { hasPermission } = useAuth();
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(() => hasPermission('finance.view') ? 0 : 4);
   const [toastMsg, setToastMsg] = useState('');
   const [toastSeverity, setToastSeverity] = useState('success');
   const showToast = (msg, severity = 'success') => { setToastMsg(msg); setToastSeverity(severity); };
@@ -101,11 +101,16 @@ export const Reports = () => {
   // Fetch Dropdown data
   useEffect(() => {
     const fetchDropdowns = async () => {
+      if (!hasPermission('finance.view')) return;
       try {
-        const types = await apiClient.get('/outlet-types');
-        setOutletTypes(types);
-        const list = await apiClient.get('/outlets');
-        setOutlets(list);
+        if (hasPermission('outlet_types.view')) {
+          const types = await apiClient.get('/outlet-types');
+          setOutletTypes(types);
+        }
+        if (hasPermission('outlets.view')) {
+          const list = await apiClient.get('/outlets');
+          setOutlets(list);
+        }
       } catch (err) {
         console.error('Failed to load filter dropdowns', err);
       }
@@ -220,10 +225,10 @@ export const Reports = () => {
 
   // Trigger loading based on active tab
   useEffect(() => {
-    if (tab === 0) fetchSummary();
-    if (tab === 1) fetchBalancesOutlet();
-    if (tab === 2) fetchBalancesGov();
-    if (tab === 3) fetchBalancesType();
+    if (hasPermission('finance.view') && tab === 0) fetchSummary();
+    if (hasPermission('finance.view') && tab === 1) fetchBalancesOutlet();
+    if (hasPermission('finance.view') && tab === 2) fetchBalancesGov();
+    if (hasPermission('finance.view') && tab === 3) fetchBalancesType();
     if (tab === 4) fetchStockReport();
     if (tab === 5) fetchAuthorReport();
     if (tab === 6) fetchReceiptReport();
@@ -539,7 +544,7 @@ export const Reports = () => {
   };
 
   const handleExportExcel = (type) => {
-    if (!hasPermission('exports.run')) {
+    if (!hasPermission('reports.export')) {
       showToast('ليس لديك صلاحية تصدير البيانات', 'error');
       return;
     }
@@ -572,13 +577,13 @@ export const Reports = () => {
           textColor="primary"
           indicatorColor="primary"
         >
-          <Tab label="الخلاصة المالية" sx={{ whiteSpace: 'nowrap' }} />
-          <Tab label="أرصدة المنافذ" sx={{ whiteSpace: 'nowrap' }} />
-          <Tab label="مبيعات المحافظات" sx={{ whiteSpace: 'nowrap' }} />
-          <Tab label="مبيعات فئات المنافذ" sx={{ whiteSpace: 'nowrap' }} />
-          <Tab label="حالة المخزون" sx={{ whiteSpace: 'nowrap' }} />
-          <Tab label="مبيعات المؤلفين" sx={{ whiteSpace: 'nowrap' }} />
-          <Tab label="سجل التوريدات" sx={{ whiteSpace: 'nowrap' }} />
+          {hasPermission('finance.view') && <Tab value={0} label="الخلاصة المالية" sx={{ whiteSpace: 'nowrap' }} />}
+          {hasPermission('finance.view') && <Tab value={1} label="أرصدة المنافذ" sx={{ whiteSpace: 'nowrap' }} />}
+          {hasPermission('finance.view') && <Tab value={2} label="مبيعات المحافظات" sx={{ whiteSpace: 'nowrap' }} />}
+          {hasPermission('finance.view') && <Tab value={3} label="مبيعات فئات المنافذ" sx={{ whiteSpace: 'nowrap' }} />}
+          <Tab value={4} label="حالة المخزون" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab value={5} label="مبيعات المؤلفين" sx={{ whiteSpace: 'nowrap' }} />
+          <Tab value={6} label="سجل التوريدات" sx={{ whiteSpace: 'nowrap' }} />
         </Tabs>
       </Paper>
 
@@ -836,9 +841,11 @@ export const Reports = () => {
             <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
               طباعة التقرير
             </Button>
-            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('balances')}>
-              تصدير كملف Excel
-            </Button>
+            {hasPermission('reports.export') && (
+              <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('balances')}>
+                تصدير كملف Excel
+              </Button>
+            )}
           </Box>
         </Box>
         {balancesOutletLoading ? <LoadingState /> : balancesOutlet.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
@@ -951,9 +958,11 @@ export const Reports = () => {
             <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
               طباعة التقرير
             </Button>
-            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('stock')}>
-              تصدير كملف Excel
-            </Button>
+            {hasPermission('reports.export') && (
+              <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('stock')}>
+                تصدير كملف Excel
+              </Button>
+            )}
           </Box>
         </Box>
         {stockLoading ? <LoadingState /> : stockData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
@@ -1000,9 +1009,11 @@ export const Reports = () => {
             <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
               طباعة التقرير
             </Button>
-            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('authors')}>
-              تصدير كملف Excel
-            </Button>
+            {hasPermission('reports.export') && (
+              <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('authors')}>
+                تصدير كملف Excel
+              </Button>
+            )}
           </Box>
         </Box>
         {authorLoading ? <LoadingState /> : authorData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (
@@ -1049,9 +1060,11 @@ export const Reports = () => {
             <Button variant="contained" color="primary" size="small" startIcon={<PrintIcon />} onClick={handlePrintReport}>
               طباعة التقرير
             </Button>
-            <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('receipts')}>
-              تصدير كملف Excel
-            </Button>
+            {hasPermission('reports.export') && (
+              <Button variant="contained" color="secondary" size="small" startIcon={<DownloadIcon />} onClick={() => handleExportExcel('receipts')}>
+                تصدير كملف Excel
+              </Button>
+            )}
           </Box>
         </Box>
         {receiptLoading ? <LoadingState /> : receiptData.length === 0 ? <EmptyState title="لا توجد بيانات" /> : (

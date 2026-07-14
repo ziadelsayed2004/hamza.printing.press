@@ -15,7 +15,7 @@ function sendRestrictedInvoiceRoleForbidden(res) {
 }
 
 // 1. GET /api/returns - List and filter returns
-router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) => {
+router.get('/', requireAuth, checkPermission('returns.view'), async (req, res) => {
   const limit = parseInt(req.query.limit || '50', 10);
   const offset = parseInt(req.query.offset || '0', 10);
   const invoiceId = req.query.invoiceId ? parseInt(req.query.invoiceId, 10) : null;
@@ -30,7 +30,7 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
     }
 
     const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff'].includes(r.name));
+    const isElevated = userRoles.some(r => ['super_admin', 'assistant', 'readonly_viewer'].includes(r.name));
 
     let filterOutletIds = null;
     if (isOutlet && !isElevated) {
@@ -50,7 +50,7 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
 });
 
 // 2. GET /api/returns/:id - Fetch specific return by ID
-router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, res) => {
+router.get('/:id', requireAuth, checkPermission('returns.view'), async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) {
     return res.status(400).json({ error: 'Bad Request', message: 'Valid Return ID is required.' });
@@ -70,7 +70,7 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
     }
 
     const isOutlet = userRoles.some(r => r.name === 'outlet');
-    const isElevated = userRoles.some(r => ['super_admin', 'admin', 'accountant', 'inventory_manager', 'sales_staff'].includes(r.name));
+    const isElevated = userRoles.some(r => ['super_admin', 'assistant', 'readonly_viewer'].includes(r.name));
 
     if (!isElevated) {
       if (isOutlet) {
@@ -99,7 +99,7 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
 });
 
 // 3. POST /api/returns - Create a new return
-router.post('/', requireAuth, checkPermission('invoices.update'), auditLog('create_return', 'returns'), async (req, res) => {
+router.post('/', requireAuth, checkPermission('returns.create'), auditLog('create_return', 'returns'), async (req, res) => {
   const { invoiceId, reason = '', items = [] } = req.body;
 
   if (!invoiceId || !items || items.length === 0) {

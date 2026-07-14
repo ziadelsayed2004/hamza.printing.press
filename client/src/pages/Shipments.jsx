@@ -173,7 +173,7 @@ export const Shipments = () => {
     const params = new URLSearchParams(location.search);
     const invId = params.get('invoiceId');
     const act = params.get('action');
-    if (invId && act === 'create') {
+    if (invId && act === 'create' && hasPermission('shipments.create')) {
       const prepareDrawer = async () => {
         try {
           const list = await apiClient.get('/invoices?limit=500');
@@ -212,6 +212,10 @@ export const Shipments = () => {
   // ── Create Shipment ──
 
   const handleOpenCreate = async () => {
+    if (!hasPermission('shipments.create')) {
+      showToast('ليس لديك صلاحية لإنشاء الشحنات.', 'error');
+      return;
+    }
     setCsInvoiceId('');
     setCsCarrier('');
     setCsTracking('');
@@ -244,6 +248,10 @@ export const Shipments = () => {
 
   const handleSubmitCreate = async (e) => {
     e.preventDefault();
+    if (!hasPermission('shipments.create')) {
+      showToast('ليس لديك صلاحية لإنشاء الشحنات.', 'error');
+      return;
+    }
     if (!csInvoiceId) {
       showToast('رقم الفاتورة مطلوب.', 'error');
       return;
@@ -301,6 +309,12 @@ export const Shipments = () => {
   // ── Update Status ──
 
   const handleOpenStatus = (shipment) => {
+    const canUpdate = hasPermission('shipments.update');
+    const canDeliver = shipment.status === 'shipped' && hasPermission('shipments.deliver');
+    if (!canUpdate && !canDeliver) {
+      showToast('ليس لديك صلاحية لتحديث حالة الشحنة.', 'error');
+      return;
+    }
     setStatusShipmentId(shipment.id);
     setStatusCurrentStatus(shipment.status);
     setStatusNewStatus('');
@@ -311,6 +325,13 @@ export const Shipments = () => {
   const handleSubmitStatus = async () => {
     if (!statusNewStatus) {
       showToast('يجب اختيار الحالة الجديدة.', 'error');
+      return;
+    }
+    const requiredPermission = statusNewStatus === 'delivered'
+      ? 'shipments.deliver'
+      : 'shipments.update';
+    if (!hasPermission(requiredPermission)) {
+      showToast('ليس لديك صلاحية لتنفيذ انتقال الحالة المحدد.', 'error');
       return;
     }
     setStatusSubmitting(true);
@@ -334,8 +355,8 @@ export const Shipments = () => {
   const statusLabel = (s) => {
     switch (s) {
       case 'pending': return 'قيد الانتظار';
-      case 'shipped': return 'تم الشحن والتسليم';
-      case 'delivered': return 'تم الشحن والتسليم';
+      case 'shipped': return 'تم الشحن';
+      case 'delivered': return 'تم التسليم';
       case 'cancelled': return 'ملغاة';
       default: return s || '—';
     }
@@ -351,10 +372,11 @@ export const Shipments = () => {
     }
   };
 
-  const statusSteps = ['pending', 'delivered'];
+  const statusSteps = ['pending', 'shipped', 'delivered'];
   const getActiveStep = (s) => {
     if (s === 'cancelled') return -1;
-    if (s === 'shipped' || s === 'delivered') return 1;
+    if (s === 'shipped') return 1;
+    if (s === 'delivered') return 2;
     return 0;
   };
 
@@ -505,7 +527,9 @@ export const Shipments = () => {
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {hasPermission('shipments.update') && row.status !== 'delivered' && row.status !== 'cancelled' && (
+                      {(hasPermission('shipments.update') ||
+                        (row.status === 'shipped' && hasPermission('shipments.deliver'))) &&
+                        row.status !== 'delivered' && row.status !== 'cancelled' && (
                         <Tooltip title="تحديث الحالة">
                           <IconButton color="secondary" onClick={() => handleOpenStatus(row)}>
                             <EditIcon fontSize="small" />
@@ -693,7 +717,10 @@ export const Shipments = () => {
         actions={
           <>
             <Button onClick={() => setOpenDetail(false)} variant="outlined">إغلاق</Button>
-            {hasPermission('shipments.update') && detailData && detailData.status !== 'delivered' && detailData.status !== 'cancelled' && (
+            {detailData &&
+              (hasPermission('shipments.update') ||
+                (detailData.status === 'shipped' && hasPermission('shipments.deliver'))) &&
+              detailData.status !== 'delivered' && detailData.status !== 'cancelled' && (
               <Button
                 variant="contained"
                 color="secondary"
@@ -830,10 +857,18 @@ export const Shipments = () => {
               onChange={(e) => setStatusNewStatus(e.target.value)}
               label="الحالة الجديدة"
             >
-              {statusCurrentStatus === 'pending' && <MenuItem value="delivered">تم الشحن والتسليم (Shipped & Delivered)</MenuItem>}
-              {statusCurrentStatus === 'pending' && <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>}
-              {statusCurrentStatus === 'shipped' && <MenuItem value="delivered">تم التسليم (Delivered)</MenuItem>}
-              {statusCurrentStatus === 'shipped' && <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>}
+              {statusCurrentStatus === 'pending' && hasPermission('shipments.update') && (
+                <MenuItem value="shipped">تم الشحن (Shipped)</MenuItem>
+              )}
+              {statusCurrentStatus === 'pending' && hasPermission('shipments.update') && (
+                <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>
+              )}
+              {statusCurrentStatus === 'shipped' && hasPermission('shipments.deliver') && (
+                <MenuItem value="delivered">تم التسليم (Delivered)</MenuItem>
+              )}
+              {statusCurrentStatus === 'shipped' && hasPermission('shipments.update') && (
+                <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>
+              )}
             </Select>
           </FormControl>
           <TextField fullWidth label="ملاحظات" size="small" multiline rows={2} value={statusNotes} onChange={(e) => setStatusNotes(e.target.value)} />

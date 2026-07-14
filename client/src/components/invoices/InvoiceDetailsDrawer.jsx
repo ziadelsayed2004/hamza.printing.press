@@ -159,7 +159,7 @@ export default function InvoiceDetailsDrawer({
       actions={
         detailsInvoice && (
           <>
-            {detailsInvoice.payment_status !== 'cancelled' && detailsInvoice.remaining_amount > 0 && (
+            {hasPermission('payments.create') && detailsInvoice.payment_status !== 'cancelled' && detailsInvoice.remaining_amount > 0 && (
               <Button
                 variant="contained"
                 color="success"
@@ -173,7 +173,7 @@ export default function InvoiceDetailsDrawer({
               </Button>
             )}
 
-            {detailsInvoice.payment_status !== 'cancelled' && detailsInvoice.remaining_amount > 0 && (
+            {hasPermission('payments.create') && detailsInvoice.payment_status !== 'cancelled' && detailsInvoice.remaining_amount > 0 && (
               <Button
                 variant="contained"
                 color="success"
@@ -187,7 +187,7 @@ export default function InvoiceDetailsDrawer({
               </Button>
             )}
 
-            {detailsInvoice.payment_status !== 'cancelled' && (
+            {hasPermission('shipments.create') && detailsInvoice.payment_status !== 'cancelled' && (
               <Button
                 variant="contained"
                 color="warning"
@@ -197,11 +197,11 @@ export default function InvoiceDetailsDrawer({
                   handleShipHandoff(detailsInvoice);
                 }}
               >
-                تحديث حالة الشحن
+                إنشاء شحنة
               </Button>
             )}
 
-            {detailsInvoice.payment_status !== 'cancelled' && (
+            {hasPermission('returns.create') && detailsInvoice.payment_status !== 'cancelled' && (
               <Button
                 variant="contained"
                 color="secondary"
@@ -409,15 +409,21 @@ export default function InvoiceDetailsDrawer({
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={detailsTabValue} onChange={(e, val) => setDetailsTabValue(val)}>
-              <Tab label="سجل التحصيلات والمدفوعات" icon={<PaymentsIcon />} iconPosition="start" />
-              <Tab label="شحنات التوصيل" icon={<LocalShippingIcon />} iconPosition="start" />
-              <Tab label="مرتجع المبيعات" icon={<SettingsBackupRestoreIcon />} iconPosition="start" />
-              <Tab label="سجل حالات الفاتورة" icon={<EventNoteIcon />} iconPosition="start" />
+              {hasPermission('payments.view') && (
+                <Tab value={0} label="سجل التحصيلات والمدفوعات" icon={<PaymentsIcon />} iconPosition="start" />
+              )}
+              {hasPermission('shipments.view') && (
+                <Tab value={1} label="شحنات التوصيل" icon={<LocalShippingIcon />} iconPosition="start" />
+              )}
+              {hasPermission('returns.view') && (
+                <Tab value={2} label="مرتجع المبيعات" icon={<SettingsBackupRestoreIcon />} iconPosition="start" />
+              )}
+              <Tab value={3} label="سجل حالات الفاتورة" icon={<EventNoteIcon />} iconPosition="start" />
             </Tabs>
           </Box>
 
           {/* TAB 0: Payments */}
-          {detailsTabValue === 0 && (
+          {hasPermission('payments.view') && detailsTabValue === 0 && (
             <Box>
               {detailsInvoice.payments && detailsInvoice.payments.length > 0 ? (
                 <TableContainer className="scrollable-table-container" component={Paper}>
@@ -478,7 +484,7 @@ export default function InvoiceDetailsDrawer({
           )}
 
           {/* TAB 1: Shipments */}
-          {detailsTabValue === 1 && (
+          {hasPermission('shipments.view') && detailsTabValue === 1 && (
             <Box>
               {detailsInvoice.shipments && detailsInvoice.shipments.length > 0 ? (
                 <TableContainer className="scrollable-table-container" component={Paper}>
@@ -528,7 +534,7 @@ export default function InvoiceDetailsDrawer({
           )}
 
           {/* TAB 2: Returns */}
-          {detailsTabValue === 2 && (
+          {hasPermission('returns.view') && detailsTabValue === 2 && (
             <Box>
               {detailsInvoice.returns && detailsInvoice.returns.length > 0 ? (
                 <TableContainer className="scrollable-table-container" component={Paper}>
@@ -600,7 +606,14 @@ export default function InvoiceDetailsDrawer({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {detailsInvoice.history.map((h) => (
+                    {(detailsInvoice.history || [])
+                      .filter((historyItem) => {
+                        if (historyItem.status_type === 'payment') {
+                          return hasPermission('payments.view');
+                        }
+                        return hasPermission('shipments.view');
+                      })
+                      .map((h) => (
                       <TableRow key={h.id}>
                         <TableCell>{formatEgyptDateTime(h.created_at)}</TableCell>
                         <TableCell>

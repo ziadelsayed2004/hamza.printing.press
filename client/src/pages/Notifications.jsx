@@ -126,6 +126,7 @@ export const Notifications = () => {
   }, [statusTab, category, severity, page, hasPermission]);
 
   const handleMarkRead = async (id) => {
+    if (!hasPermission('notifications.manage')) return;
     try {
       await apiClient.patch(`/notifications/${id}/read`);
       await fetchNotifications();
@@ -135,6 +136,7 @@ export const Notifications = () => {
   };
 
   const handleResolve = async (id) => {
+    if (!hasPermission('notifications.manage')) return;
     try {
       await apiClient.patch(`/notifications/${id}/resolve`);
       await fetchNotifications();
@@ -308,14 +310,14 @@ export const Notifications = () => {
                               </IconButton>
                             </Tooltip>
                           )}
-                          {n.status === 'unread' && (
+                          {hasPermission('notifications.manage') && n.status === 'unread' && (
                             <Tooltip title="تحديد كمقروء">
                               <IconButton size="small" color="primary" onClick={() => handleMarkRead(n.id)}>
                                 <ReadIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
                           )}
-                          {n.status !== 'resolved' && (
+                          {hasPermission('notifications.manage') && n.status !== 'resolved' && (
                             <Tooltip title="تجاهل التنبيه">
                               <IconButton size="small" color="success" onClick={() => handleResolve(n.id)}>
                                 <ResolveIcon fontSize="small" />

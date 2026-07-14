@@ -16,7 +16,12 @@ jest.mock('../exportsService', () => ({
   exportOutletStatement: jest.fn(),
   exportReport: jest.fn()
 }));
-jest.mock('../../users/usersService', () => ({ getUserRoles: jest.fn() }));
+jest.mock('../../users/usersService', () => ({
+  getUserRoles: jest.fn(),
+  getUserPermissions: jest.fn()
+}));
+jest.mock('../../authors/authorsService', () => ({ getLinkedAuthorsForUser: jest.fn() }));
+jest.mock('../../outlets/outletsService', () => ({ getLinkedOutletsForUser: jest.fn() }));
 jest.mock('../../../middleware/rbac', () => ({
   requireAuth: (_req, _res, next) => next(),
   checkPermission: () => (_req, _res, next) => next()
@@ -27,6 +32,8 @@ jest.mock('../../../middleware/audit', () => ({
 
 const exportsService = require('../exportsService');
 const usersService = require('../../users/usersService');
+const authorsService = require('../../authors/authorsService');
+const outletsService = require('../../outlets/outletsService');
 const exportsRouter = require('../exportsRoutes');
 
 function createApp() {
@@ -45,8 +52,12 @@ describe('invoice export route access scope', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     usersService.getUserRoles.mockResolvedValue([{ name: 'shipping_user' }]);
+    usersService.getUserPermissions.mockResolvedValue([]);
+    authorsService.getLinkedAuthorsForUser.mockResolvedValue([]);
+    outletsService.getLinkedOutletsForUser.mockResolvedValue([]);
     exportsService.exportInvoices.mockResolvedValue('invoice csv');
     exportsService.exportInvoiceItems.mockResolvedValue('item csv');
+    exportsService.exportReport.mockResolvedValue('report csv');
   });
 
   test.each([
@@ -63,7 +74,9 @@ describe('invoice export route access scope', () => {
       'csv',
       {
         allowedShippingStatuses: ['pending', 'partially_shipped'],
-        excludeCancelled: true
+        excludeCancelled: true,
+        authorIds: null,
+        outletIds: null
       }
     );
   });
@@ -71,7 +84,7 @@ describe('invoice export route access scope', () => {
   test('passes an unrestricted scope when a bypass role is also present', async () => {
     usersService.getUserRoles.mockResolvedValue([
       { name: 'inventory_manager' },
-      { name: 'admin' }
+      { name: 'readonly_viewer' }
     ]);
 
     const response = await request(app).get('/api/exports/invoices?format=csv');
@@ -80,7 +93,46 @@ describe('invoice export route access scope', () => {
     expect(exportsService.exportInvoices).toHaveBeenCalledWith(
       expect.any(Object),
       'csv',
-      { allowedShippingStatuses: null, excludeCancelled: false }
+      {
+        allowedShippingStatuses: null,
+        excludeCancelled: false,
+        authorIds: null,
+        outletIds: null
+      }
+    );
+  });
+
+  test('passes linked author and outlet scope to invoice exports', async () => {
+    usersService.getUserRoles.mockResolvedValue([{ name: 'author' }, { name: 'outlet' }]);
+    authorsService.getLinkedAuthorsForUser.mockResolvedValue([4]);
+    outletsService.getLinkedOutletsForUser.mockResolvedValue([9]);
+
+    const response = await request(app).get('/api/exports/invoices?format=csv');
+
+    expect(response.status).toBe(200);
+    expect(exportsService.exportInvoices).toHaveBeenCalledWith(
+      expect.any(Object),
+      'csv',
+      expect.objectContaining({ authorIds: [4], outletIds: [9] })
+    );
+  });
+
+  test('blocks balance report export without financial export permissions', async () => {
+    const response = await request(app).get('/api/exports/reports?type=balances&format=csv');
+
+    expect(response.status).toBe(403);
+    expect(exportsService.exportReport).not.toHaveBeenCalled();
+  });
+
+  test('allows operational report export without financial permissions', async () => {
+    const response = await request(app).get('/api/exports/reports?type=stock&format=csv');
+
+    expect(response.status).toBe(200);
+    expect(exportsService.exportReport).toHaveBeenCalledWith(
+      'stock',
+      expect.objectContaining({ type: 'stock', format: 'csv' }),
+      expect.objectContaining({ id: 88 }),
+      'csv'
     );
   });
 });

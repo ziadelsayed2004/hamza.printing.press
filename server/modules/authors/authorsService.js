@@ -25,7 +25,7 @@ async function createAuthor({ name, phone = '', status = 'active', userId = null
 /**
  * Update an existing author.
  */
-async function updateAuthor(id, { name, phone = '', status = 'active', userId = null }) {
+async function updateAuthor(id, { name, phone = '', status = 'active', userId }) {
   if (!name) {
     throw new Error('Author name is required');
   }
@@ -40,10 +40,14 @@ async function updateAuthor(id, { name, phone = '', status = 'active', userId = 
   `;
   const result = await db.run(sql, [name.trim(), phone.trim(), status, id]);
 
-  // Clean up and update linked user account
-  await db.run('DELETE FROM author_users WHERE author_id = ?', [id]);
-  if (userId) {
-    await db.run('INSERT INTO author_users (author_id, user_id) VALUES (?, ?)', [id, userId]);
+  // Only mutate the security-sensitive account link when the caller explicitly
+  // supplied it. Operational editors can therefore update author data without
+  // silently detaching the existing account.
+  if (userId !== undefined) {
+    await db.run('DELETE FROM author_users WHERE author_id = ?', [id]);
+    if (userId) {
+      await db.run('INSERT INTO author_users (author_id, user_id) VALUES (?, ?)', [id, userId]);
+    }
   }
 
   return result.changes > 0;

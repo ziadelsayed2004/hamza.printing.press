@@ -87,158 +87,194 @@ async function recordManualAdjustment({ outletId, amount, adjustmentType, title,
 /**
  * Fetch overview finance metrics in Egypt timezone and EGP.
  */
+function appendIdScope(query, column, ids) {
+  if (!Array.isArray(ids)) return;
+  if (ids.length === 0) {
+    query.sql += ' AND 0=1';
+    return;
+  }
+
+  query.sql += ` AND ${column} IN (${ids.map(() => '?').join(',')})`;
+  query.params.push(...ids);
+}
+
+function appendInvoiceAuthorScope(query, invoiceAlias, authorIds) {
+  if (!Array.isArray(authorIds)) return;
+  if (authorIds.length === 0) {
+    query.sql += ' AND 0=1';
+    return;
+  }
+
+  query.sql += ` AND EXISTS (
+    SELECT 1
+    FROM invoice_items scoped_ii
+    JOIN product_authors scoped_pa ON scoped_pa.product_id = scoped_ii.product_id
+    WHERE scoped_ii.invoice_id = ${invoiceAlias}.id
+      AND scoped_pa.author_id IN (${authorIds.map(() => '?').join(',')})
+  )`;
+  query.params.push(...authorIds);
+}
+
+function appendReturnAuthorScope(query, returnAlias, authorIds) {
+  if (!Array.isArray(authorIds)) return;
+  if (authorIds.length === 0) {
+    query.sql += ' AND 0=1';
+    return;
+  }
+
+  query.sql += ` AND EXISTS (
+    SELECT 1
+    FROM invoice_items scoped_ii
+    JOIN product_authors scoped_pa ON scoped_pa.product_id = scoped_ii.product_id
+    WHERE scoped_ii.invoice_id = ${returnAlias}.invoice_id
+      AND scoped_pa.author_id IN (${authorIds.map(() => '?').join(',')})
+  )`;
+  query.params.push(...authorIds);
+}
+
+function appendLedgerAuthorScope(query, ledgerAlias, authorIds) {
+  if (!Array.isArray(authorIds)) return;
+  if (authorIds.length === 0) {
+    query.sql += ' AND 0=1';
+    return;
+  }
+
+  // Ledger rows point to invoices directly, or indirectly through a payment
+  // or return. Resolve that invoice before applying the linked-author scope so
+  // manual/general entries can never leak into an author summary.
+  query.sql += ` AND EXISTS (
+    SELECT 1
+    FROM invoice_items scoped_ii
+    JOIN product_authors scoped_pa ON scoped_pa.product_id = scoped_ii.product_id
+    WHERE scoped_ii.invoice_id = CASE
+      WHEN ${ledgerAlias}.reference_type = 'invoice' THEN ${ledgerAlias}.reference_id
+      WHEN ${ledgerAlias}.reference_type = 'payment' THEN (
+        SELECT scoped_payment.invoice_id
+        FROM invoice_payments scoped_payment
+        WHERE scoped_payment.id = ${ledgerAlias}.reference_id
+      )
+      WHEN ${ledgerAlias}.reference_type = 'return' THEN (
+        SELECT scoped_return.invoice_id
+        FROM returns scoped_return
+        WHERE scoped_return.id = ${ledgerAlias}.reference_id
+      )
+      ELSE NULL
+    END
+      AND scoped_pa.author_id IN (${authorIds.map(() => '?').join(',')})
+  )`;
+  query.params.push(...authorIds);
+}
+
+function appendProductAuthorScope(query, productAlias, authorIds) {
+  if (!Array.isArray(authorIds)) return;
+  if (authorIds.length === 0) {
+    query.sql += ' AND 0=1';
+    return;
+  }
+
+  query.sql += ` AND EXISTS (
+    SELECT 1
+    FROM product_authors scoped_pa
+    WHERE scoped_pa.product_id = ${productAlias}.id
+      AND scoped_pa.author_id IN (${authorIds.map(() => '?').join(',')})
+  )`;
+  query.params.push(...authorIds);
+}
+
 async function getFinanceSummary(outletIds = null, authorIds = null) {
-  let totalInvoicesSql = `
+  const totalInvoicesQuery = { sql: `
     SELECT COALESCE(SUM(total_price), 0) as total, COUNT(*) as count
     FROM invoices i
     WHERE i.payment_status != 'cancelled'
-  `;
-  let ledgerSql = `
+  `, params: [] };
+  const ledgerQuery = { sql: `
     SELECT 
       COALESCE(SUM(cash_amount), 0) as totalCollected,
       COALESCE(SUM(receivable_amount), 0) as totalReceivables
     FROM finance_ledger_entries fle
     WHERE 1=1
-  `;
-  let partialShipmentsSql = `
+  `, params: [] };
+  const partialShipmentsQuery = { sql: `
     SELECT COUNT(*) as count
     FROM invoices i
-    WHERE i.shipping_status = 'partial' AND i.payment_status != 'cancelled'
-  `;
+    WHERE i.shipping_status = 'partially_shipped' AND i.payment_status != 'cancelled'
+  `, params: [] };
 
-  const params = [];
-  const ledgerParams = [];
+  appendIdScope(totalInvoicesQuery, 'i.outlet_id', outletIds);
+  appendInvoiceAuthorScope(totalInvoicesQuery, 'i', authorIds);
+  appendIdScope(ledgerQuery, 'fle.outlet_id', outletIds);
+  appendLedgerAuthorScope(ledgerQuery, 'fle', authorIds);
+  appendIdScope(partialShipmentsQuery, 'i.outlet_id', outletIds);
+  appendInvoiceAuthorScope(partialShipmentsQuery, 'i', authorIds);
 
-  if (outletIds && outletIds.length > 0) {
-    const placeholders = outletIds.map(() => '?').join(',');
-    totalInvoicesSql += ` AND i.outlet_id IN (${placeholders})`;
-    ledgerSql += ` AND fle.outlet_id IN (${placeholders})`;
-    partialShipmentsSql += ` AND i.outlet_id IN (${placeholders})`;
-    params.push(...outletIds);
-    ledgerParams.push(...outletIds);
-  } else if (outletIds) {
-    totalInvoicesSql += ` AND 0=1`;
-    ledgerSql += ` AND 0=1`;
-    partialShipmentsSql += ` AND 0=1`;
-  }
-
-  if (authorIds && authorIds.length > 0) {
-    const placeholders = authorIds.map(() => '?').join(',');
-    const authorFilter = ` AND i.id IN (
-      SELECT ii.invoice_id
-      FROM invoice_items ii
-      JOIN product_authors pa ON pa.product_id = ii.product_id
-      WHERE pa.author_id IN (${placeholders})
-    )`;
-    totalInvoicesSql += authorFilter;
-    partialShipmentsSql += authorFilter;
-    params.push(...authorIds);
-  } else if (authorIds) {
-    totalInvoicesSql += ` AND 0=1`;
-    partialShipmentsSql += ` AND 0=1`;
-  }
-
-  let suppliedSql = `
+  const suppliedQuery = { sql: `
     SELECT COALESCE(SUM(p.amount), 0) as total
     FROM invoice_payments p
     JOIN invoices i ON i.id = p.invoice_id
     WHERE i.payment_status != 'cancelled' AND p.supply_status = 'supplied' AND p.receipt_status = 'approved'
-  `;
-  let unsuppliedSql = `
+  `, params: [] };
+  const unsuppliedQuery = { sql: `
     SELECT COALESCE(SUM(p.amount), 0) as total
     FROM invoice_payments p
     JOIN invoices i ON i.id = p.invoice_id
     WHERE i.payment_status != 'cancelled' AND p.supply_status = 'not_supplied' AND p.receipt_status = 'approved'
-  `;
-  let unreviewedReceiptsSql = `
+  `, params: [] };
+  const unreviewedReceiptsQuery = { sql: `
     SELECT COALESCE(SUM(p.amount), 0) as total, COUNT(p.id) as count
     FROM invoice_payments p
     JOIN invoices i ON i.id = p.invoice_id
     WHERE i.payment_status != 'cancelled' AND p.receipt_status = 'pending_review'
-  `;
-  let rejectedReceiptsSql = `
+  `, params: [] };
+  const rejectedReceiptsQuery = { sql: `
     SELECT COALESCE(SUM(p.amount), 0) as total
     FROM invoice_payments p
     JOIN invoices i ON i.id = p.invoice_id
     WHERE i.payment_status != 'cancelled' AND p.receipt_status = 'rejected'
-  `;
-  let returnsSql = `
+  `, params: [] };
+  const returnsQuery = { sql: `
     SELECT COALESCE(SUM(return_value), 0) as total
     FROM returns r
     WHERE r.status = 'approved'
-  `;
+  `, params: [] };
 
-  const subParams = [];
-  if (outletIds && outletIds.length > 0) {
-    const placeholders = outletIds.map(() => '?').join(',');
-    suppliedSql += ` AND i.outlet_id IN (${placeholders})`;
-    unsuppliedSql += ` AND i.outlet_id IN (${placeholders})`;
-    unreviewedReceiptsSql += ` AND i.outlet_id IN (${placeholders})`;
-    rejectedReceiptsSql += ` AND i.outlet_id IN (${placeholders})`;
-    returnsSql += ` AND r.outlet_id IN (${placeholders})`;
-    subParams.push(...outletIds);
-  } else if (outletIds) {
-    suppliedSql += ` AND 0=1`;
-    unsuppliedSql += ` AND 0=1`;
-    unreviewedReceiptsSql += ` AND 0=1`;
-    rejectedReceiptsSql += ` AND 0=1`;
-    returnsSql += ` AND 0=1`;
+  const invoicePaymentQueries = [
+    suppliedQuery,
+    unsuppliedQuery,
+    unreviewedReceiptsQuery,
+    rejectedReceiptsQuery
+  ];
+  for (const query of invoicePaymentQueries) {
+    appendIdScope(query, 'i.outlet_id', outletIds);
+    appendInvoiceAuthorScope(query, 'i', authorIds);
   }
+  appendIdScope(returnsQuery, 'r.outlet_id', outletIds);
+  appendReturnAuthorScope(returnsQuery, 'r', authorIds);
 
-  if (authorIds && authorIds.length > 0) {
-    const placeholders = authorIds.map(() => '?').join(',');
-    const authorFilter = ` AND i.id IN (
-      SELECT ii.invoice_id
-      FROM invoice_items ii
-      JOIN product_authors pa ON pa.product_id = ii.product_id
-      WHERE pa.author_id IN (${placeholders})
-    )`;
-    suppliedSql += authorFilter;
-    unsuppliedSql += authorFilter;
-    unreviewedReceiptsSql += authorFilter;
-    rejectedReceiptsSql += authorFilter;
-    subParams.push(...authorIds);
-
-    returnsSql += ` AND r.invoice_id IN (
-      SELECT ii.invoice_id
-      FROM invoice_items ii
-      JOIN product_authors pa ON pa.product_id = ii.product_id
-      WHERE pa.author_id IN (${placeholders})
-    )`;
-    subParams.push(...authorIds);
-  } else if (authorIds) {
-    suppliedSql += ` AND 0=1`;
-    unsuppliedSql += ` AND 0=1`;
-    unreviewedReceiptsSql += ` AND 0=1`;
-    rejectedReceiptsSql += ` AND 0=1`;
-    returnsSql += ` AND 0=1`;
-  }
-
-  let stockAlertsSql = `
+  const stockAlertsQuery = { sql: `
     SELECT COUNT(*) as count FROM (
       SELECT p.id, COALESCE(SUM(t.quantity), 0) as stock
       FROM products p
       LEFT JOIN inventory_transactions t ON t.product_id = p.id
-      LEFT JOIN product_authors pa ON pa.product_id = p.id
       WHERE p.status = 'active' AND p.stock_policy != 'ignore'
-  `;
-  const stockParams = [];
-  if (authorIds && authorIds.length > 0) {
-    const placeholders = authorIds.map(() => '?').join(',');
-    stockAlertsSql += ` AND pa.author_id IN (${placeholders})`;
-    stockParams.push(...authorIds);
+  `, params: [] };
+  if (Array.isArray(authorIds)) {
+    appendProductAuthorScope(stockAlertsQuery, 'p', authorIds);
+  } else if (Array.isArray(outletIds)) {
+    // Stock alerts are not an outlet financial metric. A linked outlet must
+    // never inherit the global operational stock count through this summary.
+    stockAlertsQuery.sql += ' AND 0=1';
   }
-  stockAlertsSql += ` GROUP BY p.id HAVING stock <= 10 )`;
+  stockAlertsQuery.sql += ' GROUP BY p.id HAVING stock <= 10 )';
 
-  const invoiceRow = await db.get(totalInvoicesSql, params);
-  const ledgerRow = await db.get(ledgerSql, ledgerParams);
-  const suppliedRow = await db.get(suppliedSql, subParams);
-  const unsuppliedRow = await db.get(unsuppliedSql, subParams);
-  const unreviewedRow = await db.get(unreviewedReceiptsSql, subParams);
-  const rejectedRow = await db.get(rejectedReceiptsSql, subParams);
-  const returnsRow = await db.get(returnsSql, subParams);
-  const partialShipmentsRow = await db.get(partialShipmentsSql, params);
-  const stockAlertsRow = await db.get(stockAlertsSql, stockParams);
+  const invoiceRow = await db.get(totalInvoicesQuery.sql, totalInvoicesQuery.params);
+  const ledgerRow = await db.get(ledgerQuery.sql, ledgerQuery.params);
+  const suppliedRow = await db.get(suppliedQuery.sql, suppliedQuery.params);
+  const unsuppliedRow = await db.get(unsuppliedQuery.sql, unsuppliedQuery.params);
+  const unreviewedRow = await db.get(unreviewedReceiptsQuery.sql, unreviewedReceiptsQuery.params);
+  const rejectedRow = await db.get(rejectedReceiptsQuery.sql, rejectedReceiptsQuery.params);
+  const returnsRow = await db.get(returnsQuery.sql, returnsQuery.params);
+  const partialShipmentsRow = await db.get(partialShipmentsQuery.sql, partialShipmentsQuery.params);
+  const stockAlertsRow = await db.get(stockAlertsQuery.sql, stockAlertsQuery.params);
 
   const totalInvoices = invoiceRow.total;
   const totalInvoicesCount = invoiceRow.count;
