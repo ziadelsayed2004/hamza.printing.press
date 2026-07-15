@@ -61,7 +61,7 @@ describe('shipmentsService status lifecycle', () => {
 
   test('records shipped_at on pending -> shipped and recalculates the invoice', async () => {
     db.get.mockImplementation(sql => {
-      if (sql.includes('SELECT * FROM shipments')) {
+      if (sql.includes('FROM shipments s') && sql.includes('archived_at')) {
         return Promise.resolve({
           id: 7,
           invoice_id: 10,

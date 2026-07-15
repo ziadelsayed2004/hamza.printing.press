@@ -103,6 +103,9 @@ async function createShipment({ invoiceId, shippingCarrier = '', trackingNumber 
   if (!invoice) {
     throw new Error(`Invoice with ID ${invoiceId} does not exist`);
   }
+  if (invoice.archived_at) {
+    throw new Error('Archived invoices must be restored before creating a shipment');
+  }
   if (invoice.payment_status === 'cancelled') {
     throw new Error('Cannot create a shipment for a cancelled invoice');
   }
@@ -217,9 +220,17 @@ async function updateShipmentStatus(shipmentId, { status, notes = '', userId = n
     throw new Error('Invalid status. Allowed: pending, shipped, cancelled');
   }
 
-  const shipment = await db.get('SELECT * FROM shipments WHERE id = ?', [shipmentId]);
+  const shipment = await db.get(`
+    SELECT s.*, i.archived_at
+    FROM shipments s
+    JOIN invoices i ON i.id = s.invoice_id
+    WHERE s.id = ?
+  `, [shipmentId]);
   if (!shipment) {
     throw new Error(`Shipment with ID ${shipmentId} does not exist`);
+  }
+  if (shipment.archived_at) {
+    throw new Error('Archived invoices must be restored before changing shipment status');
   }
 
   if (shipment.status === status) {

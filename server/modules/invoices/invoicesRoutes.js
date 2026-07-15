@@ -105,9 +105,14 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
   const hasRemaining = req.query.hasRemaining || '';
   const minRemaining = req.query.minRemaining !== undefined ? parseFloat(req.query.minRemaining) : null;
   const maxRemaining = req.query.maxRemaining !== undefined ? parseFloat(req.query.maxRemaining) : null;
+  const archived = req.query.archived === 'true';
 
   try {
     const userId = req.session.user.id;
+    const permissions = await usersService.getUserPermissions(userId);
+    if (archived && !permissions.includes('invoices.archive')) {
+      return res.status(403).json({ error: 'Forbidden', message: 'Archive permission is required.' });
+    }
     const userRoles = await usersService.getUserRoles(userId);
     const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
     const isAuthor = userRoles.some(r => r.name === 'author');
@@ -156,7 +161,8 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
       authorIds: filterAuthorIds,
       outletIds: filterOutletIds,
       allowedShippingStatuses: visibilityScope.allowedShippingStatuses,
-      excludeCancelled: visibilityScope.excludeCancelled
+      excludeCancelled: visibilityScope.excludeCancelled,
+      archived
     });
     res.status(200).json(list);
   } catch (err) {
@@ -179,6 +185,10 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
     const invoice = await invoicesService.getInvoiceById(invoiceId, { includePayments: canViewPayments });
     if (!invoice) {
       return res.status(404).json({ error: 'Not Found', message: 'Invoice not found.' });
+    }
+
+    if (invoice.archived_at && !permissions.includes('invoices.archive')) {
+      return sendInvoiceVisibilityForbidden(res);
     }
 
     const userRoles = await usersService.getUserRoles(userId);
@@ -321,6 +331,86 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
       return res.status(400).json({ error: 'Bad Request', message: err.message });
     }
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  }
+});
+
+async function validateBulkInvoiceAccess(req, res, invoiceIds, { requireArchived = null } = {}) {
+  const userId = req.session.user.id;
+  const userRoles = await usersService.getUserRoles(userId);
+  const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+  const linkedScope = await getLinkedInvoiceScope(userId, userRoles);
+  const invoices = await invoicesService.getInvoiceVisibilityRecords(invoiceIds);
+  const invoiceMap = new Map(invoices.map(invoice => [invoice.id, invoice]));
+
+  for (const invoiceId of invoiceIds) {
+    const invoice = invoiceMap.get(invoiceId);
+    if (!invoice) {
+      res.status(404).json({ error: 'Not Found', message: `Invoice with ID ${invoiceId} does not exist.` });
+      return null;
+    }
+    if (!isInvoiceVisible(invoice, visibilityScope) || !isInvoiceWithinLinkedScope(invoice, linkedScope)) {
+      sendInvoiceVisibilityForbidden(res);
+      return null;
+    }
+    if (requireArchived === true && !invoice.archived_at) {
+      res.status(400).json({ error: 'Bad Request', message: `Invoice with ID ${invoiceId} is not archived.` });
+      return null;
+    }
+    if (requireArchived === false && invoice.archived_at) {
+      res.status(400).json({ error: 'Bad Request', message: `Invoice with ID ${invoiceId} is archived.` });
+      return null;
+    }
+  }
+  return invoices;
+}
+
+function normalizeInvoiceIdsInput(req, res) {
+  const { invoiceIds } = req.body;
+  if (!Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+    res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must be a non-empty array.' });
+    return null;
+  }
+  const normalized = invoiceIds.map(Number);
+  if (normalized.some(id => !Number.isInteger(id) || id <= 0) || new Set(normalized).size !== normalized.length) {
+    res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must be unique positive integers.' });
+    return null;
+  }
+  return normalized;
+}
+
+router.put('/bulk/undo-latest-shipment', requireAuth, checkPermission('invoices.ship'), auditLog('bulk_undo_latest_shipment', 'invoices'), async (req, res) => {
+  const invoiceIds = normalizeInvoiceIdsInput(req, res);
+  if (!invoiceIds) return;
+  try {
+    if (!await validateBulkInvoiceAccess(req, res, invoiceIds, { requireArchived: false })) return;
+    await invoicesService.bulkUndoLatestShipment({ invoiceIds, userId: req.session.user.id });
+    return res.status(200).json({ success: true, message: 'Latest shipment was undone for selected invoices.' });
+  } catch (error) {
+    return res.status(400).json({ error: 'Bad Request', message: error.message });
+  }
+});
+
+router.put('/bulk/archive', requireAuth, checkPermission('invoices.archive'), auditLog('bulk_archive_invoices', 'invoices'), async (req, res) => {
+  const invoiceIds = normalizeInvoiceIdsInput(req, res);
+  if (!invoiceIds) return;
+  try {
+    if (!await validateBulkInvoiceAccess(req, res, invoiceIds, { requireArchived: false })) return;
+    await invoicesService.bulkSetArchiveStatus({ invoiceIds, archived: true, userId: req.session.user.id });
+    return res.status(200).json({ success: true, message: 'Selected invoices were archived.' });
+  } catch (error) {
+    return res.status(400).json({ error: 'Bad Request', message: error.message });
+  }
+});
+
+router.put('/bulk/restore', requireAuth, checkPermission('invoices.archive'), auditLog('bulk_restore_invoices', 'invoices'), async (req, res) => {
+  const invoiceIds = normalizeInvoiceIdsInput(req, res);
+  if (!invoiceIds) return;
+  try {
+    if (!await validateBulkInvoiceAccess(req, res, invoiceIds, { requireArchived: true })) return;
+    await invoicesService.bulkSetArchiveStatus({ invoiceIds, archived: false, userId: req.session.user.id });
+    return res.status(200).json({ success: true, message: 'Selected invoices were restored.' });
+  } catch (error) {
+    return res.status(400).json({ error: 'Bad Request', message: error.message });
   }
 });
 
@@ -495,9 +585,17 @@ router.post('/export/pdf', requireAuth, checkPermission('invoices.export'), asyn
   const uniqueInvoiceIds = [...new Set(normalizedInvoiceIds)];
 
   try {
+    const permissions = await usersService.getUserPermissions(req.session.user.id);
     const userRoles = await usersService.getUserRoles(req.session.user.id);
     const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
     const invoices = await invoicesService.getInvoiceVisibilityRecords(uniqueInvoiceIds);
+
+    if (invoices.some(invoice => invoice.archived_at) && !permissions.includes('invoices.archive')) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Archive permission is required to export archived invoices.'
+      });
+    }
 
     if (
       visibilityScope.restricted &&

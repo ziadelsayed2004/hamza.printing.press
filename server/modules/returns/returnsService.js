@@ -80,6 +80,9 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
   if (!invoice) {
     throw new Error(`Invoice with ID ${invoiceId} does not exist`);
   }
+  if (invoice.archived_at) {
+    throw new Error('Archived invoices must be restored before creating a return');
+  }
   if (invoice.payment_status === 'cancelled') {
     throw new Error('Cannot return items from a cancelled invoice');
   }

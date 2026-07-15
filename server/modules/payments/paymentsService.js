@@ -52,9 +52,12 @@ async function recordPayment({ invoiceId, amount, paymentMethod, paymentDate, re
     throw new Error('Invalid supply status');
   }
 
-  const invoice = await db.get('SELECT total_price, payment_status, outlet_id, invoice_number FROM invoices WHERE id = ?', [invoiceId]);
+  const invoice = await db.get('SELECT total_price, payment_status, outlet_id, invoice_number, archived_at FROM invoices WHERE id = ?', [invoiceId]);
   if (!invoice) {
     throw new Error(`Invoice with ID ${invoiceId} does not exist`);
+  }
+  if (invoice.archived_at) {
+    throw new Error('Archived invoices must be restored before recording a payment');
   }
 
   const existingPayments = await db.all('SELECT amount FROM invoice_payments WHERE invoice_id = ? AND receipt_status != "rejected"', [invoiceId]);

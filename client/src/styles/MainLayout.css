@@ -240,11 +240,11 @@
 }
 
 .sidebar-item-btn--expanded {
-  margin-left: 12px;
-  margin-right: 12px;
+  margin-left: 6px;
+  margin-right: 6px;
   justify-content: initial;
-  padding-left: var(--space-6);
-  padding-right: var(--space-6);
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
 }
 
 .sidebar-item-icon {
@@ -546,7 +546,7 @@
 
 @media (min-width: 600px) {
   .main-layout__content {
-    padding: 20px 48px 20px 24px;
+    padding: 20px 24px;
   }
 }
 
@@ -592,10 +592,10 @@
 }
 
 .sidebar-item-btn--expanded.sidebar-profile-btn {
-  margin-left: 12px !important;
-  margin-right: 12px !important;
-  padding-left: var(--space-4) !important;
-  padding-right: var(--space-4) !important;
+  margin-left: 6px !important;
+  margin-right: 6px !important;
+  padding-left: var(--space-2) !important;
+  padding-right: var(--space-2) !important;
   min-height: 48px !important;
   gap: var(--space-3) !important;
 }
@@ -734,12 +734,7 @@
 /* Force MUI Tabs wrapper to constrain itself inside viewport instead of stretching parent */
 .MuiTabs-root {
   max-width: 100% !important;
-  width: 100% !important;
-}
-
-/* Force standard MUI Paper/Card to never stretch past content area */
-.MuiPaper-root {
-  max-width: 100% !important;
+  /* width: 100% !important; */
 }
 
 /* Make sure scrollable table container has native horizontal scrolling on touch/mouse */

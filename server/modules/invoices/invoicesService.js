@@ -392,6 +392,9 @@ async function updateInvoice(invoiceId, { outletId, discount = 0, shippingCost =
   if (!existingInvoice) {
     throw new Error(`Invoice with ID ${invoiceId} does not exist`);
   }
+  if (existingInvoice.archived_at) {
+    throw new Error('Archived invoices must be restored before they can be modified');
+  }
 
   // Get previous invoice items to compute delta stock levels
   const oldItems = await db.all('SELECT * FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
@@ -751,7 +754,8 @@ async function getInvoices({
   authorIds = null,
   outletIds = null,
   allowedShippingStatuses = null,
-  excludeCancelled = false
+  excludeCancelled = false,
+  archived = false
 } = {}) {
   let sql = `
     SELECT i.*, o.name as outlet_name, o.governorate, o.outlet_type_id,
@@ -767,6 +771,8 @@ async function getInvoices({
     WHERE 1=1
   `;
   const params = [];
+
+  sql += archived ? ' AND i.archived_at IS NOT NULL' : ' AND i.archived_at IS NULL';
 
   if (Array.isArray(allowedShippingStatuses)) {
     if (allowedShippingStatuses.length > 0) {
@@ -891,6 +897,8 @@ async function getInvoiceVisibilityRecords(invoiceIds) {
       i.outlet_id,
       i.payment_status,
       i.shipping_status,
+      i.archived_at,
+      i.archived_by,
       GROUP_CONCAT(DISTINCT pa.author_id) as author_ids
     FROM invoices i
     LEFT JOIN invoice_items ii ON ii.invoice_id = i.id
@@ -914,6 +922,9 @@ async function cancelInvoice(invoiceId, userId) {
   const invoice = await db.get('SELECT * FROM invoices WHERE id = ?', [invoiceId]);
   if (!invoice) {
     throw new Error(`Invoice with ID ${invoiceId} does not exist`);
+  }
+  if (invoice.archived_at) {
+    throw new Error('Archived invoices must be restored before they can be cancelled');
   }
   if (invoice.payment_status === 'cancelled') {
     throw new Error('Invoice is already cancelled');
@@ -1020,12 +1031,15 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus = 'shipped'
 
   try {
     for (const invoiceId of normalizedInvoiceIds) {
-      const invoice = await db.get('SELECT shipping_status, payment_status, invoice_number, outlet_id FROM invoices WHERE id = ?', [invoiceId]);
+      const invoice = await db.get('SELECT shipping_status, payment_status, invoice_number, outlet_id, archived_at FROM invoices WHERE id = ?', [invoiceId]);
       if (!invoice) {
         throw new Error(`Invoice with ID ${invoiceId} does not exist`);
       }
       if (invoice.payment_status === 'cancelled') {
         throw new Error(`Cannot update shipping for cancelled invoice ${invoice.invoice_number}`);
+      }
+      if (invoice.archived_at) {
+        throw new Error(`Cannot update shipping for archived invoice ${invoice.invoice_number}`);
       }
       if (!['pending', 'partially_shipped'].includes(invoice.shipping_status)) {
         throw new Error(`Cannot update shipping for completed invoice ${invoice.invoice_number}`);
@@ -1138,6 +1152,97 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus = 'shipped'
   }
 }
 
+function normalizeBulkInvoiceIds(invoiceIds) {
+  if (!Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+    throw new Error('Invoice IDs must be a non-empty array.');
+  }
+  const normalized = invoiceIds.map(Number);
+  if (normalized.some(id => !Number.isInteger(id) || id <= 0)) {
+    throw new Error('Invoice IDs must contain positive integers only.');
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    throw new Error('Invoice IDs must not contain duplicates.');
+  }
+  return normalized;
+}
+
+async function bulkUndoLatestShipment({ invoiceIds, userId }) {
+  const normalizedInvoiceIds = normalizeBulkInvoiceIds(invoiceIds);
+  await db.exec('BEGIN IMMEDIATE TRANSACTION;');
+  try {
+    const latestShipments = [];
+    for (const invoiceId of normalizedInvoiceIds) {
+      const invoice = await db.get(
+        'SELECT id, invoice_number, payment_status, archived_at FROM invoices WHERE id = ?',
+        [invoiceId]
+      );
+      if (!invoice) throw new Error(`Invoice with ID ${invoiceId} does not exist`);
+      if (invoice.archived_at) throw new Error(`Cannot undo shipping for archived invoice ${invoice.invoice_number}`);
+      if (invoice.payment_status === 'cancelled') throw new Error(`Cannot undo shipping for cancelled invoice ${invoice.invoice_number}`);
+
+      const shipment = await db.get(`
+        SELECT id, status
+        FROM shipments
+        WHERE invoice_id = ? AND status != 'cancelled'
+        ORDER BY datetime(created_at) DESC, id DESC
+        LIMIT 1
+      `, [invoiceId]);
+      if (!shipment) throw new Error(`Invoice ${invoice.invoice_number} has no shipment that can be undone`);
+      latestShipments.push({ invoiceId, shipment });
+    }
+
+    const shipmentsService = require('../shipments/shipmentsService');
+    for (const { invoiceId, shipment } of latestShipments) {
+      await db.run(`
+        UPDATE shipments
+        SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [shipment.id]);
+      await db.run(`
+        INSERT INTO shipment_status_history (shipment_id, old_status, new_status, changed_by, notes)
+        VALUES (?, ?, 'cancelled', ?, 'Latest shipment undone via bulk invoice action.')
+      `, [shipment.id, shipment.status, userId]);
+      await shipmentsService.recalculateInvoiceShippingStatus(invoiceId, userId);
+    }
+    await db.exec('COMMIT;');
+  } catch (error) {
+    await db.exec('ROLLBACK;');
+    throw error;
+  }
+}
+
+async function bulkSetArchiveStatus({ invoiceIds, archived, userId }) {
+  const normalizedInvoiceIds = normalizeBulkInvoiceIds(invoiceIds);
+  await db.exec('BEGIN IMMEDIATE TRANSACTION;');
+  try {
+    for (const invoiceId of normalizedInvoiceIds) {
+      const invoice = await db.get('SELECT id, invoice_number, archived_at FROM invoices WHERE id = ?', [invoiceId]);
+      if (!invoice) throw new Error(`Invoice with ID ${invoiceId} does not exist`);
+      if (archived && invoice.archived_at) throw new Error(`Invoice ${invoice.invoice_number} is already archived`);
+      if (!archived && !invoice.archived_at) throw new Error(`Invoice ${invoice.invoice_number} is not archived`);
+    }
+
+    const placeholders = normalizedInvoiceIds.map(() => '?').join(',');
+    if (archived) {
+      await db.run(`
+        UPDATE invoices
+        SET archived_at = CURRENT_TIMESTAMP, archived_by = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (${placeholders})
+      `, [userId, ...normalizedInvoiceIds]);
+    } else {
+      await db.run(`
+        UPDATE invoices
+        SET archived_at = NULL, archived_by = NULL, updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (${placeholders})
+      `, normalizedInvoiceIds);
+    }
+    await db.exec('COMMIT;');
+  } catch (error) {
+    await db.exec('ROLLBACK;');
+    throw error;
+  }
+}
+
 module.exports = {
   createInvoice,
   updateInvoice,
@@ -1145,5 +1250,7 @@ module.exports = {
   getInvoices,
   getInvoiceVisibilityRecords,
   cancelInvoice,
-  bulkUpdateShippingStatus
+  bulkUpdateShippingStatus,
+  bulkUndoLatestShipment,
+  bulkSetArchiveStatus
 };

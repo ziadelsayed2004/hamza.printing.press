@@ -70,7 +70,10 @@ import {
   Receipt as ReceiptIcon,
   Print as PrintIcon,
   ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  Archive as ArchiveIcon,
+  Unarchive as UnarchiveIcon,
+  Undo as UndoIcon
 } from '@mui/icons-material';
 import '../styles/Invoices.css';
 
@@ -144,6 +147,8 @@ export const Invoices = () => {
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [openBulkShippingModal, setOpenBulkShippingModal] = useState(false);
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [invoiceListMode, setInvoiceListMode] = useState('active');
+  const [bulkActionDialog, setBulkActionDialog] = useState(null);
 
   // Toast Notification State
   const [toastMsg, setToastMsg] = useState('');
@@ -246,7 +251,7 @@ export const Invoices = () => {
   const fetchInvoices = async () => {
     setLoading(true);
     try {
-      let query = `/invoices?limit=${limit}&offset=${offset}`;
+      let query = `/invoices?limit=${limit}&offset=${offset}&archived=${invoiceListMode === 'archived'}`;
 
       if (filterSearch) query += `&search=${encodeURIComponent(filterSearch)}`;
       if (filterOutletId) query += `&outletId=${filterOutletId}`;
@@ -292,7 +297,7 @@ export const Invoices = () => {
   // Run on filter/pagination changes
   useEffect(() => {
     fetchInvoices();
-  }, [limit, offset]);
+  }, [limit, offset, invoiceListMode]);
 
   // Handle pagination navigation
   const handlePrevPage = () => {
@@ -337,9 +342,41 @@ export const Invoices = () => {
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedInvoiceIds(invoices.filter(isInvoiceShippable).map((inv) => inv.id));
+      setSelectedInvoiceIds(invoices.map((inv) => inv.id));
     } else {
       setSelectedInvoiceIds([]);
+    }
+  };
+
+  const selectedInvoices = invoices.filter(invoice => selectedInvoiceIds.includes(invoice.id));
+  const canShipSelection = selectedInvoices.length > 0 && selectedInvoices.every(isInvoiceShippable);
+  const canUndoSelection = selectedInvoices.length > 0 && selectedInvoices.every(invoice =>
+    invoice.payment_status !== 'cancelled' && ['partially_shipped', 'shipped'].includes(invoice.shipping_status)
+  );
+
+  const executeBulkInvoiceAction = async () => {
+    if (!bulkActionDialog || selectedInvoiceIds.length === 0) return;
+    const endpoints = {
+      undo: '/invoices/bulk/undo-latest-shipment',
+      archive: '/invoices/bulk/archive',
+      restore: '/invoices/bulk/restore'
+    };
+    setBulkSubmitting(true);
+    try {
+      await apiClient.put(endpoints[bulkActionDialog], { invoiceIds: selectedInvoiceIds });
+      const messages = {
+        undo: 'تم التراجع عن أحدث شحنة للفواتير المحددة.',
+        archive: 'تمت أرشفة الفواتير المحددة.',
+        restore: 'تم استرجاع الفواتير المحددة من الأرشيف.'
+      };
+      showToast(messages[bulkActionDialog]);
+      setSelectedInvoiceIds([]);
+      setBulkActionDialog(null);
+      fetchInvoices();
+    } catch (error) {
+      showToast(error.message || 'تعذر تنفيذ العملية الجماعية.', 'error');
+    } finally {
+      setBulkSubmitting(false);
     }
   };
 
@@ -1315,15 +1352,34 @@ export const Invoices = () => {
           إدارة فواتير المبيعات
         </Typography>
 
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          {selectedInvoiceIds.length > 0 && hasPermission('invoices.ship') && (
+        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+          {invoiceListMode === 'active' && selectedInvoiceIds.length > 0 && hasPermission('invoices.ship') && (
             <Button
               variant="outlined"
               color="warning"
               startIcon={<LocalShippingIcon />}
               onClick={() => setOpenBulkShippingModal(true)}
+              disabled={!canShipSelection}
             >
               تحديث حالة الشحن ({selectedInvoiceIds.length})
+            </Button>
+          )}
+
+          {invoiceListMode === 'active' && selectedInvoiceIds.length > 0 && hasPermission('invoices.ship') && (
+            <Button variant="outlined" color="warning" startIcon={<UndoIcon />} onClick={() => setBulkActionDialog('undo')} disabled={!canUndoSelection}>
+              تراجع عن آخر شحنة ({selectedInvoiceIds.length})
+            </Button>
+          )}
+
+          {invoiceListMode === 'active' && selectedInvoiceIds.length > 0 && hasPermission('invoices.archive') && (
+            <Button variant="outlined" color="inherit" startIcon={<ArchiveIcon />} onClick={() => setBulkActionDialog('archive')}>
+              أرشفة المحدد ({selectedInvoiceIds.length})
+            </Button>
+          )}
+
+          {invoiceListMode === 'archived' && selectedInvoiceIds.length > 0 && hasPermission('invoices.archive') && (
+            <Button variant="outlined" color="success" startIcon={<UnarchiveIcon />} onClick={() => setBulkActionDialog('restore')}>
+              استرجاع المحدد ({selectedInvoiceIds.length})
             </Button>
           )}
 
@@ -1348,7 +1404,7 @@ export const Invoices = () => {
             </>
           )}
 
-          {hasPermission('invoices.create') && (
+          {invoiceListMode === 'active' && hasPermission('invoices.create') && (
             <Button
               variant="contained"
               color="primary"
@@ -1360,6 +1416,21 @@ export const Invoices = () => {
           )}
         </Box>
       </Box>
+
+      {hasPermission('invoices.archive') && (
+        <Tabs
+          value={invoiceListMode}
+          onChange={(_, value) => {
+            setInvoiceListMode(value);
+            setSelectedInvoiceIds([]);
+            setOffset(0);
+          }}
+          sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab value="active" label="الفواتير الحالية" />
+          <Tab value="archived" label="الأرشيف" icon={<ArchiveIcon />} iconPosition="start" />
+        </Tabs>
+      )}
 
       {isInvoiceVisibilityRestricted && (
         <Alert severity="info" variant="outlined" sx={{ mb: 3 }}>
@@ -1641,14 +1712,14 @@ export const Invoices = () => {
                 <TableRow>
                   <TableCell padding="checkbox">
                     <Checkbox
-                      disabled={invoices.filter(isInvoiceShippable).length === 0}
+                      disabled={invoices.length === 0}
                       indeterminate={
                         selectedInvoiceIds.length > 0 &&
-                        selectedInvoiceIds.length < invoices.filter(isInvoiceShippable).length
+                        selectedInvoiceIds.length < invoices.length
                       }
                       checked={
-                        invoices.filter(isInvoiceShippable).length > 0 &&
-                        selectedInvoiceIds.length === invoices.filter(isInvoiceShippable).length
+                        invoices.length > 0 &&
+                        selectedInvoiceIds.length === invoices.length
                       }
                       onChange={handleSelectAll}
                     />
@@ -1678,7 +1749,6 @@ export const Invoices = () => {
                       <TableCell padding="checkbox">
                         <Checkbox
                           checked={isSelected}
-                          disabled={!isInvoiceShippable(row)}
                           onChange={() => handleSelectInvoice(row.id)}
                         />
                       </TableCell>
@@ -1714,7 +1784,7 @@ export const Invoices = () => {
                           <VisibilityIcon size="small" />
                         </IconButton>
 
-                        {hasPermission('payments.create') && row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
+                        {invoiceListMode === 'active' && hasPermission('payments.create') && row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
                           <IconButton
                             color="success"
                             title="تسجيل دفع (Pay)"
@@ -1724,7 +1794,7 @@ export const Invoices = () => {
                           </IconButton>
                         )}
 
-                        {hasPermission('payments.create') && row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
+                        {invoiceListMode === 'active' && hasPermission('payments.create') && row.payment_status !== 'cancelled' && row.remaining_amount > 0 && (
                           <IconButton
                             color="success"
                             title="تعليم كمدفوعة كلياً"
@@ -1734,7 +1804,7 @@ export const Invoices = () => {
                           </IconButton>
                         )}
 
-                        {hasPermission('shipments.create') && row.payment_status !== 'cancelled' && (
+                        {invoiceListMode === 'active' && hasPermission('shipments.create') && row.payment_status !== 'cancelled' && (
                           <IconButton
                             color="warning"
                             title="إنشاء شحنة للفاتورة"
@@ -1744,7 +1814,7 @@ export const Invoices = () => {
                           </IconButton>
                         )}
 
-                        {hasPermission('returns.create') && row.payment_status !== 'cancelled' && (
+                        {invoiceListMode === 'active' && hasPermission('returns.create') && row.payment_status !== 'cancelled' && (
                           <IconButton
                             color="secondary"
                             title="إنشاء مرتجع (Return)"
@@ -1754,7 +1824,7 @@ export const Invoices = () => {
                           </IconButton>
                         )}
 
-                        {hasPermission('invoices.update') && (
+                        {invoiceListMode === 'active' && hasPermission('invoices.update') && (
                           <IconButton
                             color="info"
                             title="تعديل الفاتورة"
@@ -1970,6 +2040,33 @@ export const Invoices = () => {
             startIcon={<LocalShippingIcon />}
           >
             {bulkSubmitting ? 'جاري الشحن...' : 'تأكيد الشحن'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(bulkActionDialog)}
+        onClose={() => !bulkSubmitting && setBulkActionDialog(null)}
+        maxWidth="xs"
+        fullWidth
+        slotProps={{ paper: { sx: { width: 'calc(100vw - 32px)', maxWidth: '520px !important', margin: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 'bold' }}>
+          {bulkActionDialog === 'undo' && 'تأكيد التراجع عن آخر شحنة'}
+          {bulkActionDialog === 'archive' && 'تأكيد أرشفة الفواتير'}
+          {bulkActionDialog === 'restore' && 'تأكيد استرجاع الفواتير'}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Alert severity={bulkActionDialog === 'undo' ? 'warning' : 'info'}>
+            {bulkActionDialog === 'undo' && `سيتم إلغاء أحدث شحنة لكل فاتورة من ${selectedInvoiceIds.length} فاتورة. قد تصبح الحالة مشحون جزئيًا أو قيد الانتظار، وستعود كميات الشحنة الملغاة للمخزون.`}
+            {bulkActionDialog === 'archive' && `سيتم نقل ${selectedInvoiceIds.length} فاتورة إلى الأرشيف دون حذف بياناتها أو التأثير على المدفوعات والشحنات.`}
+            {bulkActionDialog === 'restore' && `سيتم استرجاع ${selectedInvoiceIds.length} فاتورة إلى قائمة الفواتير الحالية.`}
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button color="inherit" onClick={() => setBulkActionDialog(null)} disabled={bulkSubmitting}>إلغاء</Button>
+          <Button variant="contained" color={bulkActionDialog === 'archive' ? 'warning' : 'primary'} onClick={executeBulkInvoiceAction} disabled={bulkSubmitting}>
+            {bulkSubmitting ? 'جاري التنفيذ...' : 'تأكيد'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -107,6 +107,7 @@ const permissionTranslations = {
   'invoices.pay': { name: 'تسجيل سداد الفواتير', desc: 'سداد المقدار المالي للفواتير وإغلاقها كمدفوعة.' },
   'invoices.ship': { name: 'شحن الفواتير وتوليد طرود', desc: 'إنشاء شحنات توصيل وربطها بأصناف ومواد الفواتير.' },
   'invoices.return': { name: 'تسجيل مرتجعات الفواتير', desc: 'إنشاء وإثبات حركات مرتجعات جزئية أو كلية على الفاتورة.' },
+  'invoices.archive': { name: 'أرشفة واسترجاع الفواتير', desc: 'نقل الفواتير إلى الأرشيف واسترجاعها دون حذف بياناتها.' },
   'payments.view': { name: 'عرض المقبوضات والدفعات', desc: 'استعراض سجل حركات المقبوضات وسداد الفواتير.' },
   'payments.create': { name: 'تسجيل مقبوضات جديدة', desc: 'إدخال دفعات سداد نقدية أو بنكية لصالح الفواتير.' },
   'payments.reverse': { name: 'إلغاء وعكس المقبوضات', desc: 'عكس حركة المقبوضات وإرجاع المديونية للفاتورة.' },
@@ -198,7 +199,7 @@ export const Users = () => {
     },
     {
       title: 'الفواتير والمبيعات',
-      perms: ['invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export', 'invoices.pay', 'invoices.ship', 'invoices.return']
+      perms: ['invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export', 'invoices.pay', 'invoices.ship', 'invoices.return', 'invoices.archive']
     },
     {
       title: 'المدفوعات والمقبوضات',
