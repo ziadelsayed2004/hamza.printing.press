@@ -56,7 +56,6 @@ INSERT OR IGNORE INTO permissions (name, description) VALUES
   ('shipments.view', 'Permission to access shipments.view'),
   ('shipments.create', 'Permission to access shipments.create'),
   ('shipments.update', 'Permission to access shipments.update'),
-  ('shipments.deliver', 'Permission to deliver shipped packages'),
   ('returns.view', 'Permission to access returns.view'),
   ('returns.create', 'Permission to create client returns'),
   ('reports.view', 'Permission to access reports.view'),
@@ -161,7 +160,7 @@ WHERE r.name = 'assistant'
     'invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export',
     'invoices.ship', 'invoices.return',
     'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
-    'shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver',
+    'shipments.view', 'shipments.create', 'shipments.update',
     'returns.view', 'returns.create',
     'reports.view', 'reports.export', 'exports.run',
     'notifications.view', 'notifications.manage'
@@ -190,8 +189,8 @@ FROM roles r
 CROSS JOIN permissions p
 WHERE r.name = 'shipping_user'
   AND p.name IN (
-    'invoices.view', 'invoices.export',
-    'shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver'
+    'invoices.view', 'invoices.export', 'invoices.ship',
+    'shipments.view', 'shipments.create', 'shipments.update'
   );
 
 INSERT OR IGNORE INTO role_permissions (role_id, permission_id)

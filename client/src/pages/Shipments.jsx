@@ -296,7 +296,14 @@ export const Shipments = () => {
         trackingNumber: csTracking,
         items: itemsToSubmit
       });
-      showToast('تم إنشاء الشحنة بنجاح وتحديث حالة شحن الفاتورة.');
+      const shipsAllRemaining = loadedInvoice.items.every(invoiceItem => {
+        if (invoiceItem.remaining_quantity <= 0) return true;
+        const submittedItem = itemsToSubmit.find(item => item.invoiceItemId === invoiceItem.id);
+        return submittedItem && submittedItem.quantity === invoiceItem.remaining_quantity;
+      });
+      showToast(shipsAllRemaining
+        ? 'تم شحن كل الكميات وتحديث حالة الفاتورة إلى تم الشحن.'
+        : 'تم تسجيل الشحن الجزئي وتحديث حالة الفاتورة إلى مشحون جزئيًا.');
       setOpenCreate(false);
       fetchShipments();
     } catch (err) {
@@ -310,8 +317,7 @@ export const Shipments = () => {
 
   const handleOpenStatus = (shipment) => {
     const canUpdate = hasPermission('shipments.update');
-    const canDeliver = shipment.status === 'shipped' && hasPermission('shipments.deliver');
-    if (!canUpdate && !canDeliver) {
+    if (!canUpdate) {
       showToast('ليس لديك صلاحية لتحديث حالة الشحنة.', 'error');
       return;
     }
@@ -327,10 +333,7 @@ export const Shipments = () => {
       showToast('يجب اختيار الحالة الجديدة.', 'error');
       return;
     }
-    const requiredPermission = statusNewStatus === 'delivered'
-      ? 'shipments.deliver'
-      : 'shipments.update';
-    if (!hasPermission(requiredPermission)) {
+    if (!hasPermission('shipments.update')) {
       showToast('ليس لديك صلاحية لتنفيذ انتقال الحالة المحدد.', 'error');
       return;
     }
@@ -356,7 +359,6 @@ export const Shipments = () => {
     switch (s) {
       case 'pending': return 'قيد الانتظار';
       case 'shipped': return 'تم الشحن';
-      case 'delivered': return 'تم التسليم';
       case 'cancelled': return 'ملغاة';
       default: return s || '—';
     }
@@ -366,17 +368,15 @@ export const Shipments = () => {
     switch (s) {
       case 'pending': return 'warning';
       case 'shipped': return 'success';
-      case 'delivered': return 'success';
       case 'cancelled': return 'error';
       default: return 'default';
     }
   };
 
-  const statusSteps = ['pending', 'shipped', 'delivered'];
+  const statusSteps = ['pending', 'shipped'];
   const getActiveStep = (s) => {
     if (s === 'cancelled') return -1;
     if (s === 'shipped') return 1;
-    if (s === 'delivered') return 2;
     return 0;
   };
 
@@ -434,7 +434,7 @@ export const Shipments = () => {
                   >
                     <MenuItem value="">الكل</MenuItem>
                     <MenuItem value="pending">قيد الانتظار</MenuItem>
-                    <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
+                    <MenuItem value="shipped">تم الشحن</MenuItem>
                     <MenuItem value="cancelled">ملغاة</MenuItem>
                   </Select>
                 </FormControl>
@@ -457,16 +457,15 @@ export const Shipments = () => {
       {/* Summary stats */}
       {!loading && shipments.length > 0 && (
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          {['pending', 'shipped', 'delivered', 'cancelled'].map(st => {
+          {['pending', 'shipped', 'cancelled'].map(st => {
             const count = shipments.filter(s => s.status === st).length;
             const colors = {
               pending: { bg: 'warning.light', fg: 'warning.contrastText' },
               shipped: { bg: 'info.light', fg: 'info.contrastText' },
-              delivered: { bg: 'success.light', fg: 'success.contrastText' },
               cancelled: { bg: 'error.light', fg: 'error.contrastText' }
             };
             return (
-              <Grid item xs={6} sm={3} key={st}>
+              <Grid item xs={12} sm={4} key={st}>
                 <Card sx={{ backgroundColor: colors[st].bg, color: colors[st].fg }}>
                   <CardContent sx={{ py: 1.5, textAlign: 'center' }}>
                     <Typography variant="body2">{statusLabel(st)}</Typography>
@@ -501,7 +500,6 @@ export const Shipments = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>رقم التتبع</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>تاريخ الشحن</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>تاريخ التسليم</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>بواسطة</TableCell>
                   <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 120 }}>خيارات</TableCell>
                 </TableRow>
@@ -519,7 +517,6 @@ export const Shipments = () => {
                       <Chip label={statusLabel(row.status)} color={statusColor(row.status)} size="small" />
                     </TableCell>
                     <TableCell>{row.shipped_at ? formatEgyptDate(row.shipped_at) : '—'}</TableCell>
-                    <TableCell>{row.delivered_at ? formatEgyptDate(row.delivered_at) : '—'}</TableCell>
                     <TableCell>{row.user_full_name || '—'}</TableCell>
                     <TableCell align="center">
                       <Tooltip title="عرض التفاصيل">
@@ -527,9 +524,7 @@ export const Shipments = () => {
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {(hasPermission('shipments.update') ||
-                        (row.status === 'shipped' && hasPermission('shipments.deliver'))) &&
-                        row.status !== 'delivered' && row.status !== 'cancelled' && (
+                      {hasPermission('shipments.update') && row.status !== 'cancelled' && (
                         <Tooltip title="تحديث الحالة">
                           <IconButton color="secondary" onClick={() => handleOpenStatus(row)}>
                             <EditIcon fontSize="small" />
@@ -571,14 +566,14 @@ export const Shipments = () => {
           <>
             <Button variant="outlined" color="inherit" onClick={() => setOpenCreate(false)} disabled={csSubmitting}>إلغاء</Button>
             <Button variant="contained" color="primary" type="submit" form="create-shipment-form" disabled={csSubmitting}>
-              {csSubmitting ? 'جاري الإنشاء...' : 'تأكيد وإنشاء الشحنة'}
+              {csSubmitting ? 'جاري الشحن...' : 'تأكيد شحن الكميات المحددة'}
             </Button>
           </>
         }
       >
         <form onSubmit={handleSubmitCreate} id="create-shipment-form">
           <Alert severity="info" sx={{ mb: 2 }}>
-            يتم تحميل أصناف الفاتورة تلقائياً عند اختيار الفاتورة. يرجى تحديد الكتب والكميات المراد شحنها.
+            حدد الكميات المراد شحنها. إذا كانت أقل من المتبقي ستصبح حالة الفاتورة «مشحون جزئيًا»، وإذا شملت كل المتبقي ستصبح «تم الشحن».
           </Alert>
           <Grid container spacing={2} className="shipment-form-grid">
             <Grid item xs={12}>
@@ -718,9 +713,7 @@ export const Shipments = () => {
           <>
             <Button onClick={() => setOpenDetail(false)} variant="outlined">إغلاق</Button>
             {detailData &&
-              (hasPermission('shipments.update') ||
-                (detailData.status === 'shipped' && hasPermission('shipments.deliver'))) &&
-              detailData.status !== 'delivered' && detailData.status !== 'cancelled' && (
+              hasPermission('shipments.update') && detailData.status !== 'cancelled' && (
               <Button
                 variant="contained"
                 color="secondary"
@@ -862,9 +855,6 @@ export const Shipments = () => {
               )}
               {statusCurrentStatus === 'pending' && hasPermission('shipments.update') && (
                 <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>
-              )}
-              {statusCurrentStatus === 'shipped' && hasPermission('shipments.deliver') && (
-                <MenuItem value="delivered">تم التسليم (Delivered)</MenuItem>
               )}
               {statusCurrentStatus === 'shipped' && hasPermission('shipments.update') && (
                 <MenuItem value="cancelled">ملغاة (Cancelled)</MenuItem>

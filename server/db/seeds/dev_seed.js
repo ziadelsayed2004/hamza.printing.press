@@ -9,6 +9,9 @@ const {
 } = require('../../modules/roles/roleCatalog');
 
 async function synchronizeRoleCatalog() {
+  await dbHelper.run("DELETE FROM role_permissions WHERE permission_id IN (SELECT id FROM permissions WHERE name = 'shipments.deliver')");
+  await dbHelper.run("DELETE FROM permissions WHERE name = 'shipments.deliver'");
+
   for (const permission of PERMISSIONS) {
     await dbHelper.run(
       'INSERT OR IGNORE INTO permissions (name, description) VALUES (?, ?)',

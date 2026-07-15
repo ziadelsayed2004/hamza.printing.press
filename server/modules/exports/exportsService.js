@@ -1128,8 +1128,7 @@ async function exportCourierSheet(query = {}, format = 'xlsx') {
   const formattedRows = rows.map(r => {
     let statusAr = r.shipment_status;
     if (r.shipment_status === 'pending') statusAr = 'قيد الانتظار / التجهيز';
-    else if (r.shipment_status === 'shipped') statusAr = 'تم الشحن والتسليم';
-    else if (r.shipment_status === 'delivered') statusAr = 'تم الشحن والتسليم';
+    else if (r.shipment_status === 'shipped') statusAr = 'تم الشحن';
     else if (r.shipment_status === 'cancelled') statusAr = 'ملغاة';
 
     let payStatusAr = r.payment_status;

@@ -8,7 +8,7 @@ function scheduleAutoBackups() {
   console.log('⏳ Automated Daily Backup Scheduler started (triggers daily at 2:00 AM)...');
   
   // Run check every 30 seconds
-  setInterval(() => {
+  globalThis.setInterval(() => {
     const now = new Date();
     const currentHour = now.getHours();
     const currentMin = now.getMinutes();

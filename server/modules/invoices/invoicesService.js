@@ -645,7 +645,7 @@ async function getInvoiceById(id, { includePayments = true } = {}) {
         SELECT SUM(si.quantity)
         FROM shipment_items si
         JOIN shipments s ON s.id = si.shipment_id
-        WHERE si.invoice_item_id = ii.id AND s.status IN ('shipped', 'delivered')
+        WHERE si.invoice_item_id = ii.id AND s.status = 'shipped'
       ), 0) as shipped_quantity,
       COALESCE((
         SELECT SUM(ri.quantity)
@@ -985,46 +985,41 @@ async function cancelInvoice(invoiceId, userId) {
 /**
  * Bulk update shipping status for a list of invoices.
  */
-async function transitionShipmentForBulk(shipment, targetStatus, userId) {
-  const steps = [];
-  if (shipment.status === 'pending') steps.push('shipped');
-  if ((shipment.status === 'pending' || shipment.status === 'shipped') && targetStatus === 'delivered') {
-    steps.push('delivered');
-  }
+async function transitionShipmentForBulk(shipment, userId) {
+  if (shipment.status !== 'pending') return;
 
-  for (const nextStatus of steps) {
-    const oldStatus = shipment.status;
-    const now = new Date().toISOString();
-    if (nextStatus === 'shipped' && !shipment.shipped_at) shipment.shipped_at = now;
-    if (nextStatus === 'delivered' && !shipment.delivered_at) shipment.delivered_at = now;
-
-    await db.run(`
-      UPDATE shipments
-      SET status = ?, shipped_at = ?, delivered_at = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [nextStatus, shipment.shipped_at || null, shipment.delivered_at || null, shipment.id]);
-    await db.run(`
-      INSERT INTO shipment_status_history (shipment_id, old_status, new_status, changed_by, notes)
-      VALUES (?, ?, ?, ?, 'Shipment status updated via authorized bulk invoice action.')
-    `, [shipment.id, oldStatus, nextStatus, userId]);
-    shipment.status = nextStatus;
-  }
+  const shippedAt = shipment.shipped_at || new Date().toISOString();
+  await db.run(`
+    UPDATE shipments
+    SET status = 'shipped', shipped_at = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `, [shippedAt, shipment.id]);
+  await db.run(`
+    INSERT INTO shipment_status_history (shipment_id, old_status, new_status, changed_by, notes)
+    VALUES (?, 'pending', 'shipped', ?, 'Shipment completed via authorized bulk invoice action.')
+  `, [shipment.id, userId]);
 }
 
-async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) {
+async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus = 'shipped', userId }) {
   if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
     throw new Error('Invoice IDs must be a non-empty array.');
   }
-  const allowedStatuses = ['shipped', 'delivered'];
-  if (!allowedStatuses.includes(shippingStatus)) {
+  if (shippingStatus !== 'shipped') {
     throw new Error(`Invalid shipping status: ${shippingStatus}`);
+  }
+  const normalizedInvoiceIds = invoiceIds.map(Number);
+  if (normalizedInvoiceIds.some(id => !Number.isInteger(id) || id <= 0)) {
+    throw new Error('Invoice IDs must contain positive integers only.');
+  }
+  if (new Set(normalizedInvoiceIds).size !== normalizedInvoiceIds.length) {
+    throw new Error('Invoice IDs must not contain duplicates.');
   }
 
   // Begin Transaction
   await db.exec('BEGIN TRANSACTION;');
 
   try {
-    for (const invoiceId of invoiceIds) {
+    for (const invoiceId of normalizedInvoiceIds) {
       const invoice = await db.get('SELECT shipping_status, payment_status, invoice_number, outlet_id FROM invoices WHERE id = ?', [invoiceId]);
       if (!invoice) {
         throw new Error(`Invoice with ID ${invoiceId} does not exist`);
@@ -1032,20 +1027,23 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) 
       if (invoice.payment_status === 'cancelled') {
         throw new Error(`Cannot update shipping for cancelled invoice ${invoice.invoice_number}`);
       }
+      if (!['pending', 'partially_shipped'].includes(invoice.shipping_status)) {
+        throw new Error(`Cannot update shipping for completed invoice ${invoice.invoice_number}`);
+      }
       
       if (shippingStatus !== invoice.shipping_status) {
         // Move existing shipments through the same state machine used by the shipment API.
         const activeShipments = await db.all(`
-          SELECT id, status, shipped_at, delivered_at
+          SELECT id, status, shipped_at
           FROM shipments
           WHERE invoice_id = ? AND status != 'cancelled'
         `, [invoiceId]);
         for (const shipment of activeShipments) {
-          await transitionShipmentForBulk(shipment, shippingStatus, userId);
+          await transitionShipmentForBulk(shipment, userId);
         }
 
         // Validate physical stock and create a shipment for any quantities not yet allocated.
-        if (shippingStatus === 'shipped' || shippingStatus === 'delivered') {
+        if (shippingStatus === 'shipped') {
           const invoiceItems = await db.all('SELECT * FROM invoice_items WHERE invoice_id = ?', [invoiceId]);
           const shipmentItemsToCreate = [];
           
@@ -1119,9 +1117,8 @@ async function bulkUpdateShippingStatus({ invoiceIds, shippingStatus, userId }) 
             await transitionShipmentForBulk({
               id: shipmentId,
               status: 'pending',
-              shipped_at: null,
-              delivered_at: null
-            }, shippingStatus, userId);
+              shipped_at: null
+            }, userId);
           }
         }
 

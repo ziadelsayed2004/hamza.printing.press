@@ -307,6 +307,10 @@ export const ThemeConfig = ({ children }) => {
               paper: {
                 borderRadius: 6,
                 padding: 12,
+                width: 'calc(100vw - 32px)',
+                maxWidth: 'min(720px, calc(100vw - 32px))',
+                maxHeight: 'calc(100vh - 32px)',
+                margin: 16,
                 boxShadow: mode === 'light'
                   ? '0 24px 38px 3px rgba(0,0,0,0.14), 0 9px 46px 8px rgba(0,0,0,0.12), 0 11px 15px -7px rgba(0,0,0,0.2)'
                   : '0 24px 38px 3px rgba(0,0,0,0.5), 0 9px 46px 8px rgba(0,0,0,0.4), 0 11px 15px -7px rgba(0,0,0,0.6)',

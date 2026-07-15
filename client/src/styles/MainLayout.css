@@ -102,6 +102,7 @@
 
 .main-layout__desktop-drawer {
   display: none;
+  min-width: 270px;
 }
 
 .main-layout__desktop-drawer-paper {
@@ -125,7 +126,7 @@
 }
 
 .main-layout__desktop-drawer-paper--collapsed {
-  width: 72px;
+  width: 72px!important;
 }
 
 .main-layout__drawer-container {

@@ -80,14 +80,8 @@ export const Invoices = () => {
   const location = useLocation();
 
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
-  const hasRestrictedInvoiceRole = userRoles.some((role) =>
-    ['inventory_manager', 'shipping_user'].includes(role)
-  );
-  const hasUnrestrictedInvoiceRole = userRoles.some((role) =>
-    ['super_admin', 'assistant', 'readonly_viewer'].includes(role)
-  );
   const isInvoiceVisibilityRestricted =
-    hasRestrictedInvoiceRole && !hasUnrestrictedInvoiceRole;
+    userRoles.length > 0 && !userRoles.some((role) => ['super_admin', 'assistant'].includes(role));
   const canRecordInvoicePayments =
     hasPermission('invoices.pay') && hasPermission('payments.create');
   const getInitialDetailsTab = () => {
@@ -149,7 +143,6 @@ export const Invoices = () => {
   // Selection state for batch actions
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [openBulkShippingModal, setOpenBulkShippingModal] = useState(false);
-  const [bulkShippingStatus, setBulkShippingStatus] = useState('shipped');
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
 
   // Toast Notification State
@@ -338,9 +331,13 @@ export const Invoices = () => {
   };
 
   // Handle single and multi-selection of rows
+  const isInvoiceShippable = (invoice) =>
+    invoice.payment_status !== 'cancelled' &&
+    ['pending', 'partially_shipped'].includes(invoice.shipping_status);
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedInvoiceIds(invoices.map((inv) => inv.id));
+      setSelectedInvoiceIds(invoices.filter(isInvoiceShippable).map((inv) => inv.id));
     } else {
       setSelectedInvoiceIds([]);
     }
@@ -365,9 +362,9 @@ export const Invoices = () => {
     try {
       await apiClient.put('/invoices/bulk/shipping-status', {
         invoiceIds: selectedInvoiceIds,
-        shippingStatus: bulkShippingStatus
+        shippingStatus: 'shipped'
       });
-      showToast(`تم تحديث حالة الشحن بنجاح لـ ${selectedInvoiceIds.length} فاتورة.`);
+      showToast(`تم شحن كل الكميات المتبقية بنجاح لـ ${selectedInvoiceIds.length} فاتورة.`);
       setSelectedInvoiceIds([]);
       setOpenBulkShippingModal(false);
       fetchInvoices();
@@ -602,8 +599,8 @@ export const Invoices = () => {
               inv.payment_status === 'partially_paid' ? '<span style="color:#ca8a04; font-weight:bold;">مسددة جزئياً</span>' :
               '<span style="color:#dc2626; font-weight:bold;">غير مسددة</span>'
             }</p>
-            <p><strong>حالة الشحن والتسليم:</strong> ${
-              inv.shipping_status === 'delivered' || inv.shipping_status === 'shipped' ? '<span style="color:#16a34a; font-weight:bold;">تم الشحن والتسليم</span>' :
+            <p><strong>حالة الشحن:</strong> ${
+              inv.shipping_status === 'shipped' ? '<span style="color:#16a34a; font-weight:bold;">تم الشحن</span>' :
               inv.shipping_status === 'partially_shipped' ? '<span style="color:#ca8a04; font-weight:bold;">شحن جزئي</span>' :
               '<span style="color:#94a3b8;">قيد الانتظار</span>'
             }</p>
@@ -799,8 +796,8 @@ export const Invoices = () => {
       showToast('لا يمكن عمل مرتجع لفاتورة ملغاة.', 'warning');
       return;
     }
-    if (!['shipped', 'delivered'].includes(invoice.shipping_status)) {
-      showToast('لا يمكن عمل مرتجع إلا بعد شحن الفاتورة أو تسليمها (تم الشحن أو التوصيل).', 'warning');
+    if (invoice.shipping_status !== 'shipped') {
+      showToast('لا يمكن عمل مرتجع إلا بعد شحن الفاتورة بالكامل.', 'warning');
       return;
     }
     try {
@@ -1272,11 +1269,9 @@ export const Invoices = () => {
       case 'pending':
         return <Chip label="قيد الانتظار" variant="outlined" color="warning" size="small" />;
       case 'shipped':
-        return <Chip label="تم الشحن والتسليم" color="success" size="small" />;
+        return <Chip label="تم الشحن" color="success" size="small" />;
       case 'partially_shipped':
         return <Chip label="شحن جزئي" variant="outlined" color="info" size="small" />;
-      case 'delivered':
-        return <Chip label="تم الشحن والتسليم" color="success" size="small" />;
       default:
         return <Chip label={status || 'غير معروف'} size="small" />;
     }
@@ -1520,9 +1515,7 @@ export const Invoices = () => {
                     <MenuItem value="">الكل</MenuItem>
                     <MenuItem value="pending">قيد الانتظار</MenuItem>
                     <MenuItem value="partially_shipped">شحن جزئي</MenuItem>
-                    {!isInvoiceVisibilityRestricted && (
-                      <MenuItem value="delivered">تم الشحن والتسليم</MenuItem>
-                    )}
+                    {!isInvoiceVisibilityRestricted && <MenuItem value="shipped">تم الشحن</MenuItem>}
                   </Select>
                 </FormControl>
               </Grid>
@@ -1648,12 +1641,14 @@ export const Invoices = () => {
                 <TableRow>
                   <TableCell padding="checkbox">
                     <Checkbox
+                      disabled={invoices.filter(isInvoiceShippable).length === 0}
                       indeterminate={
                         selectedInvoiceIds.length > 0 &&
-                        selectedInvoiceIds.length < invoices.length
+                        selectedInvoiceIds.length < invoices.filter(isInvoiceShippable).length
                       }
                       checked={
-                        invoices.length > 0 && selectedInvoiceIds.length === invoices.length
+                        invoices.filter(isInvoiceShippable).length > 0 &&
+                        selectedInvoiceIds.length === invoices.filter(isInvoiceShippable).length
                       }
                       onChange={handleSelectAll}
                     />
@@ -1683,6 +1678,7 @@ export const Invoices = () => {
                       <TableCell padding="checkbox">
                         <Checkbox
                           checked={isSelected}
+                          disabled={!isInvoiceShippable(row)}
                           onChange={() => handleSelectInvoice(row.id)}
                         />
                       </TableCell>
@@ -1943,24 +1939,24 @@ export const Invoices = () => {
         onClose={() => setOpenBulkShippingModal(false)}
         maxWidth="xs"
         fullWidth
+        slotProps={{
+          paper: {
+            sx: {
+              width: 'calc(100vw - 32px)',
+              maxWidth: '520px !important',
+              margin: 2
+            }
+          }
+        }}
       >
         <DialogTitle sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
           <LocalShippingIcon color="primary" />
-          {selectedInvoiceIds.length === 1 ? 'تحديث حالة الشحن للفاتورة' : `تحديث حالة الشحن لـ (${selectedInvoiceIds.length}) فواتير`}
+          {selectedInvoiceIds.length === 1 ? 'تأكيد شحن الفاتورة' : `تأكيد شحن (${selectedInvoiceIds.length}) فواتير`}
         </DialogTitle>
         <DialogContent dividers>
-          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-            <InputLabel id="bulk-shipping-status-label">حالة الشحن الجديدة</InputLabel>
-            <Select
-              labelId="bulk-shipping-status-label"
-              value={bulkShippingStatus}
-              onChange={(e) => setBulkShippingStatus(e.target.value)}
-              label="حالة الشحن الجديدة"
-            >
-              <MenuItem value="shipped">تم الشحن</MenuItem>
-              <MenuItem value="delivered">تم التسليم</MenuItem>
-            </Select>
-          </FormControl>
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            سيتم إنشاء شحنة مستقلة لكل فاتورة وشحن كل الكميات المتبقية. إذا تعذر شحن أي فاتورة فلن تُنفذ العملية على أي فاتورة.
+          </Alert>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setOpenBulkShippingModal(false)} color="inherit" disabled={bulkSubmitting}>
@@ -1973,7 +1969,7 @@ export const Invoices = () => {
             disabled={bulkSubmitting}
             startIcon={<LocalShippingIcon />}
           >
-            {bulkSubmitting ? 'جاري التحديث...' : 'تحديث الحالة'}
+            {bulkSubmitting ? 'جاري الشحن...' : 'تأكيد الشحن'}
           </Button>
         </DialogActions>
       </Dialog>

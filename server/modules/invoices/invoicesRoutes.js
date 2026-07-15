@@ -326,18 +326,41 @@ router.post('/', requireAuth, checkPermission('invoices.create'), auditLog('crea
 
 // 9. PUT /api/invoices/bulk/shipping-status - Bulk update shipping status
 router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.ship'), auditLog('bulk_update_shipping_status', 'invoices'), async (req, res) => {
-  const { invoiceIds, shippingStatus } = req.body;
+  const { invoiceIds, shippingStatus = 'shipped' } = req.body;
   if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
     return res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must be a non-empty array.' });
   }
-  if (!shippingStatus) {
-    return res.status(400).json({ error: 'Bad Request', message: 'Shipping status is required.' });
+  const normalizedInvoiceIds = invoiceIds.map(Number);
+  if (normalizedInvoiceIds.some(id => !Number.isInteger(id) || id <= 0)) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must contain positive integers only.' });
+  }
+  if (new Set(normalizedInvoiceIds).size !== normalizedInvoiceIds.length) {
+    return res.status(400).json({ error: 'Bad Request', message: 'Invoice IDs must not contain duplicates.' });
+  }
+  if (shippingStatus !== 'shipped') {
+    return res.status(400).json({ error: 'Bad Request', message: 'Bulk shipping only supports the shipped status.' });
   }
 
   try {
     const userId = req.session.user.id;
+    const userRoles = await usersService.getUserRoles(userId);
+    const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
+    const linkedScope = await getLinkedInvoiceScope(userId, userRoles);
+    const invoices = await invoicesService.getInvoiceVisibilityRecords(normalizedInvoiceIds);
+    const invoiceMap = new Map(invoices.map(invoice => [invoice.id, invoice]));
+
+    for (const invoiceId of normalizedInvoiceIds) {
+      const invoice = invoiceMap.get(invoiceId);
+      if (!invoice) {
+        return res.status(404).json({ error: 'Not Found', message: `Invoice with ID ${invoiceId} does not exist.` });
+      }
+      if (!isInvoiceVisible(invoice, visibilityScope) || !isInvoiceWithinLinkedScope(invoice, linkedScope)) {
+        return sendInvoiceVisibilityForbidden(res);
+      }
+    }
+
     await invoicesService.bulkUpdateShippingStatus({
-      invoiceIds,
+      invoiceIds: normalizedInvoiceIds,
       shippingStatus,
       userId
     });
@@ -349,6 +372,8 @@ router.put('/bulk/shipping-status', requireAuth, checkPermission('invoices.ship'
     const msg = (err.message || '').toLowerCase();
     if (
       msg.includes('invalid shipping status') ||
+      msg.includes('positive integers') ||
+      msg.includes('duplicates') ||
       msg.includes('cannot update shipping') ||
       msg.includes('unable to derive shipping status') ||
       msg.includes('المخزون') ||

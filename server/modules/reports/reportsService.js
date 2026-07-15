@@ -163,7 +163,7 @@ async function getFinancialSummary({ startDate = '', endDate = '', outletId = nu
   // 4. Calculate invoice shipping status counts
   let shipSql = `
     SELECT 
-      COALESCE(SUM(CASE WHEN i.shipping_status = 'shipped' OR i.shipping_status = 'delivered' THEN 1 ELSE 0 END), 0) as countShipped,
+      COALESCE(SUM(CASE WHEN i.shipping_status = 'shipped' THEN 1 ELSE 0 END), 0) as countShipped,
       COALESCE(SUM(CASE WHEN i.shipping_status = 'partially_shipped' THEN 1 ELSE 0 END), 0) as countPartiallyShipped,
       COALESCE(SUM(CASE WHEN i.shipping_status = 'pending' THEN 1 ELSE 0 END), 0) as countNotShipped
     FROM invoices i

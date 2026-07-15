@@ -57,6 +57,7 @@ describe('invoice routes access scope', () => {
     invoicesService.getInvoices.mockResolvedValue([]);
     invoicesService.createInvoice.mockResolvedValue({ id: 99, history: [], payments: [] });
     invoicesService.updateInvoice.mockResolvedValue({ id: 42, history: [], payments: [] });
+    invoicesService.bulkUpdateShippingStatus.mockResolvedValue();
     paymentsService.getPayments.mockResolvedValue([]);
     pdfService.generateInvoicesPdf.mockResolvedValue(Buffer.from('pdf'));
     usersService.getUserPermissions.mockResolvedValue(['invoices.pay', 'payments.view']);
@@ -98,7 +99,6 @@ describe('invoice routes access scope', () => {
 
   test.each([
     ['shipped', 'unpaid'],
-    ['delivered', 'paid'],
     ['pending', 'cancelled']
   ])('returns 403 for direct details with shipping=%s payment=%s', async (shippingStatus, paymentStatus) => {
     useRoles('inventory_manager');
@@ -119,7 +119,7 @@ describe('invoice routes access scope', () => {
     useRoles('shipping_user');
     invoicesService.getInvoiceVisibilityRecords.mockResolvedValue([{
       id: 42,
-      shipping_status: 'delivered',
+      shipping_status: 'shipped',
       payment_status: 'paid'
     }]);
 
@@ -345,5 +345,46 @@ describe('invoice routes access scope', () => {
 
     expect(response.status).toBe(403);
     expect(paymentsService.getPayments).not.toHaveBeenCalled();
+  });
+
+  test('lets the shipping role bulk ship a fully visible invoice selection', async () => {
+    useRoles('shipping_user');
+    invoicesService.getInvoiceVisibilityRecords.mockResolvedValue([
+      { id: 1, outlet_id: 3, author_ids: [], shipping_status: 'pending', payment_status: 'unpaid' },
+      { id: 2, outlet_id: 4, author_ids: [], shipping_status: 'partially_shipped', payment_status: 'paid' }
+    ]);
+
+    const response = await request(app)
+      .put('/api/invoices/bulk/shipping-status')
+      .send({ invoiceIds: [1, 2], shippingStatus: 'shipped' });
+
+    expect(response.status).toBe(200);
+    expect(invoicesService.bulkUpdateShippingStatus).toHaveBeenCalledWith({
+      invoiceIds: [1, 2], shippingStatus: 'shipped', userId: 77
+    });
+  });
+
+  test('rejects the entire bulk shipment if one selected invoice is hidden', async () => {
+    useRoles('shipping_user');
+    invoicesService.getInvoiceVisibilityRecords.mockResolvedValue([
+      { id: 1, outlet_id: 3, author_ids: [], shipping_status: 'pending', payment_status: 'unpaid' },
+      { id: 2, outlet_id: 4, author_ids: [], shipping_status: 'shipped', payment_status: 'paid' }
+    ]);
+
+    const response = await request(app)
+      .put('/api/invoices/bulk/shipping-status')
+      .send({ invoiceIds: [1, 2], shippingStatus: 'shipped' });
+
+    expect(response.status).toBe(403);
+    expect(invoicesService.bulkUpdateShippingStatus).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    [{ invoiceIds: [1, 1], shippingStatus: 'shipped' }, 'duplicates'],
+    [{ invoiceIds: [1], shippingStatus: 'delivered' }, 'obsolete status']
+  ])('rejects invalid bulk shipping input: %s', async (body) => {
+    const response = await request(app).put('/api/invoices/bulk/shipping-status').send(body);
+    expect(response.status).toBe(400);
+    expect(invoicesService.bulkUpdateShippingStatus).not.toHaveBeenCalled();
   });
 });

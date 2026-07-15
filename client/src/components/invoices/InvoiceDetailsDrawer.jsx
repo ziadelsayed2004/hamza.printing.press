@@ -89,11 +89,9 @@ export default function InvoiceDetailsDrawer({
       case 'pending':
         return <Chip label="قيد الانتظار" variant="outlined" color="warning" size="small" />;
       case 'shipped':
-        return <Chip label="تم الشحن والتسليم" color="success" size="small" />;
+        return <Chip label="تم الشحن" color="success" size="small" />;
       case 'partially_shipped':
         return <Chip label="شحن جزئي" variant="outlined" color="info" size="small" />;
-      case 'delivered':
-        return <Chip label="تم الشحن والتسليم" color="success" size="small" />;
       default:
         return <Chip label={status || 'غير معروف'} size="small" />;
     }

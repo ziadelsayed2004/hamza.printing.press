@@ -119,6 +119,7 @@ describe('fresh development seed invoice permissions', () => {
       { role_name: 'inventory_manager', permission_name: 'invoices.export' },
       { role_name: 'inventory_manager', permission_name: 'invoices.view' },
       { role_name: 'shipping_user', permission_name: 'invoices.export' },
+      { role_name: 'shipping_user', permission_name: 'invoices.ship' },
       { role_name: 'shipping_user', permission_name: 'invoices.view' }
     ]);
   });

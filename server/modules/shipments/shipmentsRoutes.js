@@ -46,13 +46,6 @@ function sendInvoiceAccessError(res, status) {
   });
 }
 
-function checkShipmentStatusPermission(req, res, next) {
-  const requiredPermission = req.body && req.body.status === 'delivered'
-    ? 'shipments.deliver'
-    : 'shipments.update';
-  return checkPermission(requiredPermission)(req, res, next);
-}
-
 // 1. GET /api/shipments - List and filter shipments
 router.get('/', requireAuth, checkPermission('shipments.view'), async (req, res) => {
   const limit = parseInt(req.query.limit || '50', 10);
@@ -187,7 +180,7 @@ router.post('/', requireAuth, checkPermission('shipments.create'), auditLog('cre
 });
 
 // 5. POST /api/shipments/:id/status - Update shipment status
-router.post('/:id/status', requireAuth, checkShipmentStatusPermission, auditLog('update_shipment_status', 'shipments'), async (req, res) => {
+router.post('/:id/status', requireAuth, checkPermission('shipments.update'), auditLog('update_shipment_status', 'shipments'), async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const { status, notes = '' } = req.body;
 

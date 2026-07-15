@@ -41,7 +41,10 @@ import {
   Snackbar,
   InputAdornment,
   Drawer,
-  Divider
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -52,7 +55,8 @@ import {
   CheckCircle as CheckCircleIcon,
   Delete as DeleteIcon,
   Save as SaveIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 
 import '../styles/Users.css';
@@ -114,7 +118,6 @@ const permissionTranslations = {
   'shipments.view': { name: 'عرض الشحنات والطرود', desc: 'متابعة سجل شحن الفواتير وحالات التوصيل.' },
   'shipments.create': { name: 'إنشاء شحنات جديدة', desc: 'شحن الفواتير وتوليد طرود شحن للمنافذ.' },
   'shipments.update': { name: 'تحديث حالة الشحن واللوجستيات', desc: 'تعديل بيانات وحالات الشحنات والموزعين.' },
-  'shipments.deliver': { name: 'تأكيد تسليم الشحنات والطرود', desc: 'تحديث وتأكيد وصول الشحنات للمنافذ كـ Delivered.' },
   'returns.view': { name: 'عرض سجل المرتجعات المالي', desc: 'استعراض وتصفح حركات مرتجعات الكتب المعتمدة.' },
   'returns.create': { name: 'تسجيل وإقرار مرتجعات كتب', desc: 'إثبات مرتجعات الكتب وإرجاعها للمخزن مع ضبط الحسابات.' },
   'reports.view': { name: 'عرض التقارير المتقدمة', desc: 'استعراض الرسوم البيانية والملخصات الإدارية المجمعة.' },
@@ -138,6 +141,7 @@ const translateRoleName = (name) => roleTranslations[name] || name;
 const translatePermission = (name) => permissionTranslations[name] || { name, desc: '' };
 
 const ASSIGNABLE_SYSTEM_ROLES = [
+  'super_admin',
   'author',
   'outlet',
   'readonly_viewer',
@@ -146,7 +150,6 @@ const ASSIGNABLE_SYSTEM_ROLES = [
   'assistant'
 ];
 const INTERNAL_OR_DEPRECATED_ROLES = [
-  'super_admin',
   'admin',
   'accountant',
   'sales_staff',
@@ -203,7 +206,7 @@ export const Users = () => {
     },
     {
       title: 'الشحن والخدمات اللوجستية',
-      perms: ['shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver']
+      perms: ['shipments.view', 'shipments.create', 'shipments.update']
     },
     {
       title: 'المرتجعات',
@@ -270,6 +273,8 @@ export const Users = () => {
   const [roleFormDescription, setRoleFormDescription] = useState('');
   const [roleFormPermissions, setRoleFormPermissions] = useState([]); // array of permission IDs
   const [permissionSearch, setPermissionSearch] = useState('');
+  const [expandedPermissionGroups, setExpandedPermissionGroups] = useState([]);
+  const isCurrentUserSuperAdmin = currentUser?.roles?.includes('super_admin');
 
   // Fetch initial data
   const fetchData = async () => {
@@ -341,7 +346,7 @@ export const Users = () => {
         showToast('تم إنشاء الحساب بنجاح.');
       } else {
         const updatePayload = { fullName: formFullName };
-        if (!selectedUser?.roles?.includes('super_admin')) {
+        if (!selectedUser?.roles?.includes('super_admin') || isCurrentUserSuperAdmin) {
           updatePayload.roles = formRoles;
         }
         await apiClient.put(`/users/${selectedUser.id}`, updatePayload);
@@ -353,6 +358,24 @@ export const Users = () => {
       console.error(err);
       showToast(err.message || 'فشل في حفظ البيانات.', 'error');
     }
+  };
+
+  const handleUserRolesChange = (event) => {
+    const nextRoles = typeof event.target.value === 'string'
+      ? event.target.value.split(',')
+      : event.target.value;
+    const hadSuperAdmin = formRoles.includes('super_admin');
+    const hasSuperAdmin = nextRoles.includes('super_admin');
+
+    if (hasSuperAdmin && !hadSuperAdmin) {
+      setFormRoles(['super_admin']);
+      return;
+    }
+    if (hadSuperAdmin && nextRoles.some(role => role !== 'super_admin')) {
+      setFormRoles(nextRoles.filter(role => role !== 'super_admin'));
+      return;
+    }
+    setFormRoles(nextRoles);
   };
 
   // Toggle user status (active vs disabled)
@@ -518,6 +541,34 @@ export const Users = () => {
     setResetPasswordUser(u);
     setResetNewPassword('');
     setOpenResetModal(true);
+  };
+
+  const groupedPermissionNames = new Set(permissionGroups.flatMap(group => group.perms));
+  const permissionSections = [
+    ...permissionGroups,
+    {
+      title: 'صلاحيات أخرى غير مصنفة',
+      perms: permissionsList.filter(permission => !groupedPermissionNames.has(permission.name)).map(permission => permission.name)
+    }
+  ];
+  const normalizedPermissionSearch = permissionSearch.trim().toLowerCase();
+  const visiblePermissionSections = permissionSections.map((group, index) => {
+    const allPermissions = permissionsList.filter(permission => group.perms.includes(permission.name));
+    const visiblePermissions = allPermissions.filter(permission => {
+      const translation = translatePermission(permission.name);
+      return `${translation.name} ${translation.desc || permission.description || ''} ${permission.name}`
+        .toLowerCase()
+        .includes(normalizedPermissionSearch);
+    });
+    return { ...group, key: `permission-group-${index}`, allPermissions, visiblePermissions };
+  }).filter(group => group.visiblePermissions.length > 0);
+  const visiblePermissionIds = visiblePermissionSections.flatMap(group => group.visiblePermissions.map(permission => permission.id));
+
+  const togglePermissions = (permissionIds) => {
+    const allSelected = permissionIds.every(id => roleFormPermissions.includes(id));
+    setRoleFormPermissions(current => allSelected
+      ? current.filter(id => !permissionIds.includes(id))
+      : [...new Set([...current, ...permissionIds])]);
   };
 
   if (loading && users.length === 0 && rolesList.length === 0) {
@@ -697,7 +748,11 @@ export const Users = () => {
                         />
                       </TableCell>
                       <TableCell align="right">
-                        <Chip label={r.permissions?.length || 0} size="small" color="primary" />
+                        <Chip
+                          label={r.name === 'super_admin' ? 'كاملة' : (r.permissions?.length || 0)}
+                          size="small"
+                          color={r.name === 'super_admin' ? 'warning' : 'primary'}
+                        />
                       </TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
@@ -775,8 +830,8 @@ export const Users = () => {
                   multiple
                   value={formRoles}
                   label="الأدوار الممنوحة"
-                  onChange={(e) => setFormRoles(e.target.value)}
-                  disabled={modalMode === 'edit' && selectedUser?.roles?.includes('super_admin')}
+                  onChange={handleUserRolesChange}
+                  disabled={modalMode === 'edit' && selectedUser?.roles?.includes('super_admin') && !isCurrentUserSuperAdmin}
                   renderValue={(selected) => (
                     <Box className="roles-chip-container">
                       {selected.map((value) => (
@@ -786,14 +841,26 @@ export const Users = () => {
                   )}
                 >
                   {rolesList.filter((role) =>
-                    ASSIGNABLE_SYSTEM_ROLES.includes(role.name) && isAssignableRole(role)
+                    ASSIGNABLE_SYSTEM_ROLES.includes(role.name) &&
+                    isAssignableRole(role) &&
+                    (role.name !== 'super_admin' || isCurrentUserSuperAdmin)
                   ).map((r) => (
                     <MenuItem key={r.id} value={r.name}>
                       {translateRoleName(r.name)}
+                      {r.name === 'super_admin' && (
+                        <Typography component="span" variant="caption" color="warning.main" sx={{ mr: 1 }}>
+                          وصول كامل للنظام
+                        </Typography>
+                      )}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
+              {formRoles.includes('super_admin') && (
+                <Alert severity="warning">
+                  دور Super Admin يمنح وصولًا كاملًا للنظام، ويُحفظ منفردًا دون أي أدوار أخرى.
+                </Alert>
+              )}
             </FieldGrid>
           </FormSection>
         </form>
@@ -889,7 +956,7 @@ export const Users = () => {
 
           <Divider />
 
-          <Box>
+          <Box className="permission-matrix">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                 مصفوفة الصلاحيات التفصيلية
@@ -903,7 +970,52 @@ export const Users = () => {
               />
             </Box>
 
-            {permissionGroups.map((group, gIdx) => {
+            <Paper variant="outlined" className="permission-matrix__summary">
+              <Typography variant="body2" fontWeight={700}>
+                تم اختيار {roleFormPermissions.length} من {permissionsList.length} صلاحية
+              </Typography>
+              <Box className="permission-matrix__summary-actions">
+                <Button size="small" onClick={() => togglePermissions(visiblePermissionIds)} disabled={!visiblePermissionIds.length}>تحديد كل النتائج</Button>
+                <Button size="small" color="inherit" onClick={() => setRoleFormPermissions([])} disabled={!roleFormPermissions.length}>مسح التحديد</Button>
+              </Box>
+            </Paper>
+
+            {visiblePermissionSections.map(group => {
+              const groupIds = group.allPermissions.map(permission => permission.id);
+              const selectedCount = groupIds.filter(id => roleFormPermissions.includes(id)).length;
+              const expanded = normalizedPermissionSearch ? true : expandedPermissionGroups.includes(group.key);
+              return (
+                <Accordion key={group.key} expanded={expanded} onChange={(_, open) => setExpandedPermissionGroups(current => open ? [...new Set([...current, group.key])] : current.filter(key => key !== group.key))} disableGutters className="permission-matrix__section">
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box className="permission-matrix__section-title">
+                      <Typography variant="body2" fontWeight={700}>{group.title}</Typography>
+                      <Chip size="small" label={`${selectedCount}/${group.allPermissions.length}`} color={selectedCount ? 'primary' : 'default'} />
+                      <Button size="small" onClick={(event) => { event.stopPropagation(); togglePermissions(groupIds); }}>
+                        {selectedCount === groupIds.length ? 'إلغاء الكل' : 'تحديد الكل'}
+                      </Button>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid container spacing={1.5}>
+                      {group.visiblePermissions.map(permission => (
+                        <Grid item xs={12} md={6} key={permission.id}>
+                          <Paper variant="outlined" className="permission-matrix__card">
+                            <FormControlLabel
+                              control={<Checkbox checked={roleFormPermissions.includes(permission.id)} onChange={() => togglePermissions([permission.id])} />}
+                              label={<Box><Typography variant="body2" fontWeight={600}>{translatePermission(permission.name).name}</Typography><Typography variant="caption" color="text.secondary">{translatePermission(permission.name).desc || permission.description}</Typography></Box>}
+                            />
+                          </Paper>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
+              );
+            })}
+
+            {/* Legacy renderer retained temporarily for safe rollback; excluded from production output. */}
+            {/* oxlint-disable-next-line no-constant-binary-expression */}
+            {false && permissionGroups.map((group, gIdx) => {
               const filteredGroupPerms = permissionsList.filter(p => {
                 if (!group.perms.includes(p.name)) return false;
                 const translation = translatePermission(p.name);
@@ -958,7 +1070,8 @@ export const Users = () => {
               );
             })}
 
-            {(() => {
+            {/* oxlint-disable-next-line no-constant-binary-expression */}
+            {false && (() => {
               const allGroupedPerms = new Set(permissionGroups.flatMap(g => g.perms));
               const uncategorizedPerms = permissionsList.filter(p => {
                 if (allGroupedPerms.has(p.name)) return false;

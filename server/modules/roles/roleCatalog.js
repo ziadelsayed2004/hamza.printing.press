@@ -11,7 +11,7 @@ const PERMISSIONS = Object.freeze([
   'payments.view', 'payments.create', 'payments.reverse', 'payments.receipt.view', 'payments.receipt.upload',
   'payments.mark_supplied', 'payments.supply_batch',
   'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
-  'shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver',
+  'shipments.view', 'shipments.create', 'shipments.update',
   'returns.view', 'returns.create',
   'reports.view', 'reports.export', 'exports.run',
   'audit.view', 'settings.update',
@@ -42,7 +42,7 @@ const ROLE_DEFINITIONS = Object.freeze({
       'invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export',
       'invoices.ship', 'invoices.return',
       'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
-      'shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver',
+      'shipments.view', 'shipments.create', 'shipments.update',
       'returns.view', 'returns.create',
       'reports.view', 'reports.export', 'exports.run',
       'notifications.view', 'notifications.manage'
@@ -71,8 +71,8 @@ const ROLE_DEFINITIONS = Object.freeze({
     isAssignable: true,
     isActive: true,
     permissions: Object.freeze([
-      'invoices.view', 'invoices.export',
-      'shipments.view', 'shipments.create', 'shipments.update', 'shipments.deliver'
+      'invoices.view', 'invoices.export', 'invoices.ship',
+      'shipments.view', 'shipments.create', 'shipments.update'
     ])
   }),
   inventory_manager: Object.freeze({
@@ -139,13 +139,11 @@ const LEGACY_ROLE_NAMES = Object.freeze(
 );
 const UNRESTRICTED_INVOICE_ROLE_NAMES = Object.freeze([
   'super_admin',
-  'assistant',
-  'readonly_viewer'
+  'assistant'
 ]);
-const RESTRICTED_INVOICE_ROLE_NAMES = Object.freeze([
-  'inventory_manager',
-  'shipping_user'
-]);
+const RESTRICTED_INVOICE_ROLE_NAMES = Object.freeze(
+  SYSTEM_ROLE_NAMES.filter(name => !UNRESTRICTED_INVOICE_ROLE_NAMES.includes(name))
+);
 const GLOBAL_BUSINESS_ROLE_NAMES = Object.freeze([
   'super_admin',
   'assistant',

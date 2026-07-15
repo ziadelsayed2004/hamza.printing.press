@@ -25,7 +25,6 @@ jest.mock('../../../middleware/audit', () => ({
 const shipmentsService = require('../shipmentsService');
 const invoicesService = require('../../invoices/invoicesService');
 const usersService = require('../../users/usersService');
-const { checkPermission } = require('../../../middleware/rbac');
 const shipmentsRouter = require('../shipmentsRoutes');
 
 function createApp() {
@@ -52,7 +51,7 @@ describe('shipment routes access and status permissions', () => {
       payment_status: 'unpaid'
     }]);
     shipmentsService.getRemainingShippableItems.mockResolvedValue([{ invoice_item_id: 4 }]);
-    shipmentsService.createShipment.mockResolvedValue({ id: 7, status: 'pending' });
+    shipmentsService.createShipment.mockResolvedValue({ id: 7, status: 'shipped' });
     shipmentsService.updateShipmentStatus.mockResolvedValue({ id: 7, status: 'shipped' });
   });
 
@@ -69,7 +68,7 @@ describe('shipment routes access and status permissions', () => {
     invoicesService.getInvoiceVisibilityRecords.mockResolvedValue([{
       id: 10,
       outlet_id: 3,
-      shipping_status: 'delivered',
+      shipping_status: 'shipped',
       payment_status: 'paid'
     }]);
 
@@ -84,13 +83,13 @@ describe('shipment routes access and status permissions', () => {
     expect(shipmentsService.createShipment).not.toHaveBeenCalled();
   });
 
-  test('creates a pending shipment for a visible incomplete invoice', async () => {
+  test('creates a confirmed shipment for a visible incomplete invoice', async () => {
     const response = await request(app)
       .post('/api/shipments')
       .send({ invoiceId: 10, items: [{ invoiceItemId: 4, quantity: 1 }] });
 
     expect(response.status).toBe(201);
-    expect(response.body.shipment.status).toBe('pending');
+    expect(response.body.shipment.status).toBe('shipped');
     expect(shipmentsService.createShipment).toHaveBeenCalledWith({
       invoiceId: 10,
       shippingCarrier: '',
@@ -100,11 +99,7 @@ describe('shipment routes access and status permissions', () => {
     });
   });
 
-  test.each([
-    ['shipped', 'shipments.update'],
-    ['cancelled', 'shipments.update'],
-    ['delivered', 'shipments.deliver']
-  ])('requires %s permission for a transition to %s', async (status, permission) => {
+  test.each(['shipped', 'cancelled'])('updates a shipment to the supported %s status', async status => {
     shipmentsService.updateShipmentStatus.mockResolvedValue({ id: 7, status });
 
     const response = await request(app)
@@ -112,11 +107,18 @@ describe('shipment routes access and status permissions', () => {
       .send({ status });
 
     expect(response.status).toBe(200);
-    expect(checkPermission).toHaveBeenCalledWith(permission);
     expect(shipmentsService.updateShipmentStatus).toHaveBeenCalledWith(7, {
       status,
       notes: '',
       userId: 17
     });
+  });
+
+  test('passes an obsolete delivered status to the service for validation', async () => {
+    shipmentsService.updateShipmentStatus.mockRejectedValue(new Error('Invalid status. Allowed: pending, shipped, cancelled'));
+    const response = await request(app)
+      .post('/api/shipments/7/status')
+      .send({ status: 'delivered' });
+    expect(response.status).toBe(400);
   });
 });

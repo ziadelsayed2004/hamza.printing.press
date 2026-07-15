@@ -81,7 +81,7 @@ describe('invoice export route access scope', () => {
     );
   });
 
-  test('passes an unrestricted scope when a bypass role is also present', async () => {
+  test('keeps readonly users restricted when combined with another non-admin role', async () => {
     usersService.getUserRoles.mockResolvedValue([
       { name: 'inventory_manager' },
       { name: 'readonly_viewer' }
@@ -94,8 +94,8 @@ describe('invoice export route access scope', () => {
       expect.any(Object),
       'csv',
       {
-        allowedShippingStatuses: null,
-        excludeCancelled: false,
+        allowedShippingStatuses: ['pending', 'partially_shipped'],
+        excludeCancelled: true,
         authorIds: null,
         outletIds: null
       }

@@ -83,8 +83,8 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
   if (invoice.payment_status === 'cancelled') {
     throw new Error('Cannot return items from a cancelled invoice');
   }
-  if (!['shipped', 'delivered', 'partially_shipped'].includes(invoice.shipping_status)) {
-    throw new Error('Cannot return items from an invoice that has not been shipped or delivered');
+  if (!['shipped', 'partially_shipped'].includes(invoice.shipping_status)) {
+    throw new Error('Cannot return items from an invoice that has not been shipped');
   }
 
   const validatedItems = [];
@@ -109,16 +109,16 @@ async function createReturn({ invoiceId, reason = '', items = [], userId }) {
       throw new Error(`Invoice Item with ID ${invoiceItemId} does not exist on invoice ${invoiceId}`);
     }
 
-    // Get total quantity shipped for this invoice item (status: shipped or delivered)
+    // Get total quantity shipped for this invoice item.
     const shippedRow = await db.get(`
       SELECT COALESCE(SUM(si.quantity), 0) as qty
       FROM shipment_items si
       JOIN shipments s ON s.id = si.shipment_id
-      WHERE si.invoice_item_id = ? AND s.status IN ('shipped', 'delivered')
+      WHERE si.invoice_item_id = ? AND s.status = 'shipped'
     `, [invoiceItemId]);
     let shippedQty = shippedRow.qty;
 
-    if (['shipped', 'delivered'].includes(invoice.shipping_status)) {
+    if (invoice.shipping_status === 'shipped') {
       shippedQty = invoiceItem.quantity;
     }
 

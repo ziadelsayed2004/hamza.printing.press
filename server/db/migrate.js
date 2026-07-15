@@ -40,10 +40,16 @@ async function runMigrations() {
     
     // Execute SQL content
     try {
+      await dbHelper.exec('PRAGMA foreign_keys = OFF;');
       await dbHelper.exec('BEGIN TRANSACTION;');
       await dbHelper.exec(sqlContent);
+      const foreignKeyErrors = await dbHelper.all('PRAGMA foreign_key_check;');
+      if (foreignKeyErrors.length > 0) {
+        throw new Error(`Foreign key check failed during ${file}: ${JSON.stringify(foreignKeyErrors)}`);
+      }
       await dbHelper.run('INSERT INTO _migrations (name) VALUES (?)', [file]);
       await dbHelper.exec('COMMIT;');
+      await dbHelper.exec('PRAGMA foreign_keys = ON;');
       console.log(`✓ Migration ${file} executed successfully.`);
       migratedCount++;
     } catch (err) {
@@ -52,6 +58,7 @@ async function runMigrations() {
       } catch (rollbackErr) {
         console.error('Rollback failed:', rollbackErr);
       }
+      await dbHelper.exec('PRAGMA foreign_keys = ON;');
       console.error(`❌ Migration ${file} failed:`, err);
       process.exit(1);
     }

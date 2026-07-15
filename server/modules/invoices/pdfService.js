@@ -25,8 +25,7 @@ function translateShippingStatus(status) {
   switch (status) {
     case 'pending': return 'قيد الانتظار';
     case 'partially_shipped': return 'شحن جزئي';
-    case 'shipped': return 'تم الشحن والتسليم';
-    case 'delivered': return 'تم الشحن والتسليم';
+    case 'shipped': return 'تم الشحن';
     default: return status || 'غير معروف';
   }
 }
@@ -164,7 +163,6 @@ function buildHtmlContent(invoices) {
         .badge-shipping-pending { background-color: #f1f5f9; color: #475569; }
         .badge-shipping-partial { background-color: #fef3c7; color: #d97706; }
         .badge-shipping-shipped { background-color: #e0f2fe; color: #0369a1; }
-        .badge-shipping-delivered { background-color: #dcfce7; color: #15803d; }
 
         .section-title {
           font-size: 14px;
@@ -265,7 +263,6 @@ function buildHtmlContent(invoices) {
     let shippingBadgeClass = 'badge-shipping-pending';
     if (inv.shipping_status === 'partially_shipped') shippingBadgeClass = 'badge-shipping-partial';
     if (inv.shipping_status === 'shipped') shippingBadgeClass = 'badge-shipping-shipped';
-    if (inv.shipping_status === 'delivered') shippingBadgeClass = 'badge-shipping-delivered';
 
     html += `
       <div class="invoice-card">

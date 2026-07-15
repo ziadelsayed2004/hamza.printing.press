@@ -74,21 +74,32 @@ export const MainLayout = () => {
   const muiTheme = useTheme();
 
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
-  const hasRestrictedInvoiceRole = userRoles.some((role) =>
-    ['inventory_manager', 'shipping_user'].includes(role)
-  );
-  const hasInvoiceVisibilityBypassRole = userRoles.some((role) =>
-    ['super_admin', 'assistant', 'readonly_viewer'].includes(role)
-  );
   const isInvoiceVisibilityRestricted =
-    hasRestrictedInvoiceRole && !hasInvoiceVisibilityBypassRole;
+    userRoles.length > 0 && !userRoles.some((role) => ['super_admin', 'assistant'].includes(role));
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const sidebarStorageKey = user?.id ? `sidebarCollapsed:${user.id}` : null;
+  const [collapsed, setCollapsed] = useState(() => {
+    if (!user?.id) return false;
+    return localStorage.getItem(`sidebarCollapsed:${user.id}`) === 'true';
+  });
   const [anchorEl, setAnchorEl] = useState(null);
   const [notifyAnchorEl, setNotifyAnchorEl] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!sidebarStorageKey) return;
+    setCollapsed(localStorage.getItem(sidebarStorageKey) === 'true');
+  }, [sidebarStorageKey]);
+
+  const toggleSidebar = () => {
+    setCollapsed(previous => {
+      const next = !previous;
+      if (sidebarStorageKey) localStorage.setItem(sidebarStorageKey, String(next));
+      return next;
+    });
+  };
 
   // ── Notifications Fetching ──
   const fetchNotifications = async () => {
@@ -432,7 +443,7 @@ export const MainLayout = () => {
             <Box className="sidebar-toggle-container">
               <Tooltip title={collapsed ? t('nav.expandMenu') : t('nav.collapseMenu')} placement="left">
                 <IconButton
-                  onClick={() => setCollapsed(!collapsed)}
+                  onClick={toggleSidebar}
                   size="small"
                   className="main-layout__icon-btn"
                 >
@@ -683,9 +694,7 @@ export const MainLayout = () => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{ keepMounted: true }}
-          PaperProps={{
-            className: 'main-layout__mobile-drawer-paper'
-          }}
+          slotProps={{ paper: { className: 'main-layout__mobile-drawer-paper' } }}
           className="main-layout__mobile-drawer"
         >
           {drawerContent(true)}
@@ -695,8 +704,10 @@ export const MainLayout = () => {
         <Drawer
           variant="permanent"
           anchor={muiTheme.direction === 'rtl' ? 'left' : 'right'}
-          PaperProps={{
-            className: `main-layout__desktop-drawer-paper ${collapsed ? 'main-layout__desktop-drawer-paper--collapsed' : 'main-layout__desktop-drawer-paper--expanded'}`
+          slotProps={{
+            paper: {
+              className: `main-layout__desktop-drawer-paper ${collapsed ? 'main-layout__desktop-drawer-paper--collapsed' : 'main-layout__desktop-drawer-paper--expanded'}`
+            }
           }}
           className="main-layout__desktop-drawer"
           open

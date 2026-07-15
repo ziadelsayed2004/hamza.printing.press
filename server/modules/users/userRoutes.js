@@ -35,6 +35,35 @@ function requestIp(req) {
   return req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
 }
 
+async function assertSuperAdminRoleChangeAllowed(req, requestedRoleNames, targetUserId = null) {
+  const roleNames = Array.isArray(requestedRoleNames)
+    ? [...new Set(requestedRoleNames.map(name => String(name).trim()))]
+    : [];
+  if (roleNames.includes('super_admin') && roleNames.length !== 1) {
+    throw new usersService.UserServiceError(
+      'The super_admin role must be assigned on its own.',
+      400,
+      'SUPER_ADMIN_ROLE_EXCLUSIVE'
+    );
+  }
+
+  const actorRoles = await usersService.getUserRoles(req.session.user.id, { activeOnly: true });
+  const actorIsSuperAdmin = actorRoles.some(role => role.name === 'super_admin');
+  let targetIsSuperAdmin = false;
+  if (targetUserId !== null) {
+    const targetRoles = await usersService.getUserRoles(targetUserId);
+    targetIsSuperAdmin = targetRoles.some(role => role.name === 'super_admin');
+  }
+
+  if ((roleNames.includes('super_admin') || targetIsSuperAdmin) && !actorIsSuperAdmin) {
+    throw new usersService.UserServiceError(
+      'Only a Super Admin can grant or remove the super_admin role.',
+      403,
+      'SUPER_ADMIN_REQUIRED'
+    );
+  }
+}
+
 // Read access is separate from role mutation so the general monitor can inspect
 // the role catalog without becoming a role administrator.
 router.get('/permissions', requireAuth, checkPermission('roles.view'), async (_req, res) => {
@@ -194,6 +223,7 @@ router.post(
     }
 
     try {
+      await assertSuperAdminRoleChangeAllowed(req, roles);
       const assignableRoles = await rolesService.getAssignableRolesByNames(roles);
       const user = await usersService.createUser({
         username,
@@ -223,6 +253,9 @@ router.put(
 
     try {
       const hasRolesField = Object.prototype.hasOwnProperty.call(req.body, 'roles');
+      if (hasRolesField) {
+        await assertSuperAdminRoleChangeAllowed(req, req.body.roles, req.params.id);
+      }
       const assignableRoles = hasRolesField
         ? await rolesService.getAssignableRolesByNames(req.body.roles)
         : null;

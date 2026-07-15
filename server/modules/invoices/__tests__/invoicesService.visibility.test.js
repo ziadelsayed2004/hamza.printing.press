@@ -46,13 +46,12 @@ describe('invoicesService invoice visibility filters', () => {
     expect(params).toEqual([5, 0]);
   });
 
-  test('treats shipped and delivered as distinct invoice filters', async () => {
-    await invoicesService.getInvoices({ shippingStatus: 'delivered', limit: 5, offset: 0 });
+  test('applies the shipped invoice filter directly', async () => {
+    await invoicesService.getInvoices({ shippingStatus: 'shipped', limit: 5, offset: 0 });
 
     const [sql, params] = db.all.mock.calls[0];
     expect(sql).toContain('i.shipping_status = ?');
-    expect(sql).not.toContain("i.shipping_status IN ('shipped', 'delivered')");
-    expect(params).toEqual(['delivered', 5, 0]);
+    expect(params).toEqual(['shipped', 5, 0]);
   });
 
   test('does not load payment rows or payment status history when excluded', async () => {

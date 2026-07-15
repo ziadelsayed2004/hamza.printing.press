@@ -148,9 +148,9 @@ describe('usersService terminal archive', () => {
     await expect(usersService.archiveUser({ targetUserId: 1, actorUserId: 1 }))
       .rejects.toMatchObject({ statusCode: 403, code: 'SELF_DEACTIVATION_FORBIDDEN' });
     await expect(usersService.archiveUser({ targetUserId: 1, actorUserId: 3 }))
-      .rejects.toMatchObject({ statusCode: 409, code: 'LAST_SUPER_ADMIN' });
+      .rejects.toMatchObject({ statusCode: 409, code: 'LAST_ACTIVE_OWNER' });
     await expect(usersService.updateStatus(1, 'disabled', { actorUserId: 3 }))
-      .rejects.toMatchObject({ statusCode: 409, code: 'LAST_SUPER_ADMIN' });
+      .rejects.toMatchObject({ statusCode: 409, code: 'LAST_ACTIVE_OWNER' });
   });
 
   test('rejects reserved usernames and races with a conflict response', async () => {

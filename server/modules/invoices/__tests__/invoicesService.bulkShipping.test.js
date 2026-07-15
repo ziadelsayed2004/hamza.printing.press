@@ -67,45 +67,40 @@ describe('invoicesService authorized bulk shipping action', () => {
     const transitionUpdates = db.run.mock.calls.filter(([sql]) => sql.includes('UPDATE shipments'));
     expect(shipmentInsert[0]).toContain("'pending'");
     expect(transitionUpdates).toHaveLength(1);
-    expect(transitionUpdates[0][1][0]).toBe('shipped');
+    expect(transitionUpdates[0][0]).toContain("status = 'shipped'");
     expect(db.run.mock.calls.some(([sql]) => sql.includes('UPDATE invoices SET shipping_status'))).toBe(false);
     expect(shipmentsService.recalculateInvoiceShippingStatus).toHaveBeenCalledWith(10, 17);
     expect(db.exec).toHaveBeenLastCalledWith('COMMIT;');
   });
 
-  test('moves pending shipments through shipped before delivered', async () => {
-    db.get.mockImplementation(sql => {
+  test('rejects the obsolete delivered target before opening a transaction', async () => {
+    await expect(invoicesService.bulkUpdateShippingStatus({
+      invoiceIds: [10], shippingStatus: 'delivered', userId: 17
+    })).rejects.toThrow('Invalid shipping status: delivered');
+    expect(db.exec).not.toHaveBeenCalled();
+  });
+
+  test('rolls back the whole selection when a later invoice is already complete', async () => {
+    db.get.mockImplementation((sql, params) => {
       if (sql.includes('SELECT shipping_status, payment_status')) {
-        return Promise.resolve({
-          shipping_status: 'pending',
-          payment_status: 'unpaid',
-          invoice_number: 'INV-1',
-          outlet_id: 3
-        });
+        return Promise.resolve(params[0] === 10
+          ? { shipping_status: 'pending', payment_status: 'unpaid', invoice_number: 'INV-1' }
+          : { shipping_status: 'shipped', payment_status: 'paid', invoice_number: 'INV-2' });
       }
-      if (sql.includes('SELECT shipping_status FROM invoices')) {
-        return Promise.resolve({ shipping_status: 'delivered' });
-      }
+      if (sql.includes('SELECT shipping_status FROM invoices')) return Promise.resolve({ shipping_status: 'shipped' });
       return Promise.resolve(null);
     });
     db.all.mockImplementation(sql => {
-      if (sql.includes('FROM shipments') && sql.includes("status != 'cancelled'")) {
-        return Promise.resolve([{ id: 70, status: 'pending', shipped_at: null, delivered_at: null }]);
-      }
       if (sql.includes('SELECT * FROM invoice_items')) return Promise.resolve([]);
       return Promise.resolve([]);
     });
 
-    await invoicesService.bulkUpdateShippingStatus({
-      invoiceIds: [10],
-      shippingStatus: 'delivered',
-      userId: 17
-    });
+    await expect(invoicesService.bulkUpdateShippingStatus({
+      invoiceIds: [10, 11], shippingStatus: 'shipped', userId: 17
+    })).rejects.toThrow('Cannot update shipping for completed invoice INV-2');
 
-    const transitionStatuses = db.run.mock.calls
-      .filter(([sql]) => sql.includes('UPDATE shipments'))
-      .map(([, params]) => params[0]);
-    expect(transitionStatuses).toEqual(['shipped', 'delivered']);
-    expect(shipmentsService.recalculateInvoiceShippingStatus).toHaveBeenCalledWith(10, 17);
+    expect(db.exec).toHaveBeenNthCalledWith(1, 'BEGIN TRANSACTION;');
+    expect(db.exec).toHaveBeenLastCalledWith('ROLLBACK;');
+    expect(db.exec).not.toHaveBeenCalledWith('COMMIT;');
   });
 });

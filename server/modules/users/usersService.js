@@ -135,7 +135,7 @@ async function assertCanDeactivateUser(targetUserId, actorUserId) {
       throw new UserServiceError(
         'The last active system owner cannot be deactivated or archived.',
         409,
-        'LAST_SUPER_ADMIN'
+        'LAST_ACTIVE_OWNER'
       );
     }
   }
@@ -252,7 +252,7 @@ async function updateUser(id, { fullName, roleIds }) {
       const otherActiveOwner = await db.get(
         `SELECT 1 AS found
          FROM users u
-         JOIN user_roles ur ON ur.role_id = u.id
+         JOIN user_roles ur ON ur.user_id = u.id
          JOIN roles r ON r.id = ur.role_id
          WHERE r.name = 'super_admin'
            AND u.status = 'active'
@@ -264,7 +264,7 @@ async function updateUser(id, { fullName, roleIds }) {
         throw new UserServiceError(
           'The last active system owner cannot be reassigned to a different role.',
           409,
-          'LAST_SUPER_ADMIN'
+          'LAST_ACTIVE_OWNER'
         );
       }
     }
