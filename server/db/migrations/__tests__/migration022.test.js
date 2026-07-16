@@ -103,6 +103,10 @@ describe('022_unify_roles_and_archive_users.sql', () => {
       path.join(migrationsDirectory, '022_unify_roles_and_archive_users.sql'),
       'utf8'
     ));
+    await exec(database, fs.readFileSync(
+      path.join(migrationsDirectory, '027_invoice_role_visibility.sql'),
+      'utf8'
+    ));
   });
 
   afterEach(async () => {

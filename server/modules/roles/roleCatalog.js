@@ -7,7 +7,7 @@ const PERMISSIONS = Object.freeze([
   'outlet_types.view', 'outlet_types.manage',
   'outlets.view', 'outlets.create', 'outlets.update', 'outlets.disable',
   'invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export',
-  'invoices.pay', 'invoices.ship', 'invoices.return', 'invoices.archive',
+  'invoices.pay', 'invoices.ship', 'invoices.return', 'invoices.archive.view', 'invoices.archive',
   'payments.view', 'payments.create', 'payments.reverse', 'payments.receipt.view', 'payments.receipt.upload',
   'payments.mark_supplied', 'payments.supply_batch',
   'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
@@ -15,7 +15,7 @@ const PERMISSIONS = Object.freeze([
   'returns.view', 'returns.create',
   'reports.view', 'reports.export', 'exports.run',
   'audit.view', 'settings.update',
-  'backup.create', 'backup.restore',
+  'backup.view', 'backup.create', 'backup.restore',
   'finance.view', 'finance.adjust', 'finance.export', 'finance.statement.view',
   'notifications.view', 'notifications.manage'
 ]);
@@ -40,7 +40,7 @@ const ROLE_DEFINITIONS = Object.freeze({
       'outlet_types.view', 'outlet_types.manage',
       'outlets.view', 'outlets.create', 'outlets.update', 'outlets.disable',
       'invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export',
-      'invoices.ship', 'invoices.return', 'invoices.archive',
+      'invoices.ship', 'invoices.return', 'invoices.archive.view', 'invoices.archive',
       'inventory.view', 'inventory.receipts.create', 'inventory.adjustments.create',
       'shipments.view', 'shipments.create', 'shipments.update',
       'returns.view', 'returns.create',
@@ -57,12 +57,12 @@ const ROLE_DEFINITIONS = Object.freeze({
       'users.view', 'roles.view',
       'authors.view', 'products.view', 'product_prices.view',
       'outlet_types.view', 'outlets.view',
-      'invoices.view', 'invoices.export',
+      'invoices.view', 'invoices.export', 'invoices.archive.view',
       'payments.view', 'payments.receipt.view',
       'inventory.view', 'shipments.view', 'returns.view',
       'reports.view', 'reports.export', 'exports.run', 'audit.view',
       'finance.view', 'finance.export', 'finance.statement.view',
-      'notifications.view'
+      'backup.view', 'notifications.view'
     ])
   }),
   shipping_user: Object.freeze({
@@ -98,7 +98,7 @@ const ROLE_DEFINITIONS = Object.freeze({
     isSystem: true,
     isAssignable: true,
     isActive: true,
-    permissions: Object.freeze(['invoices.view', 'shipments.view', 'finance.view', 'finance.statement.view'])
+    permissions: Object.freeze(['invoices.view', 'invoices.export', 'payments.view', 'payments.receipt.view', 'shipments.view', 'finance.view', 'finance.statement.view'])
   }),
   admin: Object.freeze({
     description: 'Deprecated administrator role',
@@ -161,6 +161,13 @@ const PROTECTED_PERMISSION_NAMES = Object.freeze([
   'backup.create', 'backup.restore',
   'settings.update'
 ]);
+const ASSISTANT_FORBIDDEN_PERMISSION_NAMES = Object.freeze([
+  'users.view', 'users.create', 'users.update', 'users.disable', 'users.archive',
+  'roles.view', 'roles.manage', 'permissions.manage',
+  'audit.view', 'settings.update',
+  'backup.view', 'backup.create', 'backup.restore',
+  'finance.view', 'finance.adjust', 'finance.export', 'finance.statement.view'
+]);
 
 const SYSTEM_ROLE_SET = new Set(SYSTEM_ROLE_NAMES);
 const ASSIGNABLE_SYSTEM_ROLE_SET = new Set(ASSIGNABLE_SYSTEM_ROLE_NAMES);
@@ -169,6 +176,7 @@ const UNRESTRICTED_INVOICE_ROLE_SET = new Set(UNRESTRICTED_INVOICE_ROLE_NAMES);
 const RESTRICTED_INVOICE_ROLE_SET = new Set(RESTRICTED_INVOICE_ROLE_NAMES);
 const GLOBAL_BUSINESS_ROLE_SET = new Set(GLOBAL_BUSINESS_ROLE_NAMES);
 const PROTECTED_PERMISSION_SET = new Set(PROTECTED_PERMISSION_NAMES);
+const ASSISTANT_FORBIDDEN_PERMISSION_SET = new Set(ASSISTANT_FORBIDDEN_PERMISSION_NAMES);
 
 function isSystemRole(roleName) {
   return SYSTEM_ROLE_SET.has(roleName);
@@ -206,6 +214,7 @@ module.exports = {
   RESTRICTED_INVOICE_ROLE_NAMES,
   GLOBAL_BUSINESS_ROLE_NAMES,
   PROTECTED_PERMISSION_NAMES,
+  ASSISTANT_FORBIDDEN_PERMISSION_NAMES,
   SYSTEM_ROLE_SET,
   ASSIGNABLE_SYSTEM_ROLE_SET,
   LEGACY_ROLE_SET,
@@ -213,6 +222,7 @@ module.exports = {
   RESTRICTED_INVOICE_ROLE_SET,
   GLOBAL_BUSINESS_ROLE_SET,
   PROTECTED_PERMISSION_SET,
+  ASSISTANT_FORBIDDEN_PERMISSION_SET,
   isSystemRole,
   isAssignableSystemRole,
   isLegacyRole,

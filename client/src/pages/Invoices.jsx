@@ -83,8 +83,11 @@ export const Invoices = () => {
   const location = useLocation();
 
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
-  const isInvoiceVisibilityRestricted =
-    userRoles.length > 0 && !userRoles.some((role) => ['super_admin', 'assistant'].includes(role));
+  const isInvoiceVisibilityRestricted = userRoles.some((role) =>
+    ['shipping_user', 'inventory_manager'].includes(role)
+  ) && !userRoles.some((role) => ['super_admin', 'assistant', 'readonly_viewer'].includes(role));
+  const canViewInvoicePricing = !userRoles.includes('shipping_user') ||
+    userRoles.some(role => ['super_admin', 'assistant', 'readonly_viewer'].includes(role));
   const canRecordInvoicePayments =
     hasPermission('invoices.pay') && hasPermission('payments.create');
   const getInitialDetailsTab = () => {
@@ -259,13 +262,13 @@ export const Invoices = () => {
       if (filterProductId) query += `&productId=${filterProductId}`;
       if (filterAuthorId) query += `&authorId=${filterAuthorId}`;
       if (filterGovernorate) query += `&governorate=${encodeURIComponent(filterGovernorate)}`;
-      if (filterPaymentStatus) query += `&paymentStatus=${filterPaymentStatus}`;
+      if (hasPermission('payments.view') && filterPaymentStatus) query += `&paymentStatus=${filterPaymentStatus}`;
       if (filterShippingStatus) query += `&shippingStatus=${filterShippingStatus}`;
       if (filterStartDate) query += `&startDate=${filterStartDate}`;
       if (filterEndDate) query += `&endDate=${filterEndDate}`;
-      if (filterHasRemaining) query += `&hasRemaining=${filterHasRemaining}`;
-      if (filterMinRemaining) query += `&minRemaining=${filterMinRemaining}`;
-      if (filterMaxRemaining) query += `&maxRemaining=${filterMaxRemaining}`;
+      if (hasPermission('payments.view') && filterHasRemaining) query += `&hasRemaining=${filterHasRemaining}`;
+      if (hasPermission('payments.view') && filterMinRemaining) query += `&minRemaining=${filterMinRemaining}`;
+      if (hasPermission('payments.view') && filterMaxRemaining) query += `&maxRemaining=${filterMaxRemaining}`;
 
       const data = await apiClient.get(query);
       setInvoices(data);
@@ -1417,7 +1420,7 @@ export const Invoices = () => {
         </Box>
       </Box>
 
-      {hasPermission('invoices.archive') && (
+      {(hasPermission('invoices.archive.view') || hasPermission('invoices.archive')) && (
         <Tabs
           value={invoiceListMode}
           onChange={(_, value) => {
@@ -1727,15 +1730,15 @@ export const Invoices = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>رقم الفاتورة</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>التاريخ</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>المنفذ</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>نوع الدفع</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>حالة الدفع</TableCell>
+                  {hasPermission('payments.view') && <TableCell sx={{ fontWeight: 'bold' }}>نوع الدفع</TableCell>}
+                  {hasPermission('payments.view') && <TableCell sx={{ fontWeight: 'bold' }}>حالة الدفع</TableCell>}
                   <TableCell sx={{ fontWeight: 'bold' }}>حالة الشحن</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                  {canViewInvoicePricing && <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                     المجموع
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>
+                  </TableCell>}
+                  {hasPermission('payments.view') && <TableCell align="right" sx={{ fontWeight: 'bold' }}>
                     المسدد / المتبقي
-                  </TableCell>
+                  </TableCell>}
                   <TableCell align="center" sx={{ fontWeight: 'bold', minWidth: 150 }}>
                     خيارات
                   </TableCell>
@@ -1759,13 +1762,13 @@ export const Invoices = () => {
                         {formatEgyptDate(row.created_at)}
                       </TableCell>
                       <TableCell>{row.outlet_name}</TableCell>
-                      <TableCell>{getPaymentTypeDisplay(row)}</TableCell>
-                      <TableCell>{getPaymentStatusChip(row.payment_status)}</TableCell>
+                      {hasPermission('payments.view') && <TableCell>{getPaymentTypeDisplay(row)}</TableCell>}
+                      {hasPermission('payments.view') && <TableCell>{getPaymentStatusChip(row.payment_status)}</TableCell>}
                       <TableCell>{getShippingStatusChip(row.shipping_status)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>
-                        {formatCurrencyEGP(row.total_price)}
-                      </TableCell>
-                      <TableCell align="right">
+                      {canViewInvoicePricing && <TableCell align="right" sx={{ fontWeight: 'bold', color: 'primary.dark' }}>
+                        {formatCurrencyEGP(row.author_subtotal ?? row.total_price)}
+                      </TableCell>}
+                      {hasPermission('payments.view') && <TableCell align="right">
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                           <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 500 }}>
                             {formatCurrencyEGP(row.paid_amount || 0)}
@@ -1774,7 +1777,7 @@ export const Invoices = () => {
                             {formatCurrencyEGP(row.remaining_amount || 0)} متبقي
                           </Typography>
                         </Box>
-                      </TableCell>
+                      </TableCell>}
                       <TableCell align="center">
                         <IconButton
                           color="primary"

@@ -51,6 +51,11 @@ describe('shipment routes access and status permissions', () => {
       payment_status: 'unpaid'
     }]);
     shipmentsService.getRemainingShippableItems.mockResolvedValue([{ invoice_item_id: 4 }]);
+    shipmentsService.getShipmentById.mockResolvedValue({
+      id: 7,
+      invoice_id: 10,
+      items: [{ product_title: 'Book', quantity: 2, unit_price: 99, total_price: 198 }]
+    });
     shipmentsService.createShipment.mockResolvedValue({ id: 7, status: 'shipped' });
     shipmentsService.updateShipmentStatus.mockResolvedValue({ id: 7, status: 'shipped' });
   });
@@ -112,6 +117,22 @@ describe('shipment routes access and status permissions', () => {
       notes: '',
       userId: 17
     });
+  });
+
+  test('removes item prices from shipping-user shipment details', async () => {
+    const response = await request(app).get('/api/shipments/7');
+
+    expect(response.status).toBe(200);
+    expect(response.body.items).toEqual([{ product_title: 'Book', quantity: 2 }]);
+    expect(response.text).not.toContain('unit_price');
+    expect(response.text).not.toContain('99');
+  });
+
+  test('keeps shipment prices for the readonly monitor', async () => {
+    usersService.getUserRoles.mockResolvedValue([{ name: 'readonly_viewer' }]);
+    const response = await request(app).get('/api/shipments/7');
+    expect(response.status).toBe(200);
+    expect(response.body.items[0].unit_price).toBe(99);
   });
 
   test('passes an obsolete delivered status to the service for validation', async () => {

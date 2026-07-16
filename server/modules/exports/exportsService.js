@@ -817,7 +817,7 @@ const authorsService = require('../authors/authorsService');
 /**
  * Export report to CSV / XLSX.
  */
-async function exportReport(reportType, query = {}, sessionUser = null, format = 'xlsx') {
+async function exportReport(reportType, query = {}, sessionUser = null, format = 'xlsx', { includeFinancials = true } = {}) {
   let filterOutletIds = null;
   let filterAuthorIds = null;
 
@@ -860,23 +860,25 @@ async function exportReport(reportType, query = {}, sessionUser = null, format =
     const rows = await reportsService.getAuthorReport({
       authorIds: filterAuthorIds
     });
+    const visibleRows = includeFinancials ? rows : rows.map(({ totalSales: _totalSales, ...row }) => row);
     config = {
       title: 'تقرير مبيعات وأرصدة كتب المؤلفين',
-      arabicHeaders: ['معرف المؤلف', 'اسم المؤلف', 'الحالة', 'إجمالي عدد الكتب', 'إجمالي المبيعات (ج.م)', 'إجمالي النسخ المباعة', 'الرصيد الحالي بالمخزن'],
-      englishKeys: ['authorId', 'authorName', 'status', 'totalBooks', 'totalSales', 'totalCopiesSold', 'currentStock'],
-      rows,
-      summaryKeys: ['totalBooks', 'totalSales', 'totalCopiesSold', 'currentStock']
+      arabicHeaders: includeFinancials ? ['معرف المؤلف', 'اسم المؤلف', 'الحالة', 'إجمالي عدد الكتب', 'إجمالي المبيعات (ج.م)', 'إجمالي النسخ المباعة', 'الرصيد الحالي بالمخزن'] : ['معرف المؤلف', 'اسم المؤلف', 'الحالة', 'إجمالي عدد الكتب', 'إجمالي النسخ المباعة', 'الرصيد الحالي بالمخزن'],
+      englishKeys: includeFinancials ? ['authorId', 'authorName', 'status', 'totalBooks', 'totalSales', 'totalCopiesSold', 'currentStock'] : ['authorId', 'authorName', 'status', 'totalBooks', 'totalCopiesSold', 'currentStock'],
+      rows: visibleRows,
+      summaryKeys: includeFinancials ? ['totalBooks', 'totalSales', 'totalCopiesSold', 'currentStock'] : ['totalBooks', 'totalCopiesSold', 'currentStock']
     };
   } else if (reportType === 'receipts') {
     const rows = await reportsService.getReceiptReport({
       authorIds: filterAuthorIds
     });
+    const visibleRows = includeFinancials ? rows : rows.map(({ totalCost: _totalCost, ...row }) => row);
     config = {
       title: 'تقرير توريد الكتب وأذونات الاستلام من الموردين',
-      arabicHeaders: ['اسم المورد', 'إجمالي أذونات الاستلام', 'إجمالي الكمية الموردة', 'إجمالي التكلفة الكلية (ج.م)'],
-      englishKeys: ['supplierName', 'totalReceipts', 'totalQuantity', 'totalCost'],
-      rows,
-      summaryKeys: ['totalReceipts', 'totalQuantity', 'totalCost']
+      arabicHeaders: includeFinancials ? ['اسم المورد', 'إجمالي أذونات الاستلام', 'إجمالي الكمية الموردة', 'إجمالي التكلفة الكلية (ج.م)'] : ['اسم المورد', 'إجمالي أذونات الاستلام', 'إجمالي الكمية الموردة'],
+      englishKeys: includeFinancials ? ['supplierName', 'totalReceipts', 'totalQuantity', 'totalCost'] : ['supplierName', 'totalReceipts', 'totalQuantity'],
+      rows: visibleRows,
+      summaryKeys: includeFinancials ? ['totalReceipts', 'totalQuantity', 'totalCost'] : ['totalReceipts', 'totalQuantity']
     };
   } else {
     throw new Error('Unsupported report type');

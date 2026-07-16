@@ -7,6 +7,16 @@ const outletsService = require('../outlets/outletsService');
 const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 
+async function redactFinancialReportFields(req, rows, fieldNames) {
+  const permissions = await usersService.getUserPermissions(req.session.user.id);
+  if (permissions.includes('finance.view')) return rows;
+  return rows.map(row => {
+    const safeRow = { ...row };
+    fieldNames.forEach(field => delete safeRow[field]);
+    return safeRow;
+  });
+}
+
 // Helper to get restricted author IDs if the user is a linked author
 async function getFilterAuthorIds(req) {
   const userId = req.session.user.id;
@@ -113,7 +123,7 @@ router.get('/authors', requireAuth, checkPermission('reports.view'), async (req,
   try {
     const filterAuthorIds = await getFilterAuthorIds(req);
     const list = await reportsService.getAuthorReport({ search, status, authorIds: filterAuthorIds });
-    res.status(200).json(list);
+    res.status(200).json(await redactFinancialReportFields(req, list, ['totalSales']));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
@@ -126,7 +136,7 @@ router.get('/receipts', requireAuth, checkPermission('reports.view'), async (req
   try {
     const filterAuthorIds = await getFilterAuthorIds(req);
     const list = await reportsService.getReceiptReport({ search, startDate, endDate, authorIds: filterAuthorIds });
-    res.status(200).json(list);
+    res.status(200).json(await redactFinancialReportFields(req, list, ['totalCost']));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }

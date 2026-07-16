@@ -13,6 +13,22 @@ function hasGlobalOperationalScope(userRoles) {
   return hasGlobalBusinessScope(userRoles.map(role => role.name));
 }
 
+function canViewShipmentPrices(userRoles) {
+  const roleNames = userRoles.map(role => role.name);
+  if (!roleNames.includes('shipping_user')) return true;
+  return roleNames.some(roleName => ['super_admin', 'assistant', 'readonly_viewer', 'outlet'].includes(roleName));
+}
+
+function presentShipment(shipment, userRoles) {
+  if (!shipment || canViewShipmentPrices(userRoles)) return shipment;
+  return {
+    ...shipment,
+    items: Array.isArray(shipment.items)
+      ? shipment.items.map(({ unit_price: _unitPrice, total_price: _totalPrice, ...item }) => item)
+      : shipment.items
+  };
+}
+
 async function canAccessOutlet(userId, userRoles, outletId) {
   if (hasGlobalOperationalScope(userRoles)) return true;
 
@@ -127,7 +143,7 @@ router.get('/:id', requireAuth, checkPermission('shipments.view'), async (req, r
       }
     }
 
-    return res.status(200).json(shipment);
+    return res.status(200).json(presentShipment(shipment, userRoles));
   } catch (err) {
     return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
@@ -158,7 +174,7 @@ router.post('/', requireAuth, checkPermission('shipments.create'), auditLog('cre
     return res.status(201).json({
       success: true,
       message: 'Shipment created successfully.',
-      shipment
+      shipment: presentShipment(shipment, await usersService.getUserRoles(userId))
     });
   } catch (err) {
     const msg = (err.message || '').toLowerCase();
@@ -194,11 +210,12 @@ router.post('/:id/status', requireAuth, checkPermission('shipments.update'), aud
   try {
     const userId = req.session.user.id;
     const shipment = await shipmentsService.updateShipmentStatus(id, { status, notes, userId });
+    const userRoles = await usersService.getUserRoles(userId);
 
     return res.status(200).json({
       success: true,
       message: 'Shipment status updated successfully.',
-      shipment
+      shipment: presentShipment(shipment, userRoles)
     });
   } catch (err) {
     const msg = (err.message || '').toLowerCase();
@@ -213,3 +230,4 @@ router.post('/:id/status', requireAuth, checkPermission('shipments.update'), aud
 });
 
 module.exports = router;
+module.exports.presentShipment = presentShipment;

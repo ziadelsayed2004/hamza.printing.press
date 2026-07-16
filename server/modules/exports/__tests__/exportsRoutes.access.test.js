@@ -81,7 +81,7 @@ describe('invoice export route access scope', () => {
     );
   });
 
-  test('keeps readonly users restricted when combined with another non-admin role', async () => {
+  test('lets the global readonly role override an operational invoice-state restriction', async () => {
     usersService.getUserRoles.mockResolvedValue([
       { name: 'inventory_manager' },
       { name: 'readonly_viewer' }
@@ -94,8 +94,8 @@ describe('invoice export route access scope', () => {
       expect.any(Object),
       'csv',
       {
-        allowedShippingStatuses: ['pending', 'partially_shipped'],
-        excludeCancelled: true,
+        allowedShippingStatuses: null,
+        excludeCancelled: false,
         authorIds: null,
         outletIds: null
       }
@@ -132,7 +132,8 @@ describe('invoice export route access scope', () => {
       'stock',
       expect.objectContaining({ type: 'stock', format: 'csv' }),
       expect.objectContaining({ id: 88 }),
-      'csv'
+      'csv',
+      { includeFinancials: false }
     );
   });
 });

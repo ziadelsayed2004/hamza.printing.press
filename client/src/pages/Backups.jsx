@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../app/AuthContext';
 import {
   Box,
@@ -38,7 +38,8 @@ export const Backups = () => {
   const { hasPermission } = useAuth();
   
   // Verification State
-  const [verified, setVerified] = useState(false);
+  const readOnlyAccess = hasPermission('backup.view') && !hasPermission('backup.create');
+  const [verified, setVerified] = useState(readOnlyAccess);
   const [password, setPassword] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -75,6 +76,10 @@ export const Backups = () => {
       setBackupLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (readOnlyAccess) fetchBackups();
+  }, [readOnlyAccess]);
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();

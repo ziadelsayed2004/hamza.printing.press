@@ -33,11 +33,10 @@ async function getInvoiceExportOptions(userId) {
 }
 
 async function requireFinancialReportExport(req, res, next) {
-  if (req.query.type !== 'balances') return next();
-
   try {
     const permissions = await usersService.getUserPermissions(req.session.user.id);
-    if (!permissions.includes('finance.view') || !permissions.includes('finance.export')) {
+    req.canViewFinance = permissions.includes('finance.view');
+    if (req.query.type === 'balances' && (!req.canViewFinance || !permissions.includes('finance.export'))) {
       return res.status(403).json({
         error: 'Forbidden',
         message: 'Access denied. Financial report export permission is required.'
@@ -210,7 +209,9 @@ router.get('/reports', requireAuth, checkPermission('exports.run'), checkPermiss
 
   try {
     const format = req.query.format || 'xlsx';
-    const content = await exportsService.exportReport(type, req.query, req.session.user, format);
+    const content = await exportsService.exportReport(type, req.query, req.session.user, format, {
+      includeFinancials: Boolean(req.canViewFinance)
+    });
     sendExportDownload(res, `${type}_report_export`, format, content);
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });

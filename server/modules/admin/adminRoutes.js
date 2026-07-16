@@ -42,7 +42,7 @@ router.post('/backup', requireAuth, checkPermission('backup.create'), auditLog('
 });
 
 // GET /api/admin/backups - List backups
-router.get('/backups', requireAuth, checkPermission('backup.create'), (req, res) => {
+router.get('/backups', requireAuth, checkPermission('backup.view'), (req, res) => {
   try {
     const backupDir = config.backupDir;
     if (!fs.existsSync(backupDir)) {
@@ -68,7 +68,7 @@ router.get('/backups', requireAuth, checkPermission('backup.create'), (req, res)
 });
 
 // GET /api/admin/backups/:filename/download - Download a backup file
-router.get('/backups/:filename/download', requireAuth, checkPermission('backup.create'), (req, res) => {
+router.get('/backups/:filename/download', requireAuth, checkPermission('backup.view'), (req, res) => {
   try {
     const filename = req.params.filename;
     // Prevent directory traversal

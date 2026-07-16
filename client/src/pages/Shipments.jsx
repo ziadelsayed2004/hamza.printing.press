@@ -732,28 +732,35 @@ export const Shipments = () => {
         {detailData ? (
           <Box>
             {/* Shipment Info */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={6} sm={3}>
-                <Typography variant="caption" color="textSecondary">رقم الشحنة</Typography>
-                <Typography variant="body1" sx={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{detailData.shipment_number}</Typography>
+            <Paper variant="outlined" sx={{ mb: 3, p: { xs: 1.5, sm: 2 }, bgcolor: 'action.hover', borderRadius: 2 }}>
+              <Grid container spacing={{ xs: 1.5, sm: 2 }}>
+                {[
+                  { label: 'رقم الشحنة', value: detailData.shipment_number, mono: true, strong: true },
+                  { label: 'رقم الفاتورة', value: detailData.invoice_number, mono: true, chip: true },
+                  { label: 'شركة الشحن', value: detailData.shipping_carrier || '—' },
+                  { label: 'رقم التتبع', value: detailData.tracking_number || '—', mono: true }
+                ].map((field) => (
+                  <Grid item xs={12} sm={6} lg={3} key={field.label}>
+                    <Box sx={{ height: '100%', minHeight: 86, p: 1.5, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
+                      <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1, width: '100%', lineHeight: 1.4 }}>
+                        {field.label}
+                      </Typography>
+                      {field.chip ? (
+                        <Chip label={field.value} size="small" color="primary" variant="outlined" sx={{ fontFamily: 'monospace', maxWidth: '100%', alignSelf: 'flex-start', '& .MuiChip-label': { px: 1.5 } }} />
+                      ) : (
+                        <Typography variant="body1" component="div" sx={{ fontFamily: field.mono ? 'monospace' : 'inherit', fontWeight: field.strong ? 700 : 500, overflowWrap: 'anywhere', width: '100%' }}>
+                          {field.value}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+                ))}
               </Grid>
-              <Grid item xs={6} sm={3}>
-                <Typography variant="caption" color="textSecondary">رقم الفاتورة</Typography>
-                <Chip label={detailData.invoice_number} size="small" color="primary" variant="outlined" sx={{ fontFamily: 'monospace', mt: 0.5 }} />
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Typography variant="caption" color="textSecondary">شركة الشحن</Typography>
-                <Typography variant="body1">{detailData.shipping_carrier || '—'}</Typography>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Typography variant="caption" color="textSecondary">رقم التتبع</Typography>
-                <Typography variant="body1" sx={{ fontFamily: 'monospace' }}>{detailData.tracking_number || '—'}</Typography>
-              </Grid>
-            </Grid>
+            </Paper>
 
             {/* Status Stepper */}
             {detailData.status !== 'cancelled' ? (
-              <Box sx={{ mb: 3 }}>
+              <Paper variant="outlined" sx={{ mb: 3, px: { xs: 1, sm: 2 }, py: 2, borderRadius: 2 }}>
                 <Stepper activeStep={getActiveStep(detailData.status)} alternativeLabel>
                   {statusSteps.map((step) => (
                     <Step key={step}>
@@ -761,7 +768,7 @@ export const Shipments = () => {
                     </Step>
                   ))}
                 </Stepper>
-              </Box>
+              </Paper>
             ) : (
               <Alert severity="error" sx={{ mb: 3 }}>هذه الشحنة ملغاة.</Alert>
             )}
@@ -779,7 +786,9 @@ export const Shipments = () => {
                         <TableCell sx={{ fontWeight: 'bold' }}>المنتج</TableCell>
                         <TableCell sx={{ fontWeight: 'bold' }}>الكود</TableCell>
                         <TableCell align="center" sx={{ fontWeight: 'bold' }}>الكمية المشحونة</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>
+                        {detailData.items.some(item => Object.prototype.hasOwnProperty.call(item, 'unit_price')) && (
+                          <TableCell align="right" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>
+                        )}
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -788,7 +797,9 @@ export const Shipments = () => {
                           <TableCell sx={{ fontWeight: 500 }}>{item.product_title}</TableCell>
                           <TableCell sx={{ fontFamily: 'monospace' }}>{item.product_code || '—'}</TableCell>
                           <TableCell align="center" sx={{ fontWeight: 'bold' }}>{item.quantity}</TableCell>
-                          <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>
+                          {Object.prototype.hasOwnProperty.call(item, 'unit_price') && (
+                            <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>

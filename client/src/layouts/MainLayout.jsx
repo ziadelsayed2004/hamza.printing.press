@@ -74,8 +74,9 @@ export const MainLayout = () => {
   const muiTheme = useTheme();
 
   const userRoles = Array.isArray(user?.roles) ? user.roles : [];
-  const isInvoiceVisibilityRestricted =
-    userRoles.length > 0 && !userRoles.some((role) => ['super_admin', 'assistant'].includes(role));
+  const isInvoiceVisibilityRestricted = userRoles.some((role) =>
+    ['shipping_user', 'inventory_manager'].includes(role)
+  ) && !userRoles.some((role) => ['super_admin', 'assistant', 'readonly_viewer'].includes(role));
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const sidebarStorageKey = user?.id ? `sidebarCollapsed:${user.id}` : null;
@@ -272,7 +273,7 @@ export const MainLayout = () => {
       title: 'الإدارة',
       items: [
         { textKey: 'nav.users', text: 'المستخدمين والأدوار', icon: <PeopleIcon />, path: '/users', permission: 'users.view' },
-        { textKey: 'nav.backups', text: 'النسخ الاحتياطي والاستعادة', icon: <SettingsBackupRestoreIcon />, path: '/backups', permission: 'backup.create' },
+        { textKey: 'nav.backups', text: 'النسخ الاحتياطي والاستعادة', icon: <SettingsBackupRestoreIcon />, path: '/backups', anyPermissions: ['backup.view', 'backup.create'] },
         { textKey: 'nav.audit', text: 'سجل العمليات', icon: <HistoryIcon />, path: '/audit', permission: 'audit.view' }
       ]
     }
@@ -286,6 +287,7 @@ export const MainLayout = () => {
       const visibleItems = section.items.filter(
         item =>
           (!item.permission || hasPermission(item.permission)) &&
+          (!item.anyPermissions || item.anyPermissions.some(hasPermission)) &&
           !(item.hideForRestrictedInvoiceRole && isInvoiceVisibilityRestricted)
       );
       if (visibleItems.length === 0) return null;

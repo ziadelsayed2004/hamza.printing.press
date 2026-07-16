@@ -45,6 +45,37 @@ function formatCurrency(val) {
   return formatCurrencyEGP(val);
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  })[character]);
+}
+
+function buildShippingHtmlContent(invoices) {
+  const cards = invoices.map((invoice, index) => `
+    ${index ? '<div class="page-break"></div>' : ''}
+    <section class="invoice">
+      <h2>فاتورة شحن رقم: ${escapeHtml(invoice.invoice_number)}</h2>
+      <div class="meta">
+        <div><b>المنفذ:</b> ${escapeHtml(invoice.outlet_name)}</div>
+        <div><b>التاريخ:</b> ${escapeHtml(formatDateTime(invoice.created_at))}</div>
+        <div><b>العنوان:</b> ${escapeHtml([invoice.governorate, invoice.address_details].filter(Boolean).join(' - ') || 'غير محدد')}</div>
+        <div><b>الهاتف:</b> ${escapeHtml(invoice.outlet_phone || 'غير محدد')}</div>
+        <div><b>حالة الشحن:</b> ${escapeHtml(translateShippingStatus(invoice.shipping_status))}</div>
+      </div>
+      <table><thead><tr><th>الكتاب / المنتج</th><th>المؤلف</th><th>الكمية</th><th>المجاني</th></tr></thead>
+      <tbody>${invoice.items.map(item => `<tr><td>${escapeHtml(item.product_title)}</td><td>${escapeHtml(item.authors || 'غير محدد')}</td><td>${escapeHtml(item.quantity)}</td><td>${escapeHtml(item.free_quantity || 0)}</td></tr>`).join('')}</tbody></table>
+      ${invoice.notes ? `<div class="notes"><b>ملاحظات:</b> ${escapeHtml(invoice.notes)}</div>` : ''}
+    </section>
+  `).join('');
+  return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><style>
+    @page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;direction:rtl;color:#1f2937;font-size:13px}
+    h1{color:#1e3a8a;border-bottom:2px solid #1e3a8a;padding-bottom:10px}.invoice{page-break-inside:avoid;margin-bottom:24px}
+    h2{background:#1e3a8a;color:white;padding:12px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#f8fafc;padding:14px}
+    table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:right}th{background:#e2e8f0}.notes{margin-top:14px}.page-break{page-break-before:always}
+  </style></head><body><h1>تقرير تجهيز وشحن الفواتير</h1>${cards}</body></html>`;
+}
+
 /**
  * Generates dynamic HTML representing selected invoices with RTL support and Arabic language markup.
  */
@@ -389,7 +420,7 @@ function buildHtmlContent(invoices) {
 /**
  * Main function to generate PDF from invoice IDs.
  */
-async function generateInvoicesPdf(invoiceIds) {
+async function generateInvoicesPdf(invoiceIds, { mode = 'full' } = {}) {
   if (!Array.isArray(invoiceIds) || invoiceIds.length === 0) {
     throw new Error('Invoice IDs must be a non-empty array');
   }
@@ -426,7 +457,9 @@ async function generateInvoicesPdf(invoiceIds) {
   }
 
   // 3. Compile HTML layout
-  const htmlContent = buildHtmlContent(invoices);
+  const htmlContent = mode === 'shipping'
+    ? buildShippingHtmlContent(invoices)
+    : buildHtmlContent(invoices);
 
   // 4. Generate PDF buffer using html-pdf-node
   const file = { content: htmlContent };
@@ -445,5 +478,7 @@ async function generateInvoicesPdf(invoiceIds) {
 }
 
 module.exports = {
-  generateInvoicesPdf
+  generateInvoicesPdf,
+  buildHtmlContent,
+  buildShippingHtmlContent
 };

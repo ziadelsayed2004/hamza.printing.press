@@ -15,7 +15,10 @@ const INVOICE_VISIBILITY_BYPASS_ROLES = UNRESTRICTED_INVOICE_ROLE_NAMES;
 function getInvoiceVisibilityScope(roleNames = []) {
   const normalizedRoleNames = Array.isArray(roleNames) ? roleNames : [];
   const hasBypassRole = hasAnyRole(normalizedRoleNames, UNRESTRICTED_INVOICE_ROLE_SET);
-  const restricted = normalizedRoleNames.length > 0 && !hasBypassRole;
+  const hasFullReadRole = normalizedRoleNames.some(roleName =>
+    ['readonly_viewer', 'author', 'outlet'].includes(roleName)
+  );
+  const restricted = normalizedRoleNames.length > 0 && !hasBypassRole && !hasFullReadRole;
 
   return {
     restricted,

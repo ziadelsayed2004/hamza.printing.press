@@ -147,7 +147,7 @@ export function App() {
                 <Route path="shipments" element={<PermissionRoute permission="shipments.view"><Shipments /></PermissionRoute>} />
                 <Route path="reports" element={<PermissionRoute permission="reports.view"><Reports /></PermissionRoute>} />
                 <Route path="exports" element={<PermissionRoute permission="exports.run"><Exports /></PermissionRoute>} />
-                <Route path="backups" element={<PermissionRoute permission="backup.create"><Backups /></PermissionRoute>} />
+                <Route path="backups" element={<PermissionRoute anyOf={['backup.view', 'backup.create']}><Backups /></PermissionRoute>} />
                 <Route path="audit" element={<PermissionRoute permission="audit.view"><AuditLogs /></PermissionRoute>} />
                 <Route path="notifications" element={<PermissionRoute permission="notifications.view"><Notifications /></PermissionRoute>} />
                 <Route path="*" element={<Navigate to="/" replace />} />

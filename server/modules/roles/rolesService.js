@@ -1,6 +1,7 @@
 const db = require('../../db');
 const {
   PROTECTED_PERMISSION_SET,
+  ASSISTANT_FORBIDDEN_PERMISSION_SET,
   SYSTEM_ROLE_SET
 } = require('./roleCatalog');
 
@@ -196,8 +197,31 @@ async function getRolePermissions(roleId) {
 }
 
 async function updateRolePermissions(roleId, permissionIds) {
-  await assertMutableCustomRole(roleId);
-  const validatedPermissionIds = await validateCustomPermissionIds(permissionIds);
+  const role = await getRoleById(roleId);
+  if (!role) throw new RoleServiceError('Role not found.', 404, 'ROLE_NOT_FOUND');
+  let validatedPermissionIds;
+  if (role.name === 'assistant') {
+    if (!Array.isArray(permissionIds)) throw new RoleServiceError('permissionIds must be an array.');
+    const uniqueIds = [...new Set(permissionIds.map(Number))];
+    if (uniqueIds.some(id => !Number.isInteger(id) || id <= 0)) throw new RoleServiceError('permissionIds contains an invalid permission id.');
+    const placeholders = uniqueIds.map(() => '?').join(',');
+    const permissions = uniqueIds.length
+      ? await db.all(`SELECT id, name FROM permissions WHERE id IN (${placeholders})`, uniqueIds)
+      : [];
+    if (permissions.length !== uniqueIds.length) throw new RoleServiceError('One or more permissions do not exist.');
+    const forbidden = permissions.filter(permission => ASSISTANT_FORBIDDEN_PERMISSION_SET.has(permission.name));
+    if (forbidden.length) {
+      throw new RoleServiceError(
+        `Assistant accounts can never receive these permissions: ${forbidden.map(item => item.name).join(', ')}.`,
+        403,
+        'ASSISTANT_PERMISSION_FORBIDDEN'
+      );
+    }
+    validatedPermissionIds = uniqueIds;
+  } else {
+    await assertMutableCustomRole(roleId);
+    validatedPermissionIds = await validateCustomPermissionIds(permissionIds);
+  }
 
   await db.exec('BEGIN IMMEDIATE TRANSACTION;');
   try {

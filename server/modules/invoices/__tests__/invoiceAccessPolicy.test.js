@@ -5,13 +5,24 @@ const {
 } = require('../invoiceAccessPolicy');
 
 describe('invoice access policy', () => {
-  test.each(['inventory_manager', 'shipping_user', 'readonly_viewer', 'author', 'outlet'])(
+  test.each(['inventory_manager', 'shipping_user'])(
     'restricts non-administrative role %s',
     role => {
       expect(getInvoiceVisibilityScope([role])).toEqual({
         restricted: true,
         allowedShippingStatuses: INCOMPLETE_SHIPPING_STATUSES,
         excludeCancelled: true
+      });
+    }
+  );
+
+  test.each(['readonly_viewer', 'author', 'outlet'])(
+    'allows full invoice-state visibility for scoped/read-only role %s',
+    role => {
+      expect(getInvoiceVisibilityScope([role])).toEqual({
+        restricted: false,
+        allowedShippingStatuses: null,
+        excludeCancelled: false
       });
     }
   );

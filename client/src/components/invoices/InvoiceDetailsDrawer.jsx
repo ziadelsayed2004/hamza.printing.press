@@ -52,6 +52,11 @@ export default function InvoiceDetailsDrawer({
   setDetailsTabValue,
   handleMarkPaymentSupplied
 }) {
+  const hasPricing = detailsInvoice && (
+    Object.prototype.hasOwnProperty.call(detailsInvoice, 'total_price') ||
+    Object.prototype.hasOwnProperty.call(detailsInvoice, 'author_subtotal')
+  );
+  const hasPaymentSummary = detailsInvoice && Object.prototype.hasOwnProperty.call(detailsInvoice, 'remaining_amount');
   const kpiCardStyle = {
     p: 2,
     height: '100%',
@@ -265,7 +270,7 @@ export default function InvoiceDetailsDrawer({
                 </Typography>
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
+            {hasPaymentSummary && <Grid item xs={12} sm={6} md={2.4}>
               <Card variant="outlined" sx={getRemainingCardStyle(detailsInvoice.remaining_amount)}>
                 <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>المبلغ المتبقي (ذمة)</Typography>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: detailsInvoice.remaining_amount > 0 ? 'error.main' : 'success.main', mt: 0.5 }}>
@@ -275,33 +280,33 @@ export default function InvoiceDetailsDrawer({
                   المدفوع: {formatCurrencyEGP(detailsInvoice.paid_amount)}
                 </Typography>
               </Card>
-            </Grid>
+            </Grid>}
             <Grid item xs={12} sm={6} md={2.4}>
               <Card variant="outlined" sx={kpiCardStyle}>
                 <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>الشحن والتوزيع</Typography>
                 <Box sx={{ mt: 0.5 }}>
                   {getShippingStatusChip(detailsInvoice.shipping_status)}
                 </Box>
-                <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
+                {hasPermission('payments.view') && <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
                   طريقة الدفع: {
                     detailsInvoice.payment_status === 'paid' ? 'دفع كلي' :
                     detailsInvoice.payment_status === 'partially_paid' ? 'دفع جزئي' :
                     translatePaymentType(detailsInvoice.payment_type)
                   }
-                </Typography>
+                </Typography>}
               </Card>
             </Grid>
-            <Grid item xs={12} sm={6} md={2.4}>
+            {hasPricing && <Grid item xs={12} sm={6} md={2.4}>
               <Card variant="outlined" sx={kpiCardStyle}>
                 <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>القيمة الإجمالية للفاتورة</Typography>
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main', mt: 0.5 }}>
-                  {formatCurrencyEGP(detailsInvoice.total_price)}
+                  {formatCurrencyEGP(detailsInvoice.author_subtotal ?? detailsInvoice.total_price)}
                 </Typography>
                 <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5 }}>
                   تاريخ الفاتورة: {formatEgyptDateTime(detailsInvoice.created_at)}
                 </Typography>
               </Card>
-            </Grid>
+            </Grid>}
             <Grid item xs={12} sm={6} md={2.4}>
               <Card variant="outlined" sx={{ ...kpiCardStyle, alignItems: 'center', p: 1, height: '100%' }}>
                 <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500, mb: 0.5 }}>{t('system.qrCode')}</Typography>
@@ -336,8 +341,8 @@ export default function InvoiceDetailsDrawer({
                     <TableCell align="center" sx={{ fontWeight: 'bold' }}>المجاني</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 'bold' }}>المشحون</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 'bold' }}>المرتجع</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>الإجمالي</TableCell>
+                    {hasPricing && <TableCell align="right" sx={{ fontWeight: 'bold' }}>سعر الوحدة</TableCell>}
+                    {hasPricing && <TableCell align="right" sx={{ fontWeight: 'bold' }}>الإجمالي</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -359,8 +364,8 @@ export default function InvoiceDetailsDrawer({
                       <TableCell align="center" sx={{ color: item.returned_quantity > 0 ? 'error.main' : 'text.secondary' }}>
                         {item.returned_quantity || 0}
                       </TableCell>
-                      <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(item.total_price)}</TableCell>
+                      {hasPricing && <TableCell align="right">{formatCurrencyEGP(item.unit_price)}</TableCell>}
+                      {hasPricing && <TableCell align="right" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(item.total_price)}</TableCell>}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -369,7 +374,7 @@ export default function InvoiceDetailsDrawer({
           </Box>
 
           {/* Totals Section */}
-          <Box sx={{ width: '100%', mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 2.5, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc' }}>
+          {hasPricing && <Box sx={{ width: '100%', mb: 4, border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 2.5, backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1e1e1e' : '#f8fafc' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="body2" color="text.secondary">المجموع الفرعي:</Typography>
               <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{formatCurrencyEGP(detailsInvoice.subtotal || 0)}</Typography>
@@ -403,7 +408,7 @@ export default function InvoiceDetailsDrawer({
                 {formatCurrencyEGP(detailsInvoice.remaining_amount || 0)}
               </Typography>
             </Box>
-          </Box>
+          </Box>}
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={detailsTabValue} onChange={(e, val) => setDetailsTabValue(val)}>

@@ -1024,7 +1024,7 @@ export const Reports = () => {
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>المؤلف</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>حالة الحساب</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>عدد العناوين</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>مبيعات كلي</TableCell>
+                  {hasPermission('finance.view') && <TableCell align="right" sx={{ fontWeight: 'bold' }}>مبيعات كلي</TableCell>}
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>إجمالي النسخ المباعة</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>المخزون المتوفر للعناوين</TableCell>
                 </TableRow>
@@ -1041,7 +1041,7 @@ export const Reports = () => {
                       )}
                     </TableCell>
                     <TableCell align="right">{row.totalBooks}</TableCell>
-                    <TableCell align="right">{formatCurrencyEGP(row.totalSales)}</TableCell>
+                    {hasPermission('finance.view') && <TableCell align="right">{formatCurrencyEGP(row.totalSales)}</TableCell>}
                     <TableCell align="right">{row.totalCopiesSold.toLocaleString()} نسخة</TableCell>
                     <TableCell align="right">{row.currentStock.toLocaleString()} نسخة</TableCell>
                   </TableRow>

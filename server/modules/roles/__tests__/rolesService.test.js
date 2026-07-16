@@ -64,6 +64,10 @@ describe('rolesService fixed and assignable roles', () => {
       path.join(migrations, '023_make_super_admin_assignable.sql'),
       'utf8'
     ));
+    await db.exec(fs.readFileSync(
+      path.join(migrations, '027_invoice_role_visibility.sql'),
+      'utf8'
+    ));
 
     jest.resetModules();
     jest.doMock('../../../db', () => db);
@@ -113,6 +117,18 @@ describe('rolesService fixed and assignable roles', () => {
       .rejects.toMatchObject({ statusCode: 403, code: 'SYSTEM_ROLE_IMMUTABLE' });
     await expect(rolesService.deleteRole(shipping.id))
       .rejects.toMatchObject({ statusCode: 403, code: 'SYSTEM_ROLE_IMMUTABLE' });
+  });
+
+  test('allows payment grants for assistant but permanently blocks aggregate finance access', async () => {
+    const assistant = await db.get("SELECT id FROM roles WHERE name = 'assistant'");
+    const invoicesView = await db.get("SELECT id FROM permissions WHERE name = 'invoices.view'");
+    const invoicesPay = await db.get("SELECT id FROM permissions WHERE name = 'invoices.pay'");
+    const financeView = await db.get("SELECT id FROM permissions WHERE name = 'finance.view'");
+
+    await expect(rolesService.updateRolePermissions(assistant.id, [invoicesView.id, invoicesPay.id]))
+      .resolves.toBeUndefined();
+    await expect(rolesService.updateRolePermissions(assistant.id, [invoicesView.id, financeView.id]))
+      .rejects.toMatchObject({ statusCode: 403, code: 'ASSISTANT_PERMISSION_FORBIDDEN' });
   });
 
   test('allows safe custom roles but rejects owner-only mutation permissions', async () => {

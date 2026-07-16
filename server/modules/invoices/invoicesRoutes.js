@@ -8,6 +8,7 @@ const authorsService = require('../authors/authorsService');
 const outletsService = require('../outlets/outletsService');
 const { hasGlobalBusinessScope } = require('../roles/roleCatalog');
 const { getInvoiceVisibilityScope, isInvoiceVisible } = require('./invoiceAccessPolicy');
+const { presentInvoice, presentInvoices, roleMode } = require('./invoicePresenter');
 const { requireAuth, checkPermission } = require('../../middleware/rbac');
 const { auditLog } = require('../../middleware/audit');
 
@@ -110,7 +111,14 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
   try {
     const userId = req.session.user.id;
     const permissions = await usersService.getUserPermissions(userId);
-    if (archived && !permissions.includes('invoices.archive')) {
+    const requestedFinancialFilter = paymentStatus || hasRemaining || minRemaining !== null || maxRemaining !== null;
+    if (requestedFinancialFilter && !permissions.includes('payments.view')) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Payment visibility permission is required to filter invoices by financial fields.'
+      });
+    }
+    if (archived && !permissions.includes('invoices.archive.view') && !permissions.includes('invoices.archive')) {
       return res.status(403).json({ error: 'Forbidden', message: 'Archive permission is required.' });
     }
     const userRoles = await usersService.getUserRoles(userId);
@@ -164,7 +172,10 @@ router.get('/', requireAuth, checkPermission('invoices.view'), async (req, res) 
       excludeCancelled: visibilityScope.excludeCancelled,
       archived
     });
-    res.status(200).json(list);
+    res.status(200).json(await presentInvoices(list, {
+      roleNames: userRoles.map(role => role.name),
+      userId
+    }));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
@@ -187,7 +198,7 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
       return res.status(404).json({ error: 'Not Found', message: 'Invoice not found.' });
     }
 
-    if (invoice.archived_at && !permissions.includes('invoices.archive')) {
+    if (invoice.archived_at && !permissions.includes('invoices.archive.view') && !permissions.includes('invoices.archive')) {
       return sendInvoiceVisibilityForbidden(res);
     }
 
@@ -266,7 +277,10 @@ router.get('/:id', requireAuth, checkPermission('invoices.view'), async (req, re
     }
 
     if (!canViewPayments) redactInvoicePaymentDetails(invoice);
-    res.status(200).json(invoice);
+    res.status(200).json(await presentInvoice(invoice, {
+      roleNames: userRoles.map(role => role.name),
+      userId
+    }));
   } catch (err) {
     res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
@@ -552,6 +566,9 @@ router.get('/:id/payments', requireAuth, checkPermission('payments.view'), async
     if (!invoice) {
       return res.status(404).json({ error: 'Not Found', message: 'Invoice not found.' });
     }
+    if (roleMode(userRoles.map(role => role.name)) === 'author' || roleMode(userRoles.map(role => role.name)) === 'shipping') {
+      return sendInvoiceVisibilityForbidden(res);
+    }
     if (!isInvoiceVisible(invoice, visibilityScope)) {
       return sendInvoiceVisibilityForbidden(res);
     }
@@ -590,7 +607,7 @@ router.post('/export/pdf', requireAuth, checkPermission('invoices.export'), asyn
     const visibilityScope = getInvoiceVisibilityScope(userRoles.map(role => role.name));
     const invoices = await invoicesService.getInvoiceVisibilityRecords(uniqueInvoiceIds);
 
-    if (invoices.some(invoice => invoice.archived_at) && !permissions.includes('invoices.archive')) {
+    if (invoices.some(invoice => invoice.archived_at) && !permissions.includes('invoices.archive.view') && !permissions.includes('invoices.archive')) {
       return res.status(403).json({
         error: 'Forbidden',
         message: 'Archive permission is required to export archived invoices.'
@@ -627,7 +644,10 @@ router.post('/export/pdf', requireAuth, checkPermission('invoices.export'), asyn
       });
     }
 
-    const pdfBuffer = await pdfService.generateInvoicesPdf(uniqueInvoiceIds);
+    const pdfBuffer = await pdfService.generateInvoicesPdf(uniqueInvoiceIds, {
+      mode: roleMode(userRoles.map(role => role.name)),
+      userId: req.session.user.id
+    });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="invoices_report.pdf"');
     return res.status(200).send(pdfBuffer);

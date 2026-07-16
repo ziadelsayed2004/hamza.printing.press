@@ -104,6 +104,7 @@ const permissionTranslations = {
   'invoices.update': { name: 'تعديل الفواتير', desc: 'تعديل بيانات الفواتير المعلقة قبل الترحيل.' },
   'invoices.cancel': { name: 'إلغاء الفواتير', desc: 'إلغاء فواتير البيع الصادرة وعكس تأثيرها.' },
   'invoices.export': { name: 'تصدير فواتير', desc: 'تنزيل فواتير المبيعات كملفات خارجية.' },
+  'invoices.archive.view': { name: 'عرض أرشيف الفواتير', desc: 'مشاهدة وتنزيل الفواتير المؤرشفة دون تعديل حالة الأرشيف.' },
   'invoices.pay': { name: 'تسجيل سداد الفواتير', desc: 'سداد المقدار المالي للفواتير وإغلاقها كمدفوعة.' },
   'invoices.ship': { name: 'شحن الفواتير وتوليد طرود', desc: 'إنشاء شحنات توصيل وربطها بأصناف ومواد الفواتير.' },
   'invoices.return': { name: 'تسجيل مرتجعات الفواتير', desc: 'إنشاء وإثبات حركات مرتجعات جزئية أو كلية على الفاتورة.' },
@@ -127,6 +128,7 @@ const permissionTranslations = {
   'audit.view': { name: 'عرض سجل التدقيق والعمليات', desc: 'مراقبة سجل عمليات المستخدمين وتعديلاتهم.' },
   'settings.update': { name: 'تحديث الإعدادات العامة', desc: 'تحديث خيارات النظام العامة والتحكم.' },
   'backup.create': { name: 'إنشاء نسخ احتياطية', desc: 'أخذ نسخة احتياطية من قاعدة البيانات بالكامل.' },
+  'backup.view': { name: 'عرض النسخ الاحتياطية', desc: 'عرض وتنزيل النسخ الاحتياطية الموجودة دون إنشائها أو استعادتها.' },
   'backup.restore': { name: 'استعادة نسخ احتياطية', desc: 'استعادة النظام لحالة نسخة احتياطية سابقة.' },
   'finance.view': { name: 'عرض الخزينة والحركات المالية', desc: 'تتبع ملخصات النقدية ومقادير التوريد المعلقة.' },
   'finance.adjust': { name: 'تسجيل تسوية مالية يدوية', desc: 'عمل قيود تسوية يدوية لزيادة/نقص النقدية بالفروع.' },
@@ -157,6 +159,12 @@ const INTERNAL_OR_DEPRECATED_ROLES = [
   'visitor'
 ];
 const SYSTEM_ROLES = [...ASSIGNABLE_SYSTEM_ROLES, ...INTERNAL_OR_DEPRECATED_ROLES];
+const ASSISTANT_FORBIDDEN_PERMISSIONS = new Set([
+  'users.view', 'users.create', 'users.update', 'users.disable', 'users.archive',
+  'roles.view', 'roles.manage', 'permissions.manage', 'audit.view', 'settings.update',
+  'backup.view', 'backup.create', 'backup.restore',
+  'finance.view', 'finance.adjust', 'finance.export', 'finance.statement.view'
+]);
 
 const roleFlag = (role, camelCaseName, snakeCaseName, fallback) => {
   if (typeof role?.[camelCaseName] === 'boolean') return role[camelCaseName];
@@ -199,7 +207,7 @@ export const Users = () => {
     },
     {
       title: 'الفواتير والمبيعات',
-      perms: ['invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export', 'invoices.pay', 'invoices.ship', 'invoices.return', 'invoices.archive']
+      perms: ['invoices.view', 'invoices.create', 'invoices.update', 'invoices.cancel', 'invoices.export', 'invoices.pay', 'invoices.ship', 'invoices.return', 'invoices.archive.view', 'invoices.archive']
     },
     {
       title: 'المدفوعات والمقبوضات',
@@ -227,7 +235,7 @@ export const Users = () => {
     },
     {
       title: 'إعدادات النظام والنسخ الاحتياطي',
-      perms: ['settings.update', 'backup.create', 'backup.restore']
+      perms: ['settings.update', 'backup.view', 'backup.create', 'backup.restore']
     }
   ];
 
@@ -443,7 +451,7 @@ export const Users = () => {
 
   // Role designer edit opener
   const handleOpenEditRole = (role) => {
-    if (isSystemRole(role) || !hasPermission('roles.manage')) return;
+    if ((isSystemRole(role) && role.name !== 'assistant') || !hasPermission('roles.manage')) return;
     setRoleModalMode('edit');
     setRoleFormId(role.id);
     setRoleFormName(role.name);
@@ -465,7 +473,7 @@ export const Users = () => {
       showToast('اسم الدور الوظيفي مطلوب.', 'error');
       return;
     }
-    if (roleModalMode === 'edit' && SYSTEM_ROLES.includes(roleFormName)) {
+    if (roleModalMode === 'edit' && SYSTEM_ROLES.includes(roleFormName) && roleFormName !== 'assistant') {
       showToast('أدوار النظام ثابتة ولا يمكن تعديل مصفوفة صلاحياتها.', 'error');
       return;
     }
@@ -479,11 +487,17 @@ export const Users = () => {
         });
         showToast('تم إنشاء الدور الوظيفي بنجاح.');
       } else {
-        await apiClient.put(`/users/roles/${roleFormId}`, {
-          name: roleFormName.trim(),
-          description: roleFormDescription,
-          permissionIds: roleFormPermissions
-        });
+        if (roleFormName === 'assistant') {
+          await apiClient.post(`/users/roles/${roleFormId}/permissions`, {
+            permissionIds: roleFormPermissions
+          });
+        } else {
+          await apiClient.put(`/users/roles/${roleFormId}`, {
+            name: roleFormName.trim(),
+            description: roleFormDescription,
+            permissionIds: roleFormPermissions
+          });
+        }
         showToast('تم تحديث الدور الوظيفي بنجاح.');
       }
       setOpenRoleDrawer(false);
@@ -757,7 +771,7 @@ export const Users = () => {
                       </TableCell>
                       <TableCell align="center">
                         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                          {!isSystem && hasPermission('roles.manage') && (
+                          {(!isSystem || r.name === 'assistant') && hasPermission('roles.manage') && (
                             <IconButton color="primary" onClick={() => handleOpenEditRole(r)} title="تعديل وصلاحيات">
                               <EditIcon />
                             </IconButton>
@@ -1035,6 +1049,7 @@ export const Users = () => {
                     {filteredGroupPerms.map((p) => {
                       const isChecked = roleFormPermissions.includes(p.id);
                       const isSuperAdminLock = roleFormName === 'super_admin';
+                      const isAssistantLock = roleFormName === 'assistant' && ASSISTANT_FORBIDDEN_PERMISSIONS.has(p.name);
                       return (
                         <Grid item xs={12} sm={6} md={4} key={p.id}>
                           <FormControlLabel
@@ -1042,14 +1057,14 @@ export const Users = () => {
                               <Checkbox
                                 checked={isChecked || isSuperAdminLock}
                                 onChange={() => {
-                                  if (isSuperAdminLock) return;
+                                  if (isSuperAdminLock || isAssistantLock) return;
                                   if (roleFormPermissions.includes(p.id)) {
                                     setRoleFormPermissions(roleFormPermissions.filter(id => id !== p.id));
                                   } else {
                                     setRoleFormPermissions([...roleFormPermissions, p.id]);
                                   }
                                 }}
-                                disabled={isSuperAdminLock}
+                                disabled={isSuperAdminLock || isAssistantLock}
                               />
                             }
                             label={

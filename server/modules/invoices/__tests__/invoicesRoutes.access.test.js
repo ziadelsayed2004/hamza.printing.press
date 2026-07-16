@@ -308,7 +308,10 @@ describe('invoice routes access scope', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toMatch(/^application\/pdf/);
-    expect(pdfService.generateInvoicesPdf).toHaveBeenCalledWith([1, 2]);
+    expect(pdfService.generateInvoicesPdf).toHaveBeenCalledWith([1, 2], {
+      mode: 'standard',
+      userId: 77
+    });
   });
 
   test('rejects PDF export when a linked author selects another author invoice', async () => {
